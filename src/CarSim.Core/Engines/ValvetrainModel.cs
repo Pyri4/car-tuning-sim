@@ -24,10 +24,14 @@ public static class ValvetrainModel
         return advertised / 6.0 * Math.Sqrt(springOpenForceN / denom);
     }
 
+    /// <summary>Spring force at full lift after wear (sag) has taken its share.</summary>
+    public static double SpringForceN(ValveSpringSpec springs, double springWear) =>
+        springs.OpenForceN * (1.0 - SpringForceLossAtFullWear * Math.Clamp(springWear, 0.0, 1.0));
+
     /// <summary>Float speed of the whole valvetrain: the lower of the intake and exhaust sides.</summary>
     public static double FloatRpm(CamshaftSpec cams, ValveSpringSpec springs, CylinderHeadSpec head, double springWear = 0.0)
     {
-        double force = springs.OpenForceN * (1.0 - SpringForceLossAtFullWear * Math.Clamp(springWear, 0.0, 1.0));
+        double force = SpringForceN(springs, springWear);
         double intake = FloatRpm(cams.IntakeDurationDeg, cams.IntakeLift, force, head.ValveMovingMass);
         double exhaust = FloatRpm(cams.ExhaustDurationDeg, cams.ExhaustLift, force, head.ValveMovingMass);
         return Math.Min(intake, exhaust);

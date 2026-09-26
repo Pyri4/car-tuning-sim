@@ -43,7 +43,11 @@ public sealed class DamageModel
     public IReadOnlyCollection<EngineTelemetry> RecentSamples => _recent;
 
     /// <summary>True once any catastrophic failure has happened: the engine cannot run.</summary>
-    public bool Seized => _c.Assembly.AllParts.Any(p => p.Damage.Failure is { } f && FailureModeInfo.Of(f.Mode).Severity == FailureSeverity.Catastrophic);
+    public bool Seized => IsSeized(_c.Assembly);
+
+    /// <summary>Whether a catastrophic failure among <paramref name="engine"/>'s installed parts locks it.</summary>
+    public static bool IsSeized(Engines.EngineAssembly engine) =>
+        engine.AllParts.Any(p => p.Damage.Failure is { } f && FailureModeInfo.Of(f.Mode).Severity == FailureSeverity.Catastrophic);
 
     /// <summary>Whether a degraded failure of <paramref name="mode"/> is present on the relevant part.</summary>
     public bool HasFailure(FailureMode mode) =>

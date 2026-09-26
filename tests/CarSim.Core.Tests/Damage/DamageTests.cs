@@ -70,6 +70,22 @@ public class DamageTests
     }
 
     [Fact]
+    public void ValveFloatReportQuotesTheWornSpringForce()
+    {
+        var sim = SimFactory.Create();
+        sim.Config.Part("valve_springs").Wear = 0.4;
+        Hold(sim, 7000, 1);
+        Hold(sim, 9300, 20, throttle: 0.0);
+        var report = Assert.Single(sim.Damage.Failures);
+        Assert.Equal(FailureMode.ValvePistonContact, report.Mode);
+        var springs = (CarSim.Core.Parts.Specs.ValveSpringSpec)sim.Config.Part("valve_springs").Definition.Spec;
+        double worn = springs.OpenForceN * (1 - ValvetrainModel.SpringForceLossAtFullWear * 0.4);
+        var measured = Assert.Single(report.Measurements, m => m.Label == "Valve spring force at full lift");
+        Assert.StartsWith($"{worn:N0} N", measured.Value.Replace(",", ""));
+        Assert.Contains(report.ContributingFactors, f => f.Contains("springs were worn (40 %)"));
+    }
+
+    [Fact]
     public void StifferSpringsMoveTheWeakLinkToTheFlywheel()
     {
         var sim = SimFactory.Create(("valve_springs", "k20.valve_springs.performance"));

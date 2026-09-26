@@ -1,5 +1,6 @@
 using System.Globalization;
 using CarSim.Core.Common;
+using CarSim.Core.Engines;
 using CarSim.Core.Parts;
 using CarSim.Core.Simulation;
 
@@ -118,14 +119,16 @@ public static class FailureDiagnostics
                 break;
             case FailureMode.ValvePistonContact:
             {
+                double springWear = c.Part(PartCategory.ValveSprings).Wear;
+                double springForce = ValvetrainModel.SpringForceN(c.Springs, springWear);
                 Measure("Valve float speed", $"{N0(t.ValveFloatRpm)} rpm");
-                Measure("Valve spring force at full lift", $"{N0(c.Springs.OpenForceN)} N");
+                Measure("Valve spring force at full lift", springWear > 0.01 ? $"{N0(springForce)} N (new {N0(c.Springs.OpenForceN)} N)" : $"{N0(springForce)} N");
                 if (t.Rpm > x.RevLimitRpm + 100)
                     f.Add($"Engine speed ({N0(t.Rpm)} rpm) was above the rev limiter ({N0(x.RevLimitRpm)} rpm): over-rev (missed shift or forced by the dyno/drivetrain).");
                 else
                     f.Add($"The rev limit ({N0(x.RevLimitRpm)} rpm) allows the engine past its valve-float speed ({N0(t.ValveFloatRpm)} rpm).");
-                f.Add($"Cam lift {F1(c.Cams.MaxLiftMm)} mm with {N0(c.Head.ValveMovingMassG)} g valves needs more spring force than {N0(c.Springs.OpenForceN)} N at this speed.");
-                if (c.Part(PartCategory.ValveSprings).Wear > 0.2) f.Add($"The valve springs were worn ({N0(100 * c.Part(PartCategory.ValveSprings).Wear)} %), reducing their force.");
+                f.Add($"Cam lift {F1(c.Cams.MaxLiftMm)} mm with {N0(c.Head.ValveMovingMassG)} g valves needs more spring force than {N0(springForce)} N at this speed.");
+                if (springWear > 0.2) f.Add($"The valve springs were worn ({N0(100 * springWear)} %), which cost {N0(c.Springs.OpenForceN - springForce)} N of spring force.");
                 r.Add("Fit stiffer valve springs (and lighter valves), or lower the rev limit below the float speed.");
                 r.Add("The head needs new valves and guides; check the pistons for valve strikes.");
                 break;
