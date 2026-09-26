@@ -137,8 +137,9 @@ Harmonic lift profile over the advertised event (duration@1mm + 50°):
 - Dyno cells can hold coolant temperature (`CoolantTemperatureOverride`).
 
 ## Lubrication
-- Pump delivery `Q = displacement · rpm/60 · 0.9 · supply`, supply falls to zero over 0.3 g beyond
-  the pan's `max_sustained_g` (pickup starvation).
+- Pump delivery `Q = displacement · rpm/60 · 0.9`.
+- Oil surge: beyond the pan's `max_sustained_g` the pickup draws air; pressure is multiplied by an
+  aeration factor that falls from 1 to 0 over the next 0.15 g (surplus pump capacity does not help).
 - Leakage conductance `K = 1.157e−9 m³/(s·Pa) · (V/2.0 L) · (μ_100/μ) · (0.6·C + 0.4)`,
   `C = mean over main/rod bearings of (clearance·(1+wear) / 0.040 mm)³`.
 - `p_oil = Q/K`, capped by the relief valve (5 % slope above relief).
@@ -250,6 +251,49 @@ Failures:
   findings (bearing clearance, ring wear, spring sag, ...); `EngineDiagnostics.CompressionTestBar`
   gives a cranking compression figure that drops with ring wear, a blown gasket, bent valves.
 
+## Vehicle dynamics (`Vehicles/`)
+A planar (x, y, yaw) chassis coupled to the engine model. `VehicleSimulation.Step(dt)` runs the engine
+once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
+
+### Tyres (`TireModel`)
+- Normalised combined slip: `sx = κ/κ_peak`, `sy = tan α / tan α_peak`, `s = |(sx, sy)|`.
+- `F = µ(Fz)·Fz·sin(1.5·atan(B·s))` with B chosen so the peak is at s = 1; sliding force falls to
+  ≈ 77 % of peak at 10× peak slip (→ 71 %). Force is split along the slip direction (friction ellipse).
+- Load sensitivity: `µ = µ₀·(1 − k·log₂(Fz/3500 N))`, clamped to [0.3, 1.3]·µ₀.
+- Slip: `κ = (ω·r − u_w)/max(|u_w|, 2 m/s)`, `α = atan2(v_w, max(|u_w|, 2 m/s))` (low-speed guard).
+- Rolling radius from the size (`rim/2 + width·aspect`).
+
+### Chassis
+- Mass = curb mass + (fitted engine parts − factory engine parts) + (fitted chassis parts − factory);
+  engine mass changes act on the front axle. CG height moves with ride height (×0.8).
+- Body: `u̇ = F_x/m + r·v`, `v̇ = F_y/m − r·u`, `ṙ = M_z/I_z`; aero drag `½ρ·Cd·A·u|u|`.
+- Load transfer targets: longitudinal `−m·a_x·h/L`, lateral `m·a_y·h` split between axles by roll
+  stiffness `K_φ = k_wheel·t²/2 + ARB`. Both follow damped second-order responses whose natural
+  frequency and damping ratio come from spring rates, dampers and estimated roll/pitch inertia —
+  stiffer suspension transfers load faster; more front roll stiffness gives more understeer.
+- Steering: front wheels (no Ackermann), 50 ms actuator lag.
+
+### Driveline
+- Clutch: torque `clamp(K·(ω_engine − ω_gearbox), ±engagement·capacity)`, K = 0.8 × reduced inertia /
+  substep (stiff but stable). The engine is integrated on its side of the clutch with its rotating inertia.
+- Automatic clutch with manual gears: open in neutral and during shifts (shift time per gearbox, throttle
+  cut), slips to launch from rest (engagement rises with engine speed), opens to avoid stalling.
+- Gearbox efficiency applied to drive torque; gearbox input inertia reflected onto the driven wheels.
+- Differential: open (equal torque), clutch LSD (locking torque = preload + locking fraction × input
+  torque, accel/decel separately) or locked; implemented as a clamped coupling between the two wheels.
+- Brakes: per-wheel torque from pedal × per-axle maximum (no ABS; locking the fronts is possible);
+  handbrake on the rear; rolling resistance torque. Brake torque can stop but never reverse a wheel.
+
+### Engine coupling
+- The engine sees the crank speed imposed by the clutch — a missed downshift drags it past the rev
+  limiter (fuel cut cannot prevent it) and the damage model reacts (valve float, rods, ...).
+- Radiator air speed = vehicle speed + 2 m/s (fan). Sump acceleration = |(a_x, a_y)| (oil surge).
+
+### Calibration reference (stock Kestrel S2, street tyres)
+0–100 km/h ≈ 8.5 s, top speed ≈ 220 km/h (drag-limited), 100–0 ≈ 48 m threshold braking (with a
+0.3 s pedal ramp) vs ≈ 54 m locked, skidpad ≈ 0.9 g (≈ 1.15 g on semi-slicks), mild understeer at the
+limit. ≈ 40 µs per 2 ms step including the engine.
+
 ## Calibration reference (stock Kestrel K20, RON 95, 90 °C coolant)
 Pinned loosely by tests (`EngineOutputTests.StockEngineCalibration`):
 peak torque ≈ 189 N·m at ≈ 4000 rpm, peak power ≈ 110 kW (148 hp) at ≈ 7000–7500 rpm,
@@ -267,4 +311,7 @@ control, boost creep, intercooling, stock-ECU MAP saturation, overlap reversion 
 fatigue curve, survival within limits, over-rev → bent valves / flywheel / rods (weak-link order),
 detonation, knock control protection, inspection before failure, turbo on stock ECU, oil starvation
 and the baffled pan, overheating → blown gasket with power loss, turbo overspeed, repair restores
-the engine, report content, warnings, compression test, damage determinism.
+the engine, report content, warnings, compression test, damage determinism, tyre force shape,
+combined slip, load sensitivity, acceleration, top speed, gearing, threshold vs locked braking,
+compound grip, roll dynamics, LSD vs open differential, mass from parts, missed downshift over-rev,
+oil surge in sustained corners, driving determinism.

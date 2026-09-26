@@ -46,6 +46,28 @@ public static class ContentLoader
         public List<JsonElement>? Fuels { get; set; }
         public List<JsonElement>? Tunes { get; set; }
         public List<JsonElement>? Scenarios { get; set; }
+        public List<JsonElement>? Vehicles { get; set; }
+    }
+
+    private sealed class VehicleDto
+    {
+        public string? Id { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public string? Engine { get; set; }
+        public string? Drivetrain { get; set; }
+        public double CurbMassKg { get; set; }
+        public double FrontWeightFraction { get; set; }
+        public double WheelbaseM { get; set; }
+        public double TrackFrontM { get; set; }
+        public double TrackRearM { get; set; }
+        public double CgHeightM { get; set; }
+        public double YawInertiaKgM2 { get; set; }
+        public double DragCoefficient { get; set; } = 0.33;
+        public double FrontalAreaM2 { get; set; } = 1.9;
+        public double MaxSteerDeg { get; set; } = 32;
+        public List<SlotDto>? Slots { get; set; }
+        public Dictionary<string, string>? StockParts { get; set; }
     }
 
     private sealed class PartDto
@@ -95,6 +117,7 @@ public static class ContentLoader
         private readonly Dictionary<string, FuelDefinition> _fuels = new(StringComparer.Ordinal);
         private readonly Dictionary<string, TuneDocument> _tunes = new(StringComparer.Ordinal);
         private readonly Dictionary<string, ScenarioDefinition> _scenarios = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, Vehicles.VehicleDefinition> _vehicles = new(StringComparer.Ordinal);
 
         private void Error(string source, string id, string message) => _errors.Add(new ContentError(source, id, message));
 
@@ -117,6 +140,34 @@ public static class ContentLoader
             foreach (var e in file.Fuels ?? new()) AddFuel(source, e);
             foreach (var e in file.Tunes ?? new()) AddTune(source, e);
             foreach (var e in file.Scenarios ?? new()) AddScenario(source, e);
+            foreach (var e in file.Vehicles ?? new()) AddVehicle(source, e);
+        }
+
+        private void AddVehicle(string source, JsonElement element)
+        {
+            string peekId = PeekId(element);
+            VehicleDto? d;
+            try { d = element.Deserialize<VehicleDto>(ContentJson.Options); }
+            catch (JsonException ex) { Error(source, peekId, ex.Message); return; }
+            if (d == null || string.IsNullOrWhiteSpace(d.Id)) { Error(source, peekId, "Vehicle is missing 'id'."); return; }
+            var slots = new List<EngineSlotDefinition>();
+            foreach (var s in d.Slots ?? new())
+            {
+                if (string.IsNullOrWhiteSpace(s.Id) || string.IsNullOrWhiteSpace(s.Category)) { Error(source, d.Id, "Every slot needs 'id' and 'category'."); continue; }
+                if (!PartSpecRegistry.IsKnownCategory(s.Category)) Error(source, d.Id, $"Slot '{s.Id}' has unknown category '{s.Category}'.");
+                slots.Add(new EngineSlotDefinition { Id = s.Id, Category = s.Category, DisplayName = s.DisplayName ?? "", Required = s.Required, AccessibleInVehicle = true });
+            }
+            var v = new Vehicles.VehicleDefinition
+            {
+                Id = d.Id, Name = d.Name ?? d.Id, Description = d.Description ?? "", Engine = d.Engine ?? "", Drivetrain = d.Drivetrain ?? "rwd",
+                CurbMassKg = d.CurbMassKg, FrontWeightFraction = d.FrontWeightFraction, WheelbaseM = d.WheelbaseM, TrackFrontM = d.TrackFrontM,
+                TrackRearM = d.TrackRearM, CgHeightM = d.CgHeightM, YawInertiaKgM2 = d.YawInertiaKgM2, DragCoefficient = d.DragCoefficient,
+                FrontalAreaM2 = d.FrontalAreaM2, MaxSteerDeg = d.MaxSteerDeg, Slots = slots,
+                StockParts = d.StockParts ?? new Dictionary<string, string>(), Source = source,
+            };
+            foreach (var p in v.Validate()) Error(source, v.Id, p);
+            if (_vehicles.ContainsKey(v.Id)) { Error(source, v.Id, "Duplicate vehicle id."); return; }
+            _vehicles[v.Id] = v;
         }
 
         private void AddScenario(string source, JsonElement element)
@@ -308,7 +359,20 @@ public static class ContentLoader
                 foreach (var id in sc.Inventory)
                     if (!_parts.ContainsKey(id)) Error(sc.Source, sc.Id, $"inventory references unknown part '{id}'.");
             }
-            var db = new ContentDatabase(_parts, _engines, _fuels, _tunes, _scenarios);
+            foreach (var v in _vehicles.Values)
+            {
+                if (!_engines.ContainsKey(v.Engine)) Error(v.Source, v.Id, $"Unknown engine '{v.Engine}'.");
+                foreach (var (slotId, partId) in v.StockParts)
+                {
+                    var slot = v.FindSlot(slotId);
+                    if (slot == null) { Error(v.Source, v.Id, $"stock_parts references unknown slot '{slotId}'."); continue; }
+                    if (!_parts.TryGetValue(partId, out var part)) { Error(v.Source, v.Id, $"stock_parts['{slotId}'] references unknown part '{partId}'."); continue; }
+                    if (part.Category != slot.Category) Error(v.Source, v.Id, $"stock_parts['{slotId}'] is a '{part.Category}' but the slot takes '{slot.Category}'.");
+                }
+                foreach (var slot in v.Slots.Where(s => s.Required))
+                    if (!v.StockParts.ContainsKey(slot.Id)) Error(v.Source, v.Id, $"No stock part for required slot '{slot.Id}'.");
+            }
+            var db = new ContentDatabase(_parts, _engines, _fuels, _tunes, _scenarios, _vehicles);
             return new ContentLoadResult(db, _errors);
         }
     }

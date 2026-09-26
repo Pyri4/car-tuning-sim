@@ -1,0 +1,318 @@
+using CarSim.Core.Common;
+using CarSim.Core.Simulation;
+
+namespace CarSim.Core.Vehicles;
+
+/// <summary>
+/// Planar vehicle model coupled to the engine model. Each <see cref="Step"/> runs the engine once
+/// (speed-held at the current crank speed) and then <see cref="Substeps"/> driveline/chassis substeps:
+/// tyre forces from wheel slip, clutch and differential torques, brakes, wheel spin, body motion
+/// (surge, sway, yaw) and roll/pitch load transfer as damped second-order responses.
+/// </summary>
+public sealed class VehicleSimulation
+{
+    public const int Substeps = 8;
+    public const double AirDensity = 1.2;
+    public const double LowSpeedSlipReference = 2.0;
+    public const double HandbrakeTorqueNm = 1500.0;
+
+    private readonly double[] _wheelX = new double[4];
+    private readonly double[] _wheelY = new double[4];
+    private readonly double[] _fz = new double[4];
+    private readonly double[] _fx = new double[4];
+    private readonly double[] _fy = new double[4];
+    private readonly double[] _slipRatio = new double[4];
+    private readonly double[] _slipAngle = new double[4];
+    private readonly double[] _driveTorque = new double[4];
+
+    public VehicleSimulation(VehicleConfiguration config, EngineSimulation engine, VehicleState? state = null)
+    {
+        Config = config;
+        Engine = engine;
+        State = state ?? new VehicleState();
+        var c = config;
+        _wheelX[Wheel.FL] = _wheelX[Wheel.FR] = c.CgToFront;
+        _wheelX[Wheel.RL] = _wheelX[Wheel.RR] = -c.CgToRear;
+        _wheelY[Wheel.FL] = c.TrackFront / 2; _wheelY[Wheel.FR] = -c.TrackFront / 2;
+        _wheelY[Wheel.RL] = c.TrackRear / 2; _wheelY[Wheel.RR] = -c.TrackRear / 2;
+    }
+
+    public VehicleConfiguration Config { get; }
+    public EngineSimulation Engine { get; }
+    public VehicleState State { get; }
+    public VehicleTelemetry? Last { get; private set; }
+
+    public double IdleRpm => Engine.Ecu.Tune.IdleRpm;
+
+    private double WheelInertia(int w, int gear)
+    {
+        double i = Config.TireOf(w).InertiaKgM2;
+        if (Config.IsDriven(w) && gear != 0)
+        {
+            double g = Config.OverallRatio(gear);
+            i += Config.Gearbox.InputInertiaKgM2 * g * g / 2.0;
+        }
+        return i;
+    }
+
+    public VehicleTelemetry Step(double dt, VehicleInputs input)
+    {
+        var c = Config;
+        var s = State;
+        UpdateShifting(dt, input);
+
+        double throttle = s.ShiftTimer > 0 ? 0.0 : Math.Clamp(input.Throttle, 0, 1);
+        double speed = Math.Sqrt(s.U * s.U + s.V * s.V);
+        var engineInput = new EngineInputs
+        {
+            Throttle = throttle,
+            SpeedMode = SpeedMode.Held,
+            HeldRpm = Units.RadPerSecToRpm(s.EngineOmega),
+            Ignition = input.Ignition,
+            Starter = input.Starter,
+            CoolingAirSpeed = speed + 2.0,
+            SumpAccelerationG = Math.Sqrt(s.Ax * s.Ax + s.Ay * s.Ay) / PhysicalConstants.Gravity,
+        };
+        var et = Engine.Step(dt, engineInput);
+        double engineTorque = et.Torque;
+        bool seized = et.Seized;
+        double starter = input.Starter && !seized ? EngineSimulation.StarterTorqueNm * Math.Max(0.0, 1.0 - Units.RadPerSecToRpm(s.EngineOmega) / EngineSimulation.StarterFreeRpm) : 0.0;
+
+        UpdateClutch(dt, input, throttle);
+
+        double h = dt / Substeps;
+        double steerTarget = Math.Clamp(input.Steer, -1, 1) * c.MaxSteer;
+        s.SteerAngle += (steerTarget - s.SteerAngle) * MathUtil.LagFactor(dt, 0.05);
+        double ieng = Engine.Config.RotatingInertia;
+        double ratio = c.OverallRatio(s.Gear);
+        double eff = c.Gearbox.Efficiency;
+
+        for (int k = 0; k < Substeps; k++)
+        {
+            ComputeLoads();
+            double fxBody = 0, fyBody = 0, mz = 0;
+            for (int w = 0; w < 4; w++)
+            {
+                double delta = w < 2 ? s.SteerAngle : 0.0;
+                double uw = s.U - s.YawRate * _wheelY[w];
+                double vw = s.V + s.YawRate * _wheelX[w];
+                double cos = Math.Cos(delta), sin = Math.Sin(delta);
+                double ul = uw * cos + vw * sin;
+                double vl = -uw * sin + vw * cos;
+                var tire = c.TireOf(w);
+                double denom = Math.Max(Math.Abs(ul), LowSpeedSlipReference);
+                _slipRatio[w] = (s.WheelOmega[w] * tire.Radius - ul) / denom;
+                _slipAngle[w] = Math.Atan2(vl, denom);
+                var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w]);
+                _fx[w] = fx;
+                _fy[w] = fy;
+                double bx = fx * cos - fy * sin;
+                double by = fx * sin + fy * cos;
+                fxBody += bx;
+                fyBody += by;
+                mz += _wheelX[w] * by - _wheelY[w] * bx;
+            }
+            double drag = 0.5 * AirDensity * c.DragArea * s.U * Math.Abs(s.U);
+            fxBody -= drag;
+
+            // Driveline: clutch between engine and gearbox input, differential to the driven wheels.
+            int d0 = c.RearWheelDrive ? Wheel.RL : Wheel.FL, d1 = d0 + 1;
+            double carrierOmega = 0.5 * (s.WheelOmega[d0] + s.WheelOmega[d1]);
+            double gearboxOmega = carrierOmega * ratio;
+            double clutchTorque = 0.0;
+            if (ratio != 0.0 && s.Clutch > 0.0)
+            {
+                double iDrive = c.Gearbox.InputInertiaKgM2 + (c.TireOf(d0).InertiaKgM2 * 2) / (ratio * ratio);
+                double reduced = seized ? iDrive : ieng * iDrive / (ieng + iDrive);
+                double kc = 0.8 * reduced / h;
+                double capacity = s.Clutch * c.Clutch.MaxTorqueNm;
+                clutchTorque = Math.Clamp(kc * (s.EngineOmega - gearboxOmega), -capacity, capacity);
+            }
+            double carrierTorque = clutchTorque * ratio * (clutchTorque * ratio >= 0 ? eff : 1.0 / eff);
+            double bias = DifferentialBias(carrierTorque, s.WheelOmega[d0], s.WheelOmega[d1], h);
+            for (int w = 0; w < 4; w++) _driveTorque[w] = 0.0;
+            _driveTorque[d0] = 0.5 * carrierTorque + 0.5 * bias;
+            _driveTorque[d1] = 0.5 * carrierTorque - 0.5 * bias;
+
+            // Wheels.
+            for (int w = 0; w < 4; w++)
+            {
+                var tire = c.TireOf(w);
+                double inertia = WheelInertia(w, s.Gear);
+                double brakeTorque = input.Brake * (w < 2 ? c.Brakes.FrontMaxTorqueNm : c.Brakes.RearMaxTorqueNm)
+                                     + (w >= 2 ? input.Handbrake * HandbrakeTorqueNm : 0.0)
+                                     + _fz[w] * tire.RollingResistance * tire.Radius;
+                double net = _driveTorque[w] - _fx[w] * tire.Radius;
+                double omega = s.WheelOmega[w];
+                double predicted = omega + net / inertia * h;
+                double brakeStep = brakeTorque / inertia * h;
+                if (Math.Abs(predicted) <= brakeStep) s.WheelOmega[w] = 0.0;
+                else s.WheelOmega[w] = predicted - Math.Sign(predicted) * brakeStep;
+            }
+
+            // Engine side of the clutch.
+            if (seized) s.EngineOmega = 0.0;
+            else s.EngineOmega = Math.Max(0.0, s.EngineOmega + (engineTorque + starter - clutchTorque) / ieng * h);
+
+            // Body.
+            s.Ax = fxBody / c.Mass;
+            s.Ay = fyBody / c.Mass;
+            double du = s.Ax + s.YawRate * s.V;
+            double dv = s.Ay - s.YawRate * s.U;
+            s.U += du * h;
+            s.V += dv * h;
+            s.YawRate += mz / c.YawInertia * h;
+            // Parked: kill numerical creep when nothing is driving the car.
+            if (Math.Abs(s.U) < 0.05 && Math.Abs(s.V) < 0.05 && throttle < 0.01 && clutchTorque == 0.0 && input.Brake > 0.05)
+            {
+                s.U = s.V = s.YawRate = 0.0;
+            }
+            double cosH = Math.Cos(s.Heading), sinH = Math.Sin(s.Heading);
+            s.X += (s.U * cosH - s.V * sinH) * h;
+            s.Y += (s.U * sinH + s.V * cosH) * h;
+            s.Heading += s.YawRate * h;
+            s.Distance += Math.Sqrt(s.U * s.U + s.V * s.V) * h;
+
+            // Load transfer targets and second-order suspension response.
+            double longTarget = -c.Mass * s.Ax * c.CgHeight / c.Wheelbase;
+            double latTarget = c.Mass * s.Ay * c.CgHeight;
+            Filter(ref s.LongTransfer, ref s.LongTransferRate, longTarget, c.PitchFrequency, c.PitchDampingRatio, h);
+            Filter(ref s.LatTransfer, ref s.LatTransferRate, latTarget, c.RollFrequency, c.RollDampingRatio, h);
+
+            if (k == Substeps - 1)
+            {
+                Last = BuildTelemetry(et, throttle, input, gearboxOmega);
+            }
+        }
+        s.Time += dt;
+        return Last!;
+    }
+
+    private static void Filter(ref double x, ref double rate, double target, double wn, double zeta, double h)
+    {
+        double acc = wn * wn * (target - x) - 2.0 * zeta * wn * rate;
+        rate += acc * h;
+        x += rate * h;
+    }
+
+    /// <summary>Differential locking torque passed from the faster to the slower wheel.</summary>
+    private double DifferentialBias(double carrierTorque, double omegaLeft, double omegaRight, double h)
+    {
+        var d = Config.Differential;
+        double limit = d.Type switch
+        {
+            "locked" => 1e5,
+            "clutch_lsd" => d.PreloadNm + (carrierTorque >= 0 ? d.LockingAccel : d.LockingDecel) * Math.Abs(carrierTorque),
+            _ => 0.0,
+        };
+        if (limit <= 0) return 0.0;
+        var tire = Config.RearWheelDrive ? Config.TiresRear : Config.TiresFront;
+        double kd = 0.8 * (tire.InertiaKgM2 / 2.0) / h;
+        return Math.Clamp(kd * (omegaRight - omegaLeft), -limit, limit);
+    }
+
+    private void ComputeLoads()
+    {
+        var c = Config;
+        var s = State;
+        double weight = c.Mass * PhysicalConstants.Gravity;
+        double front = weight * c.CgToRear / c.Wheelbase + s.LongTransfer;
+        double rear = weight * c.CgToFront / c.Wheelbase - s.LongTransfer;
+        double latF = s.LatTransfer * c.FrontRollShare / c.TrackFront;
+        double latR = s.LatTransfer * (1 - c.FrontRollShare) / c.TrackRear;
+        // Positive lateral acceleration (turning left) loads the right-hand wheels.
+        _fz[Wheel.FL] = Math.Max(0, front / 2 - latF);
+        _fz[Wheel.FR] = Math.Max(0, front / 2 + latF);
+        _fz[Wheel.RL] = Math.Max(0, rear / 2 - latR);
+        _fz[Wheel.RR] = Math.Max(0, rear / 2 + latR);
+    }
+
+    private void UpdateShifting(double dt, VehicleInputs input)
+    {
+        var s = State;
+        int top = Config.Gearbox.Ratios.Count;
+        if (s.ShiftTimer <= 0)
+        {
+            int target = s.Gear;
+            if (input.ShiftUp && s.Gear < top) target = s.Gear + 1;
+            else if (input.ShiftDown)
+            {
+                if (s.Gear > 1 || s.Gear == 1) target = s.Gear - 1;
+                else if (s.Gear == 0 && Math.Abs(s.U) < 1.0) target = -1;
+            }
+            if (target != s.Gear)
+            {
+                s.PendingGear = target;
+                s.ShiftTimer = Config.Gearbox.ShiftTimeS;
+            }
+        }
+        else
+        {
+            double before = s.ShiftTimer;
+            s.ShiftTimer = Math.Max(0, s.ShiftTimer - dt);
+            if (before > Config.Gearbox.ShiftTimeS / 2 && s.ShiftTimer <= Config.Gearbox.ShiftTimeS / 2) s.Gear = s.PendingGear;
+        }
+    }
+
+    /// <summary>
+    /// Automatic clutch (manual gears): open during shifts and in neutral, slips to launch from rest,
+    /// opens to avoid stalling, otherwise fully engaged.
+    /// </summary>
+    private void UpdateClutch(double dt, VehicleInputs input, double throttle)
+    {
+        var s = State;
+        double target;
+        double rpm = Units.RadPerSecToRpm(s.EngineOmega);
+        double ratio = Config.OverallRatio(s.Gear);
+        int d0 = Config.RearWheelDrive ? Wheel.RL : Wheel.FL;
+        double gearboxRpm = Units.RadPerSecToRpm(0.5 * (s.WheelOmega[d0] + s.WheelOmega[d0 + 1]) * ratio);
+        if (s.ShiftTimer > 0 || s.Gear == 0) target = 0.0;
+        else if (rpm < IdleRpm * 0.85 && Math.Abs(gearboxRpm) < rpm + 50) target = 0.0;
+        else if (rpm - Math.Abs(gearboxRpm) > 150 && Math.Abs(gearboxRpm) < 2500)
+            target = MathUtil.SmoothStep(IdleRpm + 150, IdleRpm + 1800, rpm) * (throttle > 0.02 ? 1.0 : 0.3);
+        else target = 1.0;
+        double rate = target > s.Clutch ? 4.0 : 25.0;
+        s.Clutch += Math.Clamp(target - s.Clutch, -rate * dt, rate * dt);
+    }
+
+    private VehicleTelemetry BuildTelemetry(EngineTelemetry et, double throttle, VehicleInputs input, double gearboxOmega)
+    {
+        var s = State;
+        var t = new VehicleTelemetry
+        {
+            Time = s.Time,
+            Speed = Math.Sqrt(s.U * s.U + s.V * s.V),
+            Gear = s.Gear,
+            EngineRpm = Units.RadPerSecToRpm(s.EngineOmega),
+            Throttle = throttle,
+            Brake = input.Brake,
+            Steer = s.SteerAngle,
+            Clutch = s.Clutch,
+            ClutchSlipRpm = Units.RadPerSecToRpm(s.EngineOmega - gearboxOmega),
+            LongitudinalG = s.Ax / PhysicalConstants.Gravity,
+            LateralG = s.Ay / PhysicalConstants.Gravity,
+            YawRate = s.YawRate,
+            BodySlipAngle = Math.Abs(s.U) > 1 ? Math.Atan2(s.V, Math.Abs(s.U)) : 0.0,
+            X = s.X, Y = s.Y, Heading = s.Heading, Distance = s.Distance,
+            Engine = et,
+        };
+        for (int w = 0; w < 4; w++)
+        {
+            t.WheelLoad[w] = _fz[w];
+            t.SlipRatio[w] = _slipRatio[w];
+            t.SlipAngle[w] = _slipAngle[w];
+            t.WheelSpeed[w] = s.WheelOmega[w] * Config.TireOf(w).Radius;
+            double available = TireModel.Friction(Config.TireOf(w), _fz[w]) * _fz[w];
+            t.TyreUsage[w] = available > 0 ? Math.Sqrt(_fx[w] * _fx[w] + _fy[w] * _fy[w]) / available : 0.0;
+        }
+        return t;
+    }
+
+    /// <summary>Places the car at rest with the engine idling in neutral.</summary>
+    public void StartIdling()
+    {
+        State.EngineOmega = Units.RpmToRadPerSec(IdleRpm);
+        Engine.State.Running = true;
+        Engine.State.Omega = State.EngineOmega;
+    }
+}

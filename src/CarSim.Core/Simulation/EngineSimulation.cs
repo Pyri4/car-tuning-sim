@@ -27,6 +27,9 @@ public sealed class EngineSimulation
     public const double ReferenceBearingClearance = 0.040e-3;
     public const double OilPumpVolumetricEfficiency = 0.9;
 
+    /// <summary>Acceleration beyond the oil pan's rating over which oil pressure collapses completely, g.</summary>
+    public const double OilSurgeWindowG = 0.15;
+
     /// <summary>Heat exchange between oil and coolant through the block, head and oil/water cooler, W/K.</summary>
     public const double OilToCoolantConductance = 400.0;
 
@@ -256,10 +259,12 @@ public sealed class EngineSimulation
         double bearingLoad = Math.Max(compressive, inertiaLoad);
 
         // ---- Oil ----
-        double supply = input.SumpAccelerationG > c.OilPan.MaxSustainedG
-            ? MathUtil.Clamp01(1.0 - (input.SumpAccelerationG - c.OilPan.MaxSustainedG) / 0.3)
+        // Oil surge: once the pickup uncovers, the pump draws air and pressure collapses however much
+        // surplus capacity the pump has.
+        double aeration = input.SumpAccelerationG > c.OilPan.MaxSustainedG
+            ? MathUtil.Clamp01(1.0 - (input.SumpAccelerationG - c.OilPan.MaxSustainedG) / OilSurgeWindowG)
             : 1.0;
-        double oilPressure = OilPressure(rpm, s.OilTemperature, supply);
+        double oilPressure = OilPressure(rpm, s.OilTemperature, 1.0) * aeration;
 
         // ---- Thermal integration ----
         double coolingAir = Math.Max(0.0, input.CoolingAirSpeed);

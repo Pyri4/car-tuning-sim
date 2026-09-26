@@ -30,4 +30,12 @@ public static class PartCategory
     public const string Radiator = "radiator";
     public const string Flywheel = "flywheel";
     public const string Ecu = "ecu";
+
+    // Chassis / drivetrain (vehicle slots).
+    public const string Clutch = "clutch";
+    public const string Gearbox = "gearbox";
+    public const string Differential = "differential";
+    public const string Tires = "tires";
+    public const string Suspension = "suspension";
+    public const string Brakes = "brakes";
 }

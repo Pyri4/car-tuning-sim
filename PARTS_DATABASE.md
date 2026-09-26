@@ -8,7 +8,8 @@ the code is right and this file must be fixed.
 ## Files and loading
 - Content lives under `content/<root>/` (base game: `content/base/`). Every `*.json` file below the
   root is loaded, in ordinal path order.
-- A file is an object with any of these arrays: `parts`, `engines`, `fuels`, `tunes`, `scenarios`.
+- A file is an object with any of these arrays: `parts`, `engines`, `fuels`, `tunes`, `scenarios`,
+  `vehicles`.
 - JSON is **snake_case**. `//` and `/* */` comments and trailing commas are allowed.
 - **Unknown fields are errors** (catches typos such as `bore_m`). Missing required fields are errors.
 - The loader collects *all* errors (file, item id, message) instead of stopping at the first.
@@ -146,6 +147,26 @@ Turbos `require` a flange interface (`turbo_flange.t25`, `turbo_flange.t3`) and 
 ### `intercooler`
 `effectiveness` (at `reference_flow_kg_s`), `reference_flow_kg_s`, `flow_cfm` (pressure drop).
 Requires `boost.source`.
+
+### Chassis categories (vehicle slots)
+- `clutch`: `max_torque_nm`.
+- `gearbox`: `ratios` (forward, first gear first), `reverse_ratio`, `efficiency`, `max_torque_nm`,
+  `shift_time_s`, `input_inertia_kg_m2`.
+- `differential`: `final_drive_ratio`, `type` (`open` | `clutch_lsd` | `locked`), `preload_nm`,
+  `locking_accel`, `locking_decel` (0–1), `max_torque_nm`.
+- `tires` (a pair, one axle): `width_mm`, `aspect_ratio`, `rim_diameter_in`, `peak_friction`,
+  `load_sensitivity`, `peak_slip_ratio`, `peak_slip_angle_deg`, `rolling_resistance`, `inertia_kg_m2`
+  (per wheel), `compound`.
+- `suspension`: `front_spring_n_mm`, `rear_spring_n_mm` (wheel rates), `front_damper_ns_m`,
+  `rear_damper_ns_m` (per wheel), `front_arb_nm_deg`, `rear_arb_nm_deg`, `ride_height_offset_mm`.
+- `brakes`: `front_max_torque_nm`, `rear_max_torque_nm` (per wheel at full pedal).
+
+## Vehicles (`vehicles`)
+`id`, `name`, `description`, `engine` (engine family id), `drivetrain` (`rwd`|`fwd`), `curb_mass_kg`
+and `front_weight_fraction` (factory build), `wheelbase_m`, `track_front_m`, `track_rear_m`,
+`cg_height_m`, `yaw_inertia_kg_m2`, `drag_coefficient`, `frontal_area_m2`, `max_steer_deg`,
+`slots` (must include `clutch`, `gearbox`, `differential`, `tires_front`, `tires_rear`, `suspension`,
+`brakes`), `stock_parts`.
 
 ## Engine families (`engines`)
 

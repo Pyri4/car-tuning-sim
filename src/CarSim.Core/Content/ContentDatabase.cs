@@ -12,14 +12,21 @@ public sealed class ContentDatabase
         IReadOnlyDictionary<string, EngineDefinition> engines,
         IReadOnlyDictionary<string, FuelDefinition> fuels,
         IReadOnlyDictionary<string, TuneDocument> tunes,
-        IReadOnlyDictionary<string, ScenarioDefinition>? scenarios = null)
+        IReadOnlyDictionary<string, ScenarioDefinition>? scenarios = null,
+        IReadOnlyDictionary<string, Vehicles.VehicleDefinition>? vehicles = null)
     {
+        Vehicles = vehicles ?? new Dictionary<string, Vehicles.VehicleDefinition>();
         Parts = parts;
         Engines = engines;
         Fuels = fuels;
         Tunes = tunes;
         Scenarios = scenarios ?? new Dictionary<string, ScenarioDefinition>();
     }
+
+    public IReadOnlyDictionary<string, Vehicles.VehicleDefinition> Vehicles { get; }
+
+    public Vehicles.VehicleDefinition GetVehicle(string id) =>
+        Vehicles.TryGetValue(id, out var v) ? v : throw new KeyNotFoundException($"Unknown vehicle id '{id}'.");
 
     /// <summary>Starting situations for a new game (which car, how worn, how much money).</summary>
     public IReadOnlyDictionary<string, ScenarioDefinition> Scenarios { get; }

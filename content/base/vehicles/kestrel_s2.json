@@ -1,0 +1,39 @@
+{
+  "vehicles": [
+    {
+      "id": "kestrel_s2",
+      "name": "Kestrel S2 coupe",
+      "description": "Front-engined, rear-drive two-seater. Near 50:50 balance, a willing K20 and a chassis that rewards setup work.",
+      "engine": "kestrel_k20",
+      "drivetrain": "rwd",
+      "curb_mass_kg": 1250,
+      "front_weight_fraction": 0.50,
+      "wheelbase_m": 2.40,
+      "track_front_m": 1.47,
+      "track_rear_m": 1.51,
+      "cg_height_m": 0.46,
+      "yaw_inertia_kg_m2": 1850,
+      "drag_coefficient": 0.35,
+      "frontal_area_m2": 1.85,
+      "max_steer_deg": 30,
+      "slots": [
+        { "id": "clutch", "category": "clutch", "display_name": "Clutch" },
+        { "id": "gearbox", "category": "gearbox", "display_name": "Gearbox" },
+        { "id": "differential", "category": "differential", "display_name": "Differential" },
+        { "id": "tires_front", "category": "tires", "display_name": "Front tyres" },
+        { "id": "tires_rear", "category": "tires", "display_name": "Rear tyres" },
+        { "id": "suspension", "category": "suspension", "display_name": "Suspension" },
+        { "id": "brakes", "category": "brakes", "display_name": "Brakes" }
+      ],
+      "stock_parts": {
+        "clutch": "clutch.oem",
+        "gearbox": "gearbox.kestrel_6mt",
+        "differential": "differential.open_410",
+        "tires_front": "tires.street_205_55r16",
+        "tires_rear": "tires.street_225_50r16",
+        "suspension": "suspension.oem",
+        "brakes": "brakes.oem"
+      }
+    }
+  ]
+}

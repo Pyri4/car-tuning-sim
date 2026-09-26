@@ -30,6 +30,12 @@ public static class PartSpecRegistry
         [PartCategory.Ecu] = typeof(EcuSpec),
         [PartCategory.Turbocharger] = typeof(TurbochargerSpec),
         [PartCategory.Intercooler] = typeof(IntercoolerSpec),
+        [PartCategory.Clutch] = typeof(ClutchSpec),
+        [PartCategory.Gearbox] = typeof(GearboxSpec),
+        [PartCategory.Differential] = typeof(DifferentialSpec),
+        [PartCategory.Tires] = typeof(TireSpec),
+        [PartCategory.Suspension] = typeof(SuspensionSpec),
+        [PartCategory.Brakes] = typeof(BrakeSpec),
     };
 
     public static bool TryGetSpecType(string category, out Type specType) =>

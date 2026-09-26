@@ -99,7 +99,8 @@ beyond the content loader. Namespaces:
 - `CarSim.Core.Dyno` – incremental dyno runner (sweep/steady-state), run records, comparison, CSV.
 - `CarSim.Core.Damage` – stress evaluation, fatigue accumulation, failures, diagnostic reports,
   inspection findings, warnings.
-- `CarSim.Core.Vehicles` *(planned)* – drivetrain, gearbox, differential, tires, chassis state.
+- `CarSim.Core.Vehicles` – vehicle definitions and chassis assemblies, tyre model, planar vehicle
+  dynamics with load transfer, clutch/gearbox/differential driveline, brakes, engine coupling.
 
 ### Domain / data
 Content (parts, engines, fuels, tunes, vehicles) is JSON under `content/`. Definitions are immutable
@@ -112,9 +113,13 @@ access rule, buy/sell), data-defined new-game scenarios (`content/base/scenarios
 JSON save/load (`SaveSystem`). Jobs, reputation and a parts market are planned.
 
 ### Physics
-The engine and drivetrain models are ours (in the core). Vehicle rigid-body motion and collision will
-use Godot/Jolt; tire forces will be computed by the core and applied as forces to Godot bodies
-through a thin adapter in `game/`. *(planned)*
+Decision (2026-09-26): vehicle dynamics run **in the core**, not in Godot's physics engine. The test
+facility is flat, and a deterministic planar model with load transfer captures what the game is about
+(gearing, differential, tyres, suspension balance, weight, power) while staying unit-testable
+(0–100, braking distance, skidpad, LSD behaviour are all tested without Godot). Godot renders the
+car from the core's pose and handles presentation. If terrain, kerbs or collisions become important,
+the planned path is to add vertical dynamics per corner in the core and use Godot/Jolt only for
+collision queries (ray casts against the track mesh) feeding the core.
 
 ### Presentation (`game/`)
 Godot scenes and C# scripts that display core state and send player intent to the core. Scripts
@@ -213,3 +218,5 @@ reports all missing content at once (e.g. a removed mod).
 | 2026-09-26 | Mean-value engine model, fixed timestep | Captures torque/airflow/thermal/turbo behaviour cheaply and deterministically; extensible |
 | 2026-09-26 | Parts sold/installed as sets per slot (e.g. a set of 4 pistons), single condition per set | Keeps the first prototype small; per-cylinder state is a later extension |
 | 2026-09-26 | Assembly order defined as data (`install_after` graph per engine family) | Disassembly/reassembly gameplay without hardcoded sequences |
+| 2026-09-26 | Vehicle dynamics in the core (planar + load transfer), Godot renders | Deterministic, testable; flat test track needs no 3D physics |
+| 2026-09-26 | Dyno pulls end at the rev limiter | An absorption dyno cannot motor the engine; over-revs come from tuning or missed shifts |
