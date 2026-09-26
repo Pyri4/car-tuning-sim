@@ -172,7 +172,7 @@ public static class AssemblyValidator
                     gasketSlot);
             if (head != null && cams != null && head.Valvetrain != cams.Valvetrain && !issues.Any(i => i.Code == "valvetrain_mismatch" && i.Slots.Contains(camSlot) && i.Slots.Contains(headSlot)))
                 Add(IssueSeverity.Error, "valvetrain_mismatch",
-                    $"{On(b)}the cylinder head is {ValvetrainTypes.Describe(head.Valvetrain)}, but the camshafts fitted are for an {ValvetrainTypes.Describe(cams.Valvetrain)} valvetrain.",
+                    $"{On(b)}the cylinder head is built for a {ValvetrainTypes.Describe(head.Valvetrain)} valvetrain, but the camshafts fitted are {ValvetrainTypes.Describe(cams.Valvetrain)} camshafts: they cannot work together.",
                     headSlot, camSlot);
             if (cams != null && springs != null && cams.MaxLiftMm > springs.MaxLiftMm && !issues.Any(i => i.Code == "coil_bind" && i.Slots.Contains(camSlot) && i.Slots.Contains(springSlot)))
                 Add(IssueSeverity.Error, "coil_bind",

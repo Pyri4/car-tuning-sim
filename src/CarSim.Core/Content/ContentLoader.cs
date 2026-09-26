@@ -443,7 +443,15 @@ public static class ContentLoader
                 if (sc.Vehicle.Length > 0)
                 {
                     if (!_vehicles.TryGetValue(sc.Vehicle, out vehicle)) Error(sc.Source, sc.Id, $"Unknown vehicle '{sc.Vehicle}'.");
-                    else if (vehicle.Engine != sc.Engine) Error(sc.Source, sc.Id, $"Vehicle '{sc.Vehicle}' takes engine '{vehicle.Engine}', not '{sc.Engine}'.");
+                    else
+                    {
+                        // Any engine whose stock parts provide what the car's stock parts require fits (an engine swap is
+                        // an interface question, not an engine id).
+                        var engineParts = engine.StockParts.Where(kv => _parts.ContainsKey(kv.Value)).Select(kv => (kv.Key, _parts[kv.Value]));
+                        var carParts = vehicle.StockParts.Where(kv => _parts.ContainsKey(kv.Value)).Select(kv => (kv.Key, _parts[kv.Value]));
+                        foreach (var problem in Vehicles.VehicleCompatibility.InterfaceProblems(engineParts, carParts, $"engine '{sc.Engine}'"))
+                            Error(sc.Source, sc.Id, $"Vehicle '{sc.Vehicle}' cannot take engine '{sc.Engine}': {problem}");
+                    }
                 }
                 bool KnownSlot(string slot) => engine.FindSlot(slot) != null || vehicle?.FindSlot(slot) != null;
                 if (!_fuels.ContainsKey(sc.Fuel)) Error(sc.Source, sc.Id, $"Unknown fuel '{sc.Fuel}'.");

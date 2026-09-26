@@ -7,6 +7,7 @@
       "spec": { "max_torque_nm": 400, "fade_start_c": 250, "life_mj": 150, "heat_capacity_j_per_k": 5000 } },
 
     { "id": "gearbox.isar_5mt", "name": "Isar 5-speed manual", "category": "gearbox", "manufacturer": "Isar", "price": 2100, "mass_kg": 36,
+      "requires": ["m54.bellhousing"],
       "description": "Long-legged five-speed with a direct fifth. Rated for 480 N·m.",
       "spec": { "ratios": [4.21, 2.49, 1.66, 1.24, 1.00], "reverse_ratio": 3.85, "efficiency": 0.95, "max_torque_nm": 480, "shift_time_s": 0.28, "input_inertia_kg_m2": 0.025 } },
 

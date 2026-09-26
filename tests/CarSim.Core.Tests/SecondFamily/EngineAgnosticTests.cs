@@ -262,11 +262,12 @@ public class EngineAgnosticTests
     [Fact]
     public void NoEngineIdentityOrEngineSpecificBranchInSimulationCode()
     {
-        var db = TestContent.Database;
+        // Every content id of the base game and of the synthetic engine matrix (ENGINE_AUTHORING_GUIDE.md).
+        var db = TestContent.Matrix;
         var identities = db.Engines.Keys.Concat(db.Parts.Keys).Concat(db.Tunes.Keys).Concat(db.Vehicles.Keys).Concat(db.Scenarios.Keys)
             .Concat(db.Parts.Values.SelectMany(p => p.Provides.Concat(p.Requires)))
             .Distinct().ToList();
-        var familyTokens = new Regex(@"(?<![A-Za-z0-9])(k20|m54|kestrel_k20|isar_m54)(?![A-Za-z0-9])", RegexOptions.IgnoreCase);
+        var familyTokens = new Regex(@"(?<![A-Za-z0-9])(k20|m54|kestrel_k20|isar_m54|syn_[a-z0-9_]+)(?![A-Za-z0-9])", RegexOptions.IgnoreCase);
         // A comparison of an engine's size against a specific number (not a > 0 sanity check) would be a hidden special case.
         var countBranch = new Regex(@"\b(Cylinders|Displacement|DisplacementCc|BoreMm|StrokeMm)\s*(==|!=|<=|>=|<|>)\s*(0\.0*[1-9]|[2-9]|[1-9][0-9])");
         var files = new[] { "src/CarSim.Core", "src/CarSim.Gameplay" }

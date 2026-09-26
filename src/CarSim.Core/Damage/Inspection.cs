@@ -117,24 +117,36 @@ public static class PartInspector
 public static class EngineDiagnostics
 {
     /// <summary>
-    /// Cranking compression pressure (gauge, bar). Healthy K20: ~13–14 bar. Worn rings, a blown gasket,
-    /// bent valves or a holed piston all show up here.
+    /// Cranking compression pressure (gauge, bar): the lowest bank's reading (what the mechanic writes down first).
+    /// Healthy K20: ~13–14 bar. Worn rings, a blown gasket, bent valves or a holed piston all show up here.
     /// </summary>
-    public static double CompressionTestBar(EngineAssembly a)
+    public static double CompressionTestBar(EngineAssembly a) =>
+        CompressionTestByBank(a) is { Count: > 0 } banks ? banks.Min() : 0.0;
+
+    /// <summary>
+    /// Cranking compression pressure per bank (gauge, bar; bank declaration order). A failed gasket or head shows on
+    /// its own bank's cylinders; the pistons, rods and rings are one set and show on every bank.
+    /// </summary>
+    public static IReadOnlyList<double> CompressionTestByBank(EngineAssembly a)
     {
         var g = EngineGeometry.TryCreate(a, out _);
-        if (g == null) return 0.0;
+        if (g == null) return Array.Empty<double>();
         // Cranking speed is slow, so the effective compression is lower than the static ratio suggests.
         double absolute = 1.0 * Math.Pow(g.CompressionRatio, 1.2) * 0.85;
-        double factor = 1.0;
-        var pistons = a.FindByCategory(PartCategory.Pistons);
-        if (pistons != null) factor *= 1.0 - 0.3 * pistons.Wear;
-        if (pistons?.IsFailed == true) factor *= 0.1;
-        if (a.FindByCategory(PartCategory.HeadGasket)?.IsFailed == true) factor *= 0.35;
-        var head = a.FindByCategory(PartCategory.CylinderHead);
-        if (head?.Damage.Failure?.Mode == FailureMode.ValvePistonContact) factor *= 0.15;
-        if (head?.Damage.Failure?.Mode == FailureMode.CylinderHeadWarp) factor *= 0.6;
-        if (a.FindByCategory(PartCategory.ConnectingRods)?.IsFailed == true) factor = 0.0;
-        return Math.Max(0.0, absolute * factor - 1.0);
+        var result = new double[a.Definition.Banks.Count];
+        for (int b = 0; b < result.Length; b++)
+        {
+            double factor = 1.0;
+            var pistons = a.FindByCategory(PartCategory.Pistons);
+            if (pistons != null) factor *= 1.0 - 0.3 * pistons.Wear;
+            if (pistons?.IsFailed == true) factor *= 0.1;
+            if (a.PartFor(PartCategory.HeadGasket, b)?.IsFailed == true) factor *= 0.35;
+            var head = a.PartFor(PartCategory.CylinderHead, b);
+            if (head?.Damage.Failure?.Mode == FailureMode.ValvePistonContact) factor *= 0.15;
+            if (head?.Damage.Failure?.Mode == FailureMode.CylinderHeadWarp) factor *= 0.6;
+            if (a.FindByCategory(PartCategory.ConnectingRods)?.IsFailed == true) factor = 0.0;
+            result[b] = Math.Max(0.0, absolute * factor - 1.0);
+        }
+        return result;
     }
 }

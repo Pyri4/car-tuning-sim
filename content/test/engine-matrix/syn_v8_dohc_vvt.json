@@ -1,0 +1,422 @@
+// Synthetic engine matrix: content-only test engines proving that families are data (ENGINE_AUTHORING_GUIDE.md).
+// Generated once from a spec sheet, then calibrated with the dev tools; no simulation code knows these ids.
+{
+  "engines": [
+    {
+      "id": "syn_v8_dohc_vvt",
+      "name": "Synth V8 4.0 DOHC VVT",
+      "cylinders": 8,
+      "layout": "v",
+      "bank_angle_deg": 90,
+      "banks": [{"id": "left", "cylinders": [1, 3, 5, 7]}, {"id": "right", "cylinders": [2, 4, 6, 8]}],
+      "firing_order": [1, 8, 4, 3, 6, 5, 7, 2],
+      "description": "4.0-litre 90° V8, 32 valves, mirror-image heads, intake cam phasers on both banks (synthetic test content).",
+      "slots": [
+        {"id": "block", "category": "block", "display_name": "Cylinder block"},
+        {"id": "main_bearings", "category": "main_bearings", "display_name": "Main bearings", "install_after": ["block"]},
+        {"id": "crankshaft", "category": "crankshaft", "display_name": "Crankshaft", "install_after": ["main_bearings"]},
+        {"id": "rod_bearings", "category": "rod_bearings", "display_name": "Rod bearings", "install_after": ["crankshaft"]},
+        {"id": "connecting_rods", "category": "connecting_rods", "display_name": "Connecting rods", "install_after": ["rod_bearings"]},
+        {"id": "pistons", "category": "pistons", "display_name": "Pistons", "install_after": ["connecting_rods"]},
+        {"id": "oil_pump", "category": "oil_pump", "display_name": "Oil pump", "install_after": ["crankshaft"]},
+        {"id": "oil_pan", "category": "oil_pan", "display_name": "Sump", "install_after": ["oil_pump", "connecting_rods"]},
+        {"id": "flywheel", "category": "flywheel", "display_name": "Flywheel", "install_after": ["crankshaft"]},
+        {
+          "id": "head_gasket_left",
+          "category": "head_gasket",
+          "display_name": "Head gasket (left)",
+          "banks": ["left"],
+          "install_after": ["pistons"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "head_gasket_right",
+          "category": "head_gasket",
+          "display_name": "Head gasket (right)",
+          "banks": ["right"],
+          "install_after": ["pistons"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "cylinder_head_left",
+          "category": "cylinder_head",
+          "display_name": "Cylinder head (left)",
+          "banks": ["left"],
+          "install_after": ["head_gasket_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "cylinder_head_right",
+          "category": "cylinder_head",
+          "display_name": "Cylinder head (right)",
+          "banks": ["right"],
+          "install_after": ["head_gasket_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "valve_springs_left",
+          "category": "valve_springs",
+          "display_name": "Valve springs (left)",
+          "banks": ["left"],
+          "install_after": ["cylinder_head_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "valve_springs_right",
+          "category": "valve_springs",
+          "display_name": "Valve springs (right)",
+          "banks": ["right"],
+          "install_after": ["cylinder_head_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "camshafts_left",
+          "category": "camshafts",
+          "display_name": "Camshafts (left)",
+          "banks": ["left"],
+          "install_after": ["valve_springs_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "camshafts_right",
+          "category": "camshafts",
+          "display_name": "Camshafts (right)",
+          "banks": ["right"],
+          "install_after": ["valve_springs_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "intake_manifold",
+          "category": "intake_manifold",
+          "display_name": "Intake manifold",
+          "install_after": ["cylinder_head_left", "cylinder_head_right"],
+          "accessible_in_vehicle": true
+        },
+        {"id": "throttle_body", "category": "throttle_body", "display_name": "Throttle body", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "injectors", "category": "injectors", "display_name": "Fuel injectors", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "fuel_pump", "category": "fuel_pump", "display_name": "Fuel pump", "accessible_in_vehicle": true},
+        {
+          "id": "exhaust_manifold_left",
+          "category": "exhaust_manifold",
+          "display_name": "Exhaust manifold (left)",
+          "banks": ["left"],
+          "install_after": ["cylinder_head_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "exhaust_manifold_right",
+          "category": "exhaust_manifold",
+          "display_name": "Exhaust manifold (right)",
+          "banks": ["right"],
+          "install_after": ["cylinder_head_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "exhaust",
+          "category": "exhaust",
+          "display_name": "Exhaust system",
+          "install_after": ["exhaust_manifold_left", "exhaust_manifold_right"],
+          "accessible_in_vehicle": true
+        },
+        {"id": "radiator", "category": "radiator", "display_name": "Radiator", "accessible_in_vehicle": true},
+        {"id": "ecu", "category": "ecu", "display_name": "ECU", "accessible_in_vehicle": true}
+      ],
+      "stock_parts": {
+        "block": "syn.v8d.block",
+        "main_bearings": "syn.v8d.main_bearings",
+        "crankshaft": "syn.v8d.crankshaft",
+        "rod_bearings": "syn.v8d.rod_bearings",
+        "connecting_rods": "syn.v8d.rods",
+        "pistons": "syn.v8d.pistons",
+        "oil_pump": "syn.v8d.oil_pump",
+        "oil_pan": "syn.v8d.oil_pan",
+        "flywheel": "m54.flywheel.single_mass",
+        "head_gasket_left": "syn.v8d.head_gasket",
+        "head_gasket_right": "syn.v8d.head_gasket",
+        "cylinder_head_left": "syn.v8d.head.left",
+        "cylinder_head_right": "syn.v8d.head.right",
+        "valve_springs_left": "syn.v8d.valve_springs",
+        "valve_springs_right": "syn.v8d.valve_springs",
+        "camshafts_left": "syn.v8d.cams",
+        "camshafts_right": "syn.v8d.cams",
+        "intake_manifold": "syn.v8d.intake",
+        "throttle_body": "syn.throttle.85mm",
+        "injectors": "syn.injectors.8x330cc",
+        "fuel_pump": "fuel_pump.race_560",
+        "exhaust_manifold_left": "syn.v8d.exhaust_manifold.left",
+        "exhaust_manifold_right": "syn.v8d.exhaust_manifold.right",
+        "exhaust": "syn.exhaust.y_76mm",
+        "radiator": "radiator.alloy_race",
+        "ecu": "syn.ecu.full"
+      },
+      "stock_tune": "syn.v8d.stock"
+    }
+  ],
+  "parts": [
+    {
+      "id": "syn.v8d.block",
+      "name": "Synth V8 4.0 DOHC VVT block",
+      "category": "block",
+      "manufacturer": "Synth",
+      "price": 4700,
+      "mass_kg": 54,
+      "provides": ["syn.v8d.deck", "syn.v8d.sump_flange", "m54.bellhousing"],
+      "description": "8 cylinders, 92.0 mm bore; its bellhousing takes the Isar (m54) pattern, so it bolts to the C30's gearbox.",
+      "spec": {
+        "cylinders": 8,
+        "bore_mm": 92.0,
+        "deck_height_mm": 216.8,
+        "main_journal_diameter_mm": 62.0,
+        "max_cylinder_pressure_bar": 140,
+        "coolant_capacity_l": 4.6,
+        "material": "aluminium"
+      }
+    },
+    {
+      "id": "syn.v8d.main_bearings",
+      "name": "Synth V8 4.0 DOHC VVT main bearings",
+      "category": "main_bearings",
+      "manufacturer": "Synth",
+      "price": 200,
+      "mass_kg": 0.4,
+      "spec": {"journal_diameter_mm": 62.0, "clearance_mm": 0.04, "max_load_kn": 65, "material": "bi-metal"}
+    },
+    {
+      "id": "syn.v8d.crankshaft",
+      "name": "Synth V8 4.0 DOHC VVT crankshaft",
+      "category": "crankshaft",
+      "manufacturer": "Synth",
+      "price": 2100,
+      "mass_kg": 24.0,
+      "spec": {"stroke_mm": 75.0, "main_journal_diameter_mm": 62.0, "rod_journal_diameter_mm": 52.0, "max_rpm": 9000, "max_torque_nm": 700, "inertia_kg_m2": 0.06, "material": "cast"}
+    },
+    {
+      "id": "syn.v8d.rod_bearings",
+      "name": "Synth V8 4.0 DOHC VVT rod bearings",
+      "category": "rod_bearings",
+      "manufacturer": "Synth",
+      "price": 160,
+      "mass_kg": 0.3,
+      "spec": {"journal_diameter_mm": 52.0, "clearance_mm": 0.04, "max_load_kn": 55, "material": "bi-metal"}
+    },
+    {
+      "id": "syn.v8d.rods",
+      "name": "Synth V8 4.0 DOHC VVT connecting rods",
+      "category": "connecting_rods",
+      "manufacturer": "Synth",
+      "price": 480,
+      "mass_kg": 4.48,
+      "spec": {
+        "count": 8,
+        "length_mm": 150.0,
+        "big_end_diameter_mm": 52.0,
+        "pin_diameter_mm": 22.0,
+        "mass_each_g": 560,
+        "max_tensile_load_kn": 32,
+        "max_compressive_load_kn": 104,
+        "beam": "i-beam"
+      }
+    },
+    {
+      "id": "syn.v8d.pistons",
+      "name": "Synth V8 4.0 DOHC VVT pistons",
+      "category": "pistons",
+      "manufacturer": "Synth",
+      "price": 560,
+      "mass_kg": 3.04,
+      "spec": {
+        "count": 8,
+        "bore_mm": 92.0,
+        "pin_diameter_mm": 22.0,
+        "compression_height_mm": 29.0,
+        "dish_volume_cc": -3.9,
+        "mass_each_g": 380,
+        "max_cylinder_pressure_bar": 120,
+        "max_crown_temperature_c": 300,
+        "material": "cast"
+      }
+    },
+    {
+      "id": "syn.v8d.oil_pump",
+      "name": "Synth V8 4.0 DOHC VVT oil pump",
+      "category": "oil_pump",
+      "manufacturer": "Synth",
+      "price": 180,
+      "mass_kg": 1.5,
+      "requires": ["syn.v8d.sump_flange"],
+      "spec": {"displacement_cc_per_rev": 15.8, "relief_pressure_kpa": 480}
+    },
+    {
+      "id": "syn.v8d.oil_pan",
+      "name": "Synth V8 4.0 DOHC VVT sump",
+      "category": "oil_pan",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 3.5,
+      "requires": ["syn.v8d.sump_flange"],
+      "spec": {"capacity_l": 6.5, "max_sustained_g": 1.0, "baffled": false}
+    },
+    {
+      "id": "syn.v8d.head.left",
+      "name": "Synth V8 4.0 DOHC VVT cylinder head (left)",
+      "category": "cylinder_head",
+      "manufacturer": "Synth",
+      "price": 1900,
+      "mass_kg": 14.8,
+      "requires": ["syn.v8d.deck"],
+      "provides": ["syn.v8d.cam_carrier", "syn.v8d.intake_flange", "syn.v8d.exhaust_flange"],
+      "spec": {
+        "valvetrain": "dohc",
+        "chamber_volume_cc": 48.0,
+        "valve_moving_mass_g": 90,
+        "valves_per_cylinder": 4,
+        "intake_port_flow_cfm": [[1, 37], [2, 74], [3, 109], [4, 140], [5, 166], [6, 187], [7, 203], [8, 215], [9, 224], [10, 230], [11, 233], [12, 235]],
+        "exhaust_port_flow_cfm": [[1, 30], [2, 60], [3, 87], [4, 111], [5, 130], [6, 145], [7, 157], [8, 165], [9, 171], [10, 174], [11, 176], [12, 177]]
+      }
+    },
+    {
+      "id": "syn.v8d.head.right",
+      "name": "Synth V8 4.0 DOHC VVT cylinder head (right)",
+      "category": "cylinder_head",
+      "manufacturer": "Synth",
+      "price": 1900,
+      "mass_kg": 14.8,
+      "requires": ["syn.v8d.deck"],
+      "provides": ["syn.v8d.cam_carrier", "syn.v8d.intake_flange", "syn.v8d.exhaust_flange"],
+      "spec": {
+        "valvetrain": "dohc",
+        "chamber_volume_cc": 48.0,
+        "valve_moving_mass_g": 90,
+        "valves_per_cylinder": 4,
+        "intake_port_flow_cfm": [[1, 37], [2, 74], [3, 109], [4, 140], [5, 166], [6, 187], [7, 203], [8, 215], [9, 224], [10, 230], [11, 233], [12, 235]],
+        "exhaust_port_flow_cfm": [[1, 30], [2, 60], [3, 87], [4, 111], [5, 130], [6, 145], [7, 157], [8, 165], [9, 171], [10, 174], [11, 176], [12, 177]]
+      }
+    },
+    {
+      "id": "syn.v8d.head_gasket",
+      "name": "Synth V8 4.0 DOHC VVT head gasket",
+      "category": "head_gasket",
+      "manufacturer": "Synth",
+      "price": 90,
+      "mass_kg": 0.3,
+      "requires": ["syn.v8d.deck"],
+      "spec": {"bore_mm": 93.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 130}
+    },
+    {
+      "id": "syn.v8d.cams",
+      "name": "Synth V8 4.0 DOHC VVT camshafts",
+      "category": "camshafts",
+      "manufacturer": "Synth",
+      "price": 600,
+      "mass_kg": 4.0,
+      "requires": ["syn.v8d.cam_carrier"],
+      "spec": {
+        "valvetrain": "dohc",
+        "intake_duration_deg": 232,
+        "intake_lift_mm": 10.5,
+        "exhaust_duration_deg": 228,
+        "exhaust_lift_mm": 10.0,
+        "lobe_separation_deg": 112,
+        "intake_centerline_deg": 128,
+        "exhaust_centerline_deg": 112,
+        "intake_phaser_range_deg": 50
+      }
+    },
+    {
+      "id": "syn.v8d.valve_springs",
+      "name": "Synth V8 4.0 DOHC VVT valve springs",
+      "category": "valve_springs",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 0.9,
+      "requires": ["syn.v8d.cam_carrier"],
+      "spec": {"seat_force_n": 250, "open_force_n": 680, "max_lift_mm": 12.0}
+    },
+    {
+      "id": "syn.v8d.intake",
+      "name": "V8 DOHC intake plenum",
+      "category": "intake_manifold",
+      "manufacturer": "Synth",
+      "price": 500,
+      "mass_kg": 5.0,
+      "requires": ["syn.v8d.intake_flange"],
+      "spec": {"runner_length_mm": 350, "flow_cfm": 950}
+    },
+    {
+      "id": "syn.v8d.exhaust_manifold.left",
+      "name": "V8 DOHC tubular manifold (left)",
+      "category": "exhaust_manifold",
+      "manufacturer": "Synth",
+      "price": 450,
+      "mass_kg": 6.0,
+      "requires": ["syn.v8d.exhaust_flange"],
+      "spec": {"flow_cfm": 560, "primary_length_mm": 650, "scavenging_gain": 0.03}
+    },
+    {
+      "id": "syn.v8d.exhaust_manifold.right",
+      "name": "V8 DOHC tubular manifold (right)",
+      "category": "exhaust_manifold",
+      "manufacturer": "Synth",
+      "price": 450,
+      "mass_kg": 6.0,
+      "requires": ["syn.v8d.exhaust_flange"],
+      "spec": {"flow_cfm": 560, "primary_length_mm": 650, "scavenging_gain": 0.03}
+    }
+  ],
+  "tunes": [
+    {
+      "id": "syn.v8d.stock",
+      "name": "Synth V8 4.0 DOHC VVT base calibration",
+      "description": "Base map from the dev calibrators on RON 98: calibrate-cams → calibrate-ve → calibrate-spark → calibrate-ve.",
+      "rpm_axis": [700, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500],
+      "load_axis_kpa": [10, 20, 30, 40, 60, 80, 100, 110],
+      "target_lambda": [
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88]
+      ],
+      "volumetric_efficiency": [
+        [0.53, 0.448, 0.474, 0.509, 0.54, 0.571, 0.594, 0.612, 0.628, 0.642, 0.654, 0.663, 0.671, 0.672, 0.659, 0.659, 0.659],
+        [0.53, 0.514, 0.554, 0.601, 0.643, 0.673, 0.702, 0.727, 0.745, 0.758, 0.769, 0.777, 0.782, 0.783, 0.769, 0.769, 0.769],
+        [0.53, 0.55, 0.584, 0.629, 0.677, 0.718, 0.743, 0.781, 0.798, 0.812, 0.823, 0.83, 0.834, 0.834, 0.82, 0.82, 0.82],
+        [0.53, 0.579, 0.618, 0.658, 0.713, 0.75, 0.776, 0.806, 0.828, 0.847, 0.856, 0.862, 0.864, 0.863, 0.848, 0.848, 0.848],
+        [0.572, 0.636, 0.774, 0.803, 0.857, 0.856, 0.86, 0.872, 0.881, 0.886, 0.894, 0.898, 0.9, 0.897, 0.883, 0.883, 0.883],
+        [0.639, 0.745, 0.867, 0.932, 0.963, 0.958, 0.946, 0.941, 0.935, 0.929, 0.926, 0.923, 0.922, 0.918, 0.905, 0.905, 0.905],
+        [0.66, 0.765, 0.896, 0.973, 0.997, 0.991, 0.983, 0.976, 0.969, 0.961, 0.953, 0.946, 0.937, 0.931, 0.917, 0.917, 0.917],
+        [0.661, 0.765, 0.896, 0.973, 0.998, 0.991, 0.983, 0.976, 0.969, 0.961, 0.953, 0.946, 0.937, 0.931, 0.917, 0.917, 0.917]
+      ],
+      "displacement_cc": 3988.6,
+      "ignition_advance_deg": [
+        [13, 25, 26.5, 27.5, 28.5, 29, 30, 31, 31.5, 32, 32.5, 33.5, 34, 34.5, 34.5, 34.5, 34.5],
+        [13, 24.5, 25.5, 26.5, 27.5, 28.5, 29.5, 30, 31, 31.5, 32, 32.5, 33.5, 34, 34, 34, 34],
+        [13, 23.5, 25, 26, 27, 28, 28.5, 29.5, 30, 31, 31.5, 32, 32.5, 33, 33, 33, 33],
+        [13, 22.5, 24.5, 25.5, 26.5, 27, 28, 28.5, 29.5, 30, 31, 31.5, 32, 32.5, 32.5, 32.5, 32.5],
+        [8, 14, 20.5, 23, 25, 26, 26.5, 27.5, 28, 29, 29.5, 30, 30.5, 31.5, 31.5, 31.5, 31.5],
+        [1.5, 7, 14, 19.5, 22.5, 24.5, 25.5, 26, 27, 27.5, 28, 29, 29.5, 30, 30, 30, 30],
+        [-0.5, 5, 12, 17, 21.5, 23, 24, 25, 25.5, 26, 27, 27.5, 28.5, 29, 29, 29, 29],
+        [-1, 4.5, 11.5, 16.5, 21.5, 23, 24, 24.5, 25.5, 26, 27, 27.5, 28.5, 29, 29, 29, 29]
+      ],
+      "rev_limit_rpm": 7500,
+      "idle_rpm": 800,
+      "injector_flow_cc_min": 330,
+      "injector_dead_time_ms": 0.9,
+      "fuel_stoich_afr": 14.7,
+      "fuel_density_kg_l": 0.745,
+      "intake_cam_advance_deg": [
+        [50, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+        [50, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+        [50, 10, 13.5, 10, 12.5, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+        [50, 9, 43.5, 26, 38, 15.5, 20, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+        [50, 50, 50, 50, 49.5, 45, 37, 25, 25.5, 10, 12, 11.5, 10, 10, 10, 10, 10],
+        [50, 50, 50, 50, 50, 45, 40, 38, 33.5, 23.5, 20, 16, 10, 10, 10, 10, 10],
+        [50, 50, 50, 50, 50, 45, 40, 40, 35, 30, 25, 20, 15, 10, 10, 10, 10],
+        [50, 50, 50, 50, 50, 45, 40, 40, 35, 30, 25, 20, 15, 10, 10, 10, 10]
+      ]
+    }
+  ]
+}

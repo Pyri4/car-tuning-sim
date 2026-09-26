@@ -1,0 +1,326 @@
+// Synthetic engine matrix: content-only test engines proving that families are data (ENGINE_AUTHORING_GUIDE.md).
+// Generated once from a spec sheet, then calibrated with the dev tools; no simulation code knows these ids.
+{
+  "engines": [
+    {
+      "id": "syn_i3_turbo_vvl",
+      "name": "Synth T3 1.2 turbo VVL",
+      "cylinders": 3,
+      "layout": "inline",
+      "firing_order": [1, 2, 3],
+      "description": "1.2-litre three with a small turbo and two-stage variable valve lift (synthetic test content).",
+      "slots": [
+        {"id": "block", "category": "block", "display_name": "Cylinder block"},
+        {"id": "main_bearings", "category": "main_bearings", "display_name": "Main bearings", "install_after": ["block"]},
+        {"id": "crankshaft", "category": "crankshaft", "display_name": "Crankshaft", "install_after": ["main_bearings"]},
+        {"id": "rod_bearings", "category": "rod_bearings", "display_name": "Rod bearings", "install_after": ["crankshaft"]},
+        {"id": "connecting_rods", "category": "connecting_rods", "display_name": "Connecting rods", "install_after": ["rod_bearings"]},
+        {"id": "pistons", "category": "pistons", "display_name": "Pistons", "install_after": ["connecting_rods"]},
+        {"id": "oil_pump", "category": "oil_pump", "display_name": "Oil pump", "install_after": ["crankshaft"]},
+        {"id": "oil_pan", "category": "oil_pan", "display_name": "Sump", "install_after": ["oil_pump", "connecting_rods"]},
+        {"id": "flywheel", "category": "flywheel", "display_name": "Flywheel", "install_after": ["crankshaft"]},
+        {"id": "head_gasket", "category": "head_gasket", "display_name": "Head gasket", "install_after": ["pistons"], "accessible_in_vehicle": true},
+        {"id": "cylinder_head", "category": "cylinder_head", "display_name": "Cylinder head", "install_after": ["head_gasket"], "accessible_in_vehicle": true},
+        {"id": "valve_springs", "category": "valve_springs", "display_name": "Valve springs", "install_after": ["cylinder_head"], "accessible_in_vehicle": true},
+        {"id": "camshafts", "category": "camshafts", "display_name": "Camshafts", "install_after": ["valve_springs"], "accessible_in_vehicle": true},
+        {"id": "intake_manifold", "category": "intake_manifold", "display_name": "Intake manifold", "install_after": ["cylinder_head"], "accessible_in_vehicle": true},
+        {"id": "throttle_body", "category": "throttle_body", "display_name": "Throttle body", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "injectors", "category": "injectors", "display_name": "Fuel injectors", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "fuel_pump", "category": "fuel_pump", "display_name": "Fuel pump", "accessible_in_vehicle": true},
+        {"id": "exhaust_manifold", "category": "exhaust_manifold", "display_name": "Exhaust manifold", "install_after": ["cylinder_head"], "accessible_in_vehicle": true},
+        {
+          "id": "turbocharger",
+          "category": "turbocharger",
+          "display_name": "Turbocharger",
+          "required": false,
+          "install_after": ["exhaust_manifold"],
+          "accessible_in_vehicle": true
+        },
+        {"id": "intercooler", "category": "intercooler", "display_name": "Intercooler", "required": false, "accessible_in_vehicle": true},
+        {"id": "exhaust", "category": "exhaust", "display_name": "Exhaust system", "install_after": ["turbocharger"], "accessible_in_vehicle": true},
+        {"id": "radiator", "category": "radiator", "display_name": "Radiator", "accessible_in_vehicle": true},
+        {"id": "ecu", "category": "ecu", "display_name": "ECU", "accessible_in_vehicle": true}
+      ],
+      "stock_parts": {
+        "block": "syn.t3.block",
+        "main_bearings": "syn.t3.main_bearings",
+        "crankshaft": "syn.t3.crankshaft",
+        "rod_bearings": "syn.t3.rod_bearings",
+        "connecting_rods": "syn.t3.rods",
+        "pistons": "syn.t3.pistons",
+        "oil_pump": "syn.t3.oil_pump",
+        "oil_pan": "syn.t3.oil_pan",
+        "flywheel": "m54.flywheel.single_mass",
+        "head_gasket": "syn.t3.head_gasket",
+        "cylinder_head": "syn.t3.head",
+        "valve_springs": "syn.t3.valve_springs",
+        "camshafts": "syn.t3.cams",
+        "intake_manifold": "syn.t3.intake",
+        "throttle_body": "throttle.60mm",
+        "injectors": "syn.injectors.3x380cc",
+        "fuel_pump": "fuel_pump.hf_330",
+        "exhaust_manifold": "syn.t3.exhaust_manifold",
+        "turbocharger": "turbo.t25_small",
+        "intercooler": "intercooler.fmic_street",
+        "exhaust": "exhaust.sport_63mm",
+        "radiator": "radiator.oem",
+        "ecu": "syn.ecu.full"
+      },
+      "stock_tune": "syn.t3.stock"
+    }
+  ],
+  "parts": [
+    {
+      "id": "syn.t3.block",
+      "name": "Synth T3 1.2 turbo VVL block",
+      "category": "block",
+      "manufacturer": "Synth",
+      "price": 2700,
+      "mass_kg": 29,
+      "provides": ["syn.t3.deck", "syn.t3.sump_flange", "m54.bellhousing"],
+      "description": "3 cylinders, 78.0 mm bore; its bellhousing takes the Isar (m54) pattern, so it bolts to the C30's gearbox.",
+      "spec": {
+        "cylinders": 3,
+        "bore_mm": 78.0,
+        "deck_height_mm": 202.1,
+        "main_journal_diameter_mm": 48.0,
+        "max_cylinder_pressure_bar": 160,
+        "coolant_capacity_l": 2.1,
+        "material": "aluminium"
+      }
+    },
+    {
+      "id": "syn.t3.main_bearings",
+      "name": "Synth T3 1.2 turbo VVL main bearings",
+      "category": "main_bearings",
+      "manufacturer": "Synth",
+      "price": 200,
+      "mass_kg": 0.4,
+      "spec": {"journal_diameter_mm": 48.0, "clearance_mm": 0.04, "max_load_kn": 90, "material": "tri-metal"}
+    },
+    {
+      "id": "syn.t3.crankshaft",
+      "name": "Synth T3 1.2 turbo VVL crankshaft",
+      "category": "crankshaft",
+      "manufacturer": "Synth",
+      "price": 1350,
+      "mass_kg": 12.8,
+      "spec": {
+        "stroke_mm": 83.6,
+        "main_journal_diameter_mm": 48.0,
+        "rod_journal_diameter_mm": 42.0,
+        "max_rpm": 8000,
+        "max_torque_nm": 320,
+        "inertia_kg_m2": 0.026,
+        "material": "forged"
+      }
+    },
+    {
+      "id": "syn.t3.rod_bearings",
+      "name": "Synth T3 1.2 turbo VVL rod bearings",
+      "category": "rod_bearings",
+      "manufacturer": "Synth",
+      "price": 160,
+      "mass_kg": 0.3,
+      "spec": {"journal_diameter_mm": 42.0, "clearance_mm": 0.04, "max_load_kn": 85, "material": "tri-metal"}
+    },
+    {
+      "id": "syn.t3.rods",
+      "name": "Synth T3 1.2 turbo VVL connecting rods",
+      "category": "connecting_rods",
+      "manufacturer": "Synth",
+      "price": 180,
+      "mass_kg": 1.35,
+      "spec": {
+        "count": 3,
+        "length_mm": 132.0,
+        "big_end_diameter_mm": 42.0,
+        "pin_diameter_mm": 19.0,
+        "mass_each_g": 450,
+        "max_tensile_load_kn": 45,
+        "max_compressive_load_kn": 99,
+        "beam": "h-beam"
+      }
+    },
+    {
+      "id": "syn.t3.pistons",
+      "name": "Synth T3 1.2 turbo VVL pistons",
+      "category": "pistons",
+      "manufacturer": "Synth",
+      "price": 210,
+      "mass_kg": 0.87,
+      "spec": {
+        "count": 3,
+        "bore_mm": 78.0,
+        "pin_diameter_mm": 19.0,
+        "compression_height_mm": 28.0,
+        "dish_volume_cc": 9.1,
+        "mass_each_g": 290,
+        "max_cylinder_pressure_bar": 150,
+        "max_crown_temperature_c": 340,
+        "material": "forged"
+      }
+    },
+    {
+      "id": "syn.t3.oil_pump",
+      "name": "Synth T3 1.2 turbo VVL oil pump",
+      "category": "oil_pump",
+      "manufacturer": "Synth",
+      "price": 180,
+      "mass_kg": 1.5,
+      "requires": ["syn.t3.sump_flange"],
+      "spec": {"displacement_cc_per_rev": 6.8, "relief_pressure_kpa": 480}
+    },
+    {
+      "id": "syn.t3.oil_pan",
+      "name": "Synth T3 1.2 turbo VVL sump",
+      "category": "oil_pan",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 3.5,
+      "requires": ["syn.t3.sump_flange"],
+      "spec": {"capacity_l": 3.7, "max_sustained_g": 1.0, "baffled": false}
+    },
+    {
+      "id": "syn.t3.head",
+      "name": "Synth T3 1.2 turbo VVL cylinder head",
+      "category": "cylinder_head",
+      "manufacturer": "Synth",
+      "price": 1650,
+      "mass_kg": 11.6,
+      "requires": ["syn.t3.deck"],
+      "provides": ["syn.t3.cam_carrier", "syn.t3.intake_flange", "syn.t3.exhaust_flange"],
+      "spec": {
+        "valvetrain": "dohc",
+        "chamber_volume_cc": 33.0,
+        "valve_moving_mass_g": 70,
+        "valves_per_cylinder": 4,
+        "intake_port_flow_cfm": [[1, 26], [2, 53], [3, 78], [4, 100], [5, 119], [6, 134], [7, 146], [8, 155], [9, 161], [10, 165], [11, 168], [12, 169]],
+        "exhaust_port_flow_cfm": [[1, 21], [2, 43], [3, 63], [4, 80], [5, 94], [6, 104], [7, 113], [8, 118], [9, 123], [10, 125], [11, 127], [12, 128]]
+      }
+    },
+    {
+      "id": "syn.t3.head_gasket",
+      "name": "Synth T3 1.2 turbo VVL head gasket",
+      "category": "head_gasket",
+      "manufacturer": "Synth",
+      "price": 90,
+      "mass_kg": 0.3,
+      "requires": ["syn.t3.deck"],
+      "spec": {"bore_mm": 79.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 160}
+    },
+    {
+      "id": "syn.t3.cams",
+      "name": "Synth T3 1.2 turbo VVL camshafts",
+      "category": "camshafts",
+      "manufacturer": "Synth",
+      "price": 600,
+      "mass_kg": 4.0,
+      "requires": ["syn.t3.cam_carrier"],
+      "description": "Two-stage variable valve lift: mild lobes for low speed, a high-lift profile the ECU engages above its switch speed.",
+      "spec": {
+        "valvetrain": "dohc",
+        "intake_duration_deg": 206,
+        "intake_lift_mm": 7.8,
+        "exhaust_duration_deg": 204,
+        "exhaust_lift_mm": 7.4,
+        "lobe_separation_deg": 114,
+        "high_lift_profile": {"intake_duration_deg": 238, "intake_lift_mm": 9.8, "exhaust_duration_deg": 232, "exhaust_lift_mm": 9.2}
+      }
+    },
+    {
+      "id": "syn.t3.valve_springs",
+      "name": "Synth T3 1.2 turbo VVL valve springs",
+      "category": "valve_springs",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 0.9,
+      "requires": ["syn.t3.cam_carrier"],
+      "spec": {"seat_force_n": 200, "open_force_n": 560, "max_lift_mm": 10.5}
+    },
+    {
+      "id": "syn.t3.intake",
+      "name": "T3 intake manifold",
+      "category": "intake_manifold",
+      "manufacturer": "Synth",
+      "price": 500,
+      "mass_kg": 5.0,
+      "requires": ["syn.t3.intake_flange"],
+      "spec": {"runner_length_mm": 300, "flow_cfm": 420}
+    },
+    {
+      "id": "syn.t3.exhaust_manifold",
+      "name": "T3 integrated turbo manifold",
+      "category": "exhaust_manifold",
+      "manufacturer": "Synth",
+      "price": 450,
+      "mass_kg": 6.0,
+      "requires": ["syn.t3.exhaust_flange", "turbo.fitted"],
+      "provides": ["turbo_flange.t25"],
+      "spec": {"flow_cfm": 450, "primary_length_mm": 200, "scavenging_gain": 0.0}
+    }
+  ],
+  "tunes": [
+    {
+      "id": "syn.t3.stock",
+      "name": "Synth T3 1.2 turbo VVL base calibration",
+      "description": "Base map from the dev calibrators on RON 98: calibrate-ve → calibrate-spark → calibrate-ve.",
+      "rpm_axis": [700, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500],
+      "load_axis_kpa": [10, 20, 30, 40, 60, 80, 100, 110, 140, 170, 200, 230, 260],
+      "target_lambda": [
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88],
+        [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+        [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
+      ],
+      "volumetric_efficiency": [
+        [0.622, 0.509, 0.521, 0.553, 0.587, 0.609, 0.625, 0.634, 0.636, 0.491, 0.497, 0.499, 0.491, 0.491, 0.491],
+        [0.622, 0.552, 0.613, 0.661, 0.699, 0.73, 0.752, 0.757, 0.753, 0.653, 0.657, 0.657, 0.644, 0.644, 0.644],
+        [0.622, 0.599, 0.661, 0.721, 0.76, 0.791, 0.811, 0.815, 0.81, 0.739, 0.742, 0.741, 0.728, 0.728, 0.728],
+        [0.622, 0.624, 0.697, 0.753, 0.797, 0.826, 0.845, 0.853, 0.846, 0.793, 0.794, 0.789, 0.776, 0.776, 0.776],
+        [0.622, 0.661, 0.735, 0.793, 0.839, 0.868, 0.885, 0.892, 0.886, 0.857, 0.855, 0.847, 0.837, 0.837, 0.837],
+        [0.632, 0.684, 0.758, 0.819, 0.864, 0.896, 0.912, 0.915, 0.907, 0.892, 0.891, 0.883, 0.876, 0.876, 0.876],
+        [0.646, 0.699, 0.775, 0.836, 0.883, 0.914, 0.93, 0.933, 0.923, 0.917, 0.914, 0.904, 0.899, 0.899, 0.899],
+        [0.647, 0.699, 0.776, 0.838, 0.885, 0.918, 0.936, 0.939, 0.93, 0.926, 0.923, 0.913, 0.9, 0.9, 0.9],
+        [0.647, 0.699, 0.776, 0.838, 0.885, 0.918, 0.936, 0.941, 0.935, 0.936, 0.94, 0.932, 0.9, 0.9, 0.9],
+        [0.647, 0.699, 0.776, 0.838, 0.885, 0.918, 0.936, 0.941, 0.935, 0.936, 0.942, 0.94, 0.9, 0.9, 0.9],
+        [0.647, 0.699, 0.776, 0.838, 0.885, 0.918, 0.936, 0.941, 0.935, 0.936, 0.942, 0.946, 0.9, 0.9, 0.9],
+        [0.647, 0.699, 0.776, 0.838, 0.885, 0.918, 0.936, 0.941, 0.935, 0.936, 0.942, 0.946, 0.9, 0.9, 0.9],
+        [0.647, 0.699, 0.776, 0.838, 0.885, 0.918, 0.936, 0.941, 0.935, 0.936, 0.942, 0.946, 0.9, 0.9, 0.9]
+      ],
+      "displacement_cc": 1198.4,
+      "ignition_advance_deg": [
+        [6.5, 24.5, 26.5, 27.5, 28.5, 29, 30, 31, 31.5, 32, 32.5, 33.5, 33.5, 33.5, 33.5],
+        [6.5, 24.5, 25.5, 26.5, 27.5, 28.5, 29.5, 30, 31, 31.5, 32, 32.5, 32.5, 32.5, 32.5],
+        [6.5, 23.5, 25, 26, 27, 28, 28.5, 29.5, 30, 31, 31.5, 32, 32, 32, 32],
+        [6.5, 22.5, 24.5, 25.5, 26.5, 27, 28, 29, 29.5, 30, 31, 31.5, 31.5, 31.5, 31.5],
+        [6.5, 17.5, 22, 24, 25, 26, 26.5, 27.5, 28.5, 29, 29.5, 30, 30, 30, 30],
+        [5, 11, 17.5, 22.5, 23.5, 24.5, 25.5, 26, 27, 27.5, 28.5, 29, 29, 29, 29],
+        [2.5, 8.5, 15.5, 21, 22.5, 23, 24, 25, 26, 26.5, 27, 28, 28, 28, 28],
+        [2.5, 8.5, 16, 20.5, 22, 23, 23.5, 24.5, 25, 25.5, 26.5, 27, 27, 27, 27],
+        [2.5, 8.5, 16, 20.5, 22, 23, 23.5, 24, 24.5, 24.5, 24.5, 25.5, 25.5, 25.5, 25.5],
+        [2.5, 8.5, 16, 20.5, 22, 23, 23.5, 24, 24.5, 24.5, 24.5, 24, 24, 24, 24],
+        [2.5, 8.5, 16, 20.5, 22, 23, 23.5, 24, 24.5, 24.5, 24.5, 24, 24, 24, 24],
+        [2.5, 8.5, 16, 20.5, 22, 23, 23.5, 24, 24.5, 24.5, 24.5, 24, 24, 24, 24],
+        [2.5, 8.5, 16, 20.5, 22, 23, 23.5, 24, 24.5, 24.5, 24.5, 24, 24, 24, 24]
+      ],
+      "rev_limit_rpm": 6500,
+      "idle_rpm": 800,
+      "injector_flow_cc_min": 380,
+      "injector_dead_time_ms": 0.9,
+      "fuel_stoich_afr": 14.7,
+      "fuel_density_kg_l": 0.745,
+      "boost_target_kpa": [101, 101, 101, 124.0, 147.0, 170, 170, 170, 170, 170, 170, 170, 170, 170, 170],
+      "valve_lift_switch_rpm": 4800
+    }
+  ]
+}

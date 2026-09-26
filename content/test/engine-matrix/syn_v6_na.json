@@ -1,0 +1,384 @@
+// Synthetic engine matrix: content-only test engines proving that families are data (ENGINE_AUTHORING_GUIDE.md).
+// Generated once from a spec sheet, then calibrated with the dev tools; no simulation code knows these ids.
+{
+  "engines": [
+    {
+      "id": "syn_v6_na",
+      "name": "Synth V6 3.5",
+      "cylinders": 6,
+      "layout": "v",
+      "bank_angle_deg": 60,
+      "banks": [{"id": "left", "cylinders": [1, 3, 5]}, {"id": "right", "cylinders": [2, 4, 6]}],
+      "firing_order": [1, 2, 3, 4, 5, 6],
+      "description": "3.5-litre 60° V6, four cams, a common plenum and a Y-pipe (synthetic test content).",
+      "slots": [
+        {"id": "block", "category": "block", "display_name": "Cylinder block"},
+        {"id": "main_bearings", "category": "main_bearings", "display_name": "Main bearings", "install_after": ["block"]},
+        {"id": "crankshaft", "category": "crankshaft", "display_name": "Crankshaft", "install_after": ["main_bearings"]},
+        {"id": "rod_bearings", "category": "rod_bearings", "display_name": "Rod bearings", "install_after": ["crankshaft"]},
+        {"id": "connecting_rods", "category": "connecting_rods", "display_name": "Connecting rods", "install_after": ["rod_bearings"]},
+        {"id": "pistons", "category": "pistons", "display_name": "Pistons", "install_after": ["connecting_rods"]},
+        {"id": "oil_pump", "category": "oil_pump", "display_name": "Oil pump", "install_after": ["crankshaft"]},
+        {"id": "oil_pan", "category": "oil_pan", "display_name": "Sump", "install_after": ["oil_pump", "connecting_rods"]},
+        {"id": "flywheel", "category": "flywheel", "display_name": "Flywheel", "install_after": ["crankshaft"]},
+        {
+          "id": "head_gasket_left",
+          "category": "head_gasket",
+          "display_name": "Head gasket (left)",
+          "banks": ["left"],
+          "install_after": ["pistons"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "head_gasket_right",
+          "category": "head_gasket",
+          "display_name": "Head gasket (right)",
+          "banks": ["right"],
+          "install_after": ["pistons"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "cylinder_head_left",
+          "category": "cylinder_head",
+          "display_name": "Cylinder head (left)",
+          "banks": ["left"],
+          "install_after": ["head_gasket_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "cylinder_head_right",
+          "category": "cylinder_head",
+          "display_name": "Cylinder head (right)",
+          "banks": ["right"],
+          "install_after": ["head_gasket_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "valve_springs_left",
+          "category": "valve_springs",
+          "display_name": "Valve springs (left)",
+          "banks": ["left"],
+          "install_after": ["cylinder_head_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "valve_springs_right",
+          "category": "valve_springs",
+          "display_name": "Valve springs (right)",
+          "banks": ["right"],
+          "install_after": ["cylinder_head_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "camshafts_left",
+          "category": "camshafts",
+          "display_name": "Camshafts (left)",
+          "banks": ["left"],
+          "install_after": ["valve_springs_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "camshafts_right",
+          "category": "camshafts",
+          "display_name": "Camshafts (right)",
+          "banks": ["right"],
+          "install_after": ["valve_springs_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "intake_manifold",
+          "category": "intake_manifold",
+          "display_name": "Intake manifold",
+          "install_after": ["cylinder_head_left", "cylinder_head_right"],
+          "accessible_in_vehicle": true
+        },
+        {"id": "throttle_body", "category": "throttle_body", "display_name": "Throttle body", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "injectors", "category": "injectors", "display_name": "Fuel injectors", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "fuel_pump", "category": "fuel_pump", "display_name": "Fuel pump", "accessible_in_vehicle": true},
+        {
+          "id": "exhaust_manifold_left",
+          "category": "exhaust_manifold",
+          "display_name": "Exhaust manifold (left)",
+          "banks": ["left"],
+          "install_after": ["cylinder_head_left"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "exhaust_manifold_right",
+          "category": "exhaust_manifold",
+          "display_name": "Exhaust manifold (right)",
+          "banks": ["right"],
+          "install_after": ["cylinder_head_right"],
+          "accessible_in_vehicle": true
+        },
+        {
+          "id": "exhaust",
+          "category": "exhaust",
+          "display_name": "Exhaust system",
+          "install_after": ["exhaust_manifold_left", "exhaust_manifold_right"],
+          "accessible_in_vehicle": true
+        },
+        {"id": "radiator", "category": "radiator", "display_name": "Radiator", "accessible_in_vehicle": true},
+        {"id": "ecu", "category": "ecu", "display_name": "ECU", "accessible_in_vehicle": true}
+      ],
+      "stock_parts": {
+        "block": "syn.v6.block",
+        "main_bearings": "syn.v6.main_bearings",
+        "crankshaft": "syn.v6.crankshaft",
+        "rod_bearings": "syn.v6.rod_bearings",
+        "connecting_rods": "syn.v6.rods",
+        "pistons": "syn.v6.pistons",
+        "oil_pump": "syn.v6.oil_pump",
+        "oil_pan": "syn.v6.oil_pan",
+        "flywheel": "m54.flywheel.single_mass",
+        "head_gasket_left": "syn.v6.head_gasket",
+        "head_gasket_right": "syn.v6.head_gasket",
+        "cylinder_head_left": "syn.v6.head",
+        "cylinder_head_right": "syn.v6.head",
+        "valve_springs_left": "syn.v6.valve_springs",
+        "valve_springs_right": "syn.v6.valve_springs",
+        "camshafts_left": "syn.v6.cams",
+        "camshafts_right": "syn.v6.cams",
+        "intake_manifold": "syn.v6.intake",
+        "throttle_body": "syn.throttle.75mm",
+        "injectors": "syn.injectors.6x330cc",
+        "fuel_pump": "fuel_pump.hf_330",
+        "exhaust_manifold_left": "syn.v6.exhaust_manifold.left",
+        "exhaust_manifold_right": "syn.v6.exhaust_manifold.right",
+        "exhaust": "syn.exhaust.y_76mm",
+        "radiator": "radiator.m54_oem",
+        "ecu": "syn.ecu.basic"
+      },
+      "stock_tune": "syn.v6.stock"
+    }
+  ],
+  "parts": [
+    {
+      "id": "syn.v6.block",
+      "name": "Synth V6 3.5 block",
+      "category": "block",
+      "manufacturer": "Synth",
+      "price": 3900,
+      "mass_kg": 50,
+      "provides": ["syn.v6.deck", "syn.v6.sump_flange", "m54.bellhousing"],
+      "description": "6 cylinders, 93.0 mm bore; its bellhousing takes the Isar (m54) pattern, so it bolts to the C30's gearbox.",
+      "spec": {
+        "cylinders": 6,
+        "bore_mm": 93.0,
+        "deck_height_mm": 223.3,
+        "main_journal_diameter_mm": 62.0,
+        "max_cylinder_pressure_bar": 140,
+        "coolant_capacity_l": 4.2,
+        "material": "aluminium"
+      }
+    },
+    {
+      "id": "syn.v6.main_bearings",
+      "name": "Synth V6 3.5 main bearings",
+      "category": "main_bearings",
+      "manufacturer": "Synth",
+      "price": 200,
+      "mass_kg": 0.4,
+      "spec": {"journal_diameter_mm": 62.0, "clearance_mm": 0.04, "max_load_kn": 65, "material": "bi-metal"}
+    },
+    {
+      "id": "syn.v6.crankshaft",
+      "name": "Synth V6 3.5 crankshaft",
+      "category": "crankshaft",
+      "manufacturer": "Synth",
+      "price": 1800,
+      "mass_kg": 22.0,
+      "spec": {"stroke_mm": 86.0, "main_journal_diameter_mm": 62.0, "rod_journal_diameter_mm": 52.0, "max_rpm": 8300, "max_torque_nm": 550, "inertia_kg_m2": 0.054, "material": "cast"}
+    },
+    {
+      "id": "syn.v6.rod_bearings",
+      "name": "Synth V6 3.5 rod bearings",
+      "category": "rod_bearings",
+      "manufacturer": "Synth",
+      "price": 160,
+      "mass_kg": 0.3,
+      "spec": {"journal_diameter_mm": 52.0, "clearance_mm": 0.04, "max_load_kn": 55, "material": "bi-metal"}
+    },
+    {
+      "id": "syn.v6.rods",
+      "name": "Synth V6 3.5 connecting rods",
+      "category": "connecting_rods",
+      "manufacturer": "Synth",
+      "price": 360,
+      "mass_kg": 3.6,
+      "spec": {
+        "count": 6,
+        "length_mm": 150.0,
+        "big_end_diameter_mm": 52.0,
+        "pin_diameter_mm": 22.0,
+        "mass_each_g": 600,
+        "max_tensile_load_kn": 32,
+        "max_compressive_load_kn": 106,
+        "beam": "i-beam"
+      }
+    },
+    {
+      "id": "syn.v6.pistons",
+      "name": "Synth V6 3.5 pistons",
+      "category": "pistons",
+      "manufacturer": "Synth",
+      "price": 420,
+      "mass_kg": 2.4,
+      "spec": {
+        "count": 6,
+        "bore_mm": 93.0,
+        "pin_diameter_mm": 22.0,
+        "compression_height_mm": 30.0,
+        "dish_volume_cc": 5.9,
+        "mass_each_g": 400,
+        "max_cylinder_pressure_bar": 120,
+        "max_crown_temperature_c": 300,
+        "material": "cast"
+      }
+    },
+    {
+      "id": "syn.v6.oil_pump",
+      "name": "Synth V6 3.5 oil pump",
+      "category": "oil_pump",
+      "manufacturer": "Synth",
+      "price": 180,
+      "mass_kg": 1.5,
+      "requires": ["syn.v6.sump_flange"],
+      "spec": {"displacement_cc_per_rev": 14.2, "relief_pressure_kpa": 480}
+    },
+    {
+      "id": "syn.v6.oil_pan",
+      "name": "Synth V6 3.5 sump",
+      "category": "oil_pan",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 3.5,
+      "requires": ["syn.v6.sump_flange"],
+      "spec": {"capacity_l": 6.0, "max_sustained_g": 1.0, "baffled": false}
+    },
+    {
+      "id": "syn.v6.head",
+      "name": "Synth V6 3.5 cylinder head",
+      "category": "cylinder_head",
+      "manufacturer": "Synth",
+      "price": 1650,
+      "mass_kg": 12.6,
+      "requires": ["syn.v6.deck"],
+      "provides": ["syn.v6.cam_carrier", "syn.v6.intake_flange", "syn.v6.exhaust_flange"],
+      "spec": {
+        "valvetrain": "dohc",
+        "chamber_volume_cc": 50.0,
+        "valve_moving_mass_g": 95,
+        "valves_per_cylinder": 4,
+        "intake_port_flow_cfm": [[1, 37], [2, 76], [3, 111], [4, 143], [5, 170], [6, 191], [7, 207], [8, 220], [9, 229], [10, 235], [11, 239], [12, 240]],
+        "exhaust_port_flow_cfm": [[1, 30], [2, 61], [3, 89], [4, 113], [5, 133], [6, 149], [7, 160], [8, 168], [9, 174], [10, 178], [11, 180], [12, 181]]
+      }
+    },
+    {
+      "id": "syn.v6.head_gasket",
+      "name": "Synth V6 3.5 head gasket",
+      "category": "head_gasket",
+      "manufacturer": "Synth",
+      "price": 90,
+      "mass_kg": 0.3,
+      "requires": ["syn.v6.deck"],
+      "spec": {"bore_mm": 94.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 130}
+    },
+    {
+      "id": "syn.v6.cams",
+      "name": "Synth V6 3.5 camshafts",
+      "category": "camshafts",
+      "manufacturer": "Synth",
+      "price": 600,
+      "mass_kg": 4.0,
+      "requires": ["syn.v6.cam_carrier"],
+      "spec": {"valvetrain": "dohc", "intake_duration_deg": 228, "intake_lift_mm": 10.2, "exhaust_duration_deg": 224, "exhaust_lift_mm": 9.5, "lobe_separation_deg": 112}
+    },
+    {
+      "id": "syn.v6.valve_springs",
+      "name": "Synth V6 3.5 valve springs",
+      "category": "valve_springs",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 0.9,
+      "requires": ["syn.v6.cam_carrier"],
+      "spec": {"seat_force_n": 230, "open_force_n": 600, "max_lift_mm": 11.5}
+    },
+    {
+      "id": "syn.v6.intake",
+      "name": "V6 intake plenum",
+      "category": "intake_manifold",
+      "manufacturer": "Synth",
+      "price": 500,
+      "mass_kg": 5.0,
+      "requires": ["syn.v6.intake_flange"],
+      "spec": {"runner_length_mm": 400, "flow_cfm": 780}
+    },
+    {
+      "id": "syn.v6.exhaust_manifold.left",
+      "name": "V6 exhaust manifold (left)",
+      "category": "exhaust_manifold",
+      "manufacturer": "Synth",
+      "price": 450,
+      "mass_kg": 6.0,
+      "requires": ["syn.v6.exhaust_flange"],
+      "spec": {"flow_cfm": 480, "primary_length_mm": 400, "scavenging_gain": 0.02}
+    },
+    {
+      "id": "syn.v6.exhaust_manifold.right",
+      "name": "V6 exhaust manifold (right)",
+      "category": "exhaust_manifold",
+      "manufacturer": "Synth",
+      "price": 450,
+      "mass_kg": 6.0,
+      "requires": ["syn.v6.exhaust_flange"],
+      "spec": {"flow_cfm": 480, "primary_length_mm": 400, "scavenging_gain": 0.02}
+    }
+  ],
+  "tunes": [
+    {
+      "id": "syn.v6.stock",
+      "name": "Synth V6 3.5 base calibration",
+      "description": "Base map from the dev calibrators on RON 95: calibrate-ve → calibrate-spark → calibrate-ve.",
+      "rpm_axis": [700, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500],
+      "load_axis_kpa": [10, 20, 30, 40, 60, 80, 100, 110],
+      "target_lambda": [
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88]
+      ],
+      "volumetric_efficiency": [
+        [0.569, 0.43, 0.468, 0.504, 0.539, 0.567, 0.584, 0.596, 0.604, 0.607, 0.605, 0.6, 0.593, 0.593, 0.593],
+        [0.569, 0.52, 0.572, 0.624, 0.664, 0.696, 0.722, 0.737, 0.743, 0.743, 0.737, 0.728, 0.716, 0.716, 0.716],
+        [0.569, 0.566, 0.63, 0.685, 0.727, 0.761, 0.79, 0.803, 0.809, 0.808, 0.8, 0.789, 0.775, 0.775, 0.775],
+        [0.569, 0.599, 0.666, 0.719, 0.767, 0.8, 0.826, 0.845, 0.852, 0.849, 0.839, 0.825, 0.809, 0.809, 0.809],
+        [0.591, 0.636, 0.707, 0.762, 0.814, 0.848, 0.874, 0.891, 0.9, 0.895, 0.883, 0.868, 0.849, 0.849, 0.849],
+        [0.612, 0.66, 0.729, 0.79, 0.839, 0.878, 0.905, 0.92, 0.926, 0.922, 0.91, 0.893, 0.873, 0.873, 0.873],
+        [0.625, 0.673, 0.746, 0.807, 0.858, 0.896, 0.923, 0.939, 0.944, 0.94, 0.927, 0.909, 0.888, 0.888, 0.888],
+        [0.625, 0.674, 0.746, 0.808, 0.858, 0.897, 0.923, 0.939, 0.944, 0.94, 0.927, 0.909, 0.888, 0.888, 0.888]
+      ],
+      "displacement_cc": 3505.1,
+      "ignition_advance_deg": [
+        [14, 25, 26.5, 27.5, 28.5, 29, 30, 31, 31.5, 32, 32.5, 33.5, 34, 34, 34],
+        [14, 24.5, 25.5, 26.5, 27.5, 28.5, 29.5, 30, 31, 31.5, 32, 32.5, 33.5, 33.5, 33.5],
+        [14, 23.5, 25, 26, 27, 28, 28.5, 29.5, 30, 31, 31.5, 32, 32.5, 32.5, 32.5],
+        [14, 21.5, 24, 25.5, 26.5, 27, 28, 29, 29.5, 30, 31, 31.5, 32, 32, 32],
+        [7.5, 14, 20.5, 23, 25, 26, 26.5, 27.5, 28, 29, 29.5, 30, 31, 31, 31],
+        [1.5, 7, 14.5, 19.5, 23.5, 24.5, 25.5, 26, 27, 27.5, 28.5, 29, 29.5, 29.5, 29.5],
+        [-1, 5, 12, 16.5, 20.5, 23, 24, 25, 25.5, 26.5, 27, 27.5, 28.5, 28.5, 28.5],
+        [-1, 4.5, 11.5, 16.5, 20.5, 23, 24, 25, 25.5, 26.5, 27, 27.5, 28.5, 28.5, 28.5]
+      ],
+      "rev_limit_rpm": 6800,
+      "idle_rpm": 800,
+      "injector_flow_cc_min": 330,
+      "injector_dead_time_ms": 0.9,
+      "fuel_stoich_afr": 14.7,
+      "fuel_density_kg_l": 0.745
+    }
+  ]
+}

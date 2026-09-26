@@ -9,9 +9,11 @@
       "spec": { "max_torque_nm": 850, "fade_start_c": 450, "life_mj": 250, "heat_capacity_j_per_k": 6000 } },
 
     { "id": "gearbox.kestrel_6mt", "name": "Kestrel 6-speed manual", "category": "gearbox", "manufacturer": "Kestrel", "price": 1800, "mass_kg": 38,
+      "requires": ["k20.bellhousing"],
       "description": "Wide ratios for the road. Rated for 400 N·m.",
       "spec": { "ratios": [3.13, 2.05, 1.48, 1.16, 0.97, 0.81], "reverse_ratio": 2.8, "efficiency": 0.95, "max_torque_nm": 400, "shift_time_s": 0.25, "input_inertia_kg_m2": 0.02 } },
     { "id": "gearbox.close_ratio_6mt", "name": "Close-ratio 6-speed dog box", "category": "gearbox", "manufacturer": "Shiftworks", "price": 4200, "mass_kg": 34,
+      "requires": ["k20.bellhousing"],
       "description": "Tightly stacked ratios keep the engine in its power band; faster shifts. Lower top speed.",
       "spec": { "ratios": [2.75, 1.95, 1.50, 1.22, 1.03, 0.89], "reverse_ratio": 2.8, "efficiency": 0.96, "max_torque_nm": 550, "shift_time_s": 0.12, "input_inertia_kg_m2": 0.018 } },
 
