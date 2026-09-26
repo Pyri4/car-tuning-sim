@@ -125,6 +125,41 @@ public class RideModelTests
     }
 
     [Fact]
+    public void OnBumpsTheStiffestSpringsAreNotTheBest()
+    {
+        // Smooth asphalt rewards stiffness (less roll, faster load transfer); kerb-grade bumps do not: the stiffest
+        // (track) coilovers lose the tyre's contact and fall behind the street ones.
+        VehicleSimulation Car(string suspension, Surface surface)
+        {
+            var sim = Vehicles.Car.Chassis(("suspension", suspension));
+            for (int w = 0; w < 4; w++) sim.WheelSurface[w] = surface;
+            return sim;
+        }
+        double smoothStreet = Vehicles.Car.MaxLateralG(Car("suspension.coilover_street", Surface.Asphalt));
+        double smoothTrack = Vehicles.Car.MaxLateralG(Car("suspension.coilover_track", Surface.Asphalt));
+        double bumpyStreet = Vehicles.Car.MaxLateralG(Car("suspension.coilover_street", Surface.Kerb));
+        double bumpyTrack = Vehicles.Car.MaxLateralG(Car("suspension.coilover_track", Surface.Kerb));
+        Assert.True(smoothTrack > smoothStreet * 1.01, $"smooth: street {smoothStreet:F3} g, track {smoothTrack:F3} g");
+        Assert.True(bumpyStreet > bumpyTrack, $"bumpy: street {bumpyStreet:F3} g, track {bumpyTrack:F3} g");
+    }
+
+    [Fact]
+    public void OnBumpsCamberHasAnInteriorOptimumAndAlwaysCostsBraking()
+    {
+        double Lateral(double camber) => Car.MaxLateralG(TrackCoilovers(("front_camber_deg", camber)));
+        double none = Lateral(0), mid = Lateral(-2), most = Lateral(-3);
+        Assert.True(mid > none && mid > most, $"0°: {none:F4} g, −2°: {mid:F4} g, −3°: {most:F4} g");
+        // And on smooth asphalt, where more camber no longer helps corner, it still lengthens the stop.
+        VehicleSimulation Smooth(double camber)
+        {
+            var sim = TrackCoilovers(("front_camber_deg", camber));
+            for (int w = 0; w < 4; w++) sim.WheelSurface[w] = Surface.Asphalt;
+            return sim;
+        }
+        Assert.True(Car.BrakingDistance(Smooth(-3), 100, 0.7) > Car.BrakingDistance(Smooth(0), 100, 0.7) + 0.5);
+    }
+
+    [Fact]
     public void OnABumpySurfaceTheBestSetUpIsNotAtAnEndStop()
     {
         double Lateral(params (string, double)[] s) => Car.MaxLateralG(TrackCoilovers(s));
