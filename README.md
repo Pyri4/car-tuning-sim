@@ -85,5 +85,10 @@ Development aids for the game (arguments after `--`): `--tab=dyno`, `--autorun`,
 (start there), `--autodrive`, `--warp=20` (simulate 20 s ahead), `--camera=trackside`, and
 `--drive --smoke-test` (headless drive check).
 
+## Modding
+Mods are folders of JSON under `content/mods/`, loaded after the base game; they can add parts,
+engines, fuels, tunes, scenarios and cars, or redefine existing ones by id. See PARTS_DATABASE.md
+("Mods") and the example in `docs/example-mod/`.
+
 ## Current status
 Early implementation. See ROADMAP.md for what exists and what is next.

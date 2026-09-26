@@ -23,13 +23,23 @@ public sealed class GameState
     private GameState()
     {
         ContentDir = ResolveContentDir();
-        var result = ContentLoader.LoadDirectory(ContentDir);
+        ModsDir = System.Environment.GetEnvironmentVariable("CARSIM_MODS_DIR") is { Length: > 0 } modsEnv
+            ? modsEnv
+            : Path.GetFullPath(Path.Combine(ContentDir, "..", "mods"));
+        var result = ContentLoader.LoadWithMods(ContentDir, ModsDir);
         ContentErrors = result.Errors;
         Content = result.Database;
+        Mods = result.Mods;
+        ContentOverrides = result.Overrides;
         Garage = Garage.NewGame(Content, "project_car");
     }
 
     public string ContentDir { get; }
+
+    /// <summary>Folder whose subfolders are mods, loaded after the base content (CARSIM_MODS_DIR, else content/mods).</summary>
+    public string ModsDir { get; }
+    public IReadOnlyList<string> Mods { get; }
+    public IReadOnlyList<string> ContentOverrides { get; }
     public IReadOnlyList<ContentError> ContentErrors { get; }
     public ContentDatabase Content { get; }
     public Garage Garage { get; private set; }

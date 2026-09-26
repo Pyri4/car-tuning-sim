@@ -19,19 +19,49 @@ public static class ContentLoader
         {
             return new ContentLoadResult(Empty(), new[] { new ContentError(root, "", "Content directory does not exist.") });
         }
-        var files = Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories)
-            .OrderBy(f => f, StringComparer.Ordinal)
-            .Select(f => (Path.GetRelativePath(root, f).Replace('\\', '/'), File.ReadAllText(f)));
-        return LoadFromStrings(files);
+        return LoadFromStrings(Files(root, ""));
     }
 
     /// <summary>Loads content from (source name, JSON text) pairs.</summary>
-    public static ContentLoadResult LoadFromStrings(IEnumerable<(string source, string json)> documents)
+    public static ContentLoadResult LoadFromStrings(IEnumerable<(string source, string json)> documents) =>
+        LoadFromLayers(new[] { documents });
+
+    /// <summary>
+    /// Loads layers of documents in order (base game first, then mods). Later layers may add content
+    /// and redefine ids from earlier layers (see <see cref="ContentLoadResult.Overrides"/>).
+    /// </summary>
+    public static ContentLoadResult LoadFromLayers(IEnumerable<IEnumerable<(string source, string json)>> layers)
     {
         var builder = new Builder();
-        foreach (var (source, json) in documents) builder.AddDocument(source, json);
+        foreach (var layer in layers)
+        {
+            foreach (var (source, json) in layer) builder.AddDocument(source, json);
+            builder.Layer++;
+        }
         return builder.Build();
     }
+
+    /// <summary>
+    /// Loads the base content, then every mod: each subdirectory of <paramref name="modsDir"/> (in
+    /// ordinal name order) is one layer. A missing mods directory simply means no mods.
+    /// </summary>
+    public static ContentLoadResult LoadWithMods(string baseDir, string? modsDir)
+    {
+        if (!Directory.Exists(baseDir))
+            return new ContentLoadResult(Empty(), new[] { new ContentError(baseDir, "", "Content directory does not exist.") });
+        var mods = modsDir != null && Directory.Exists(modsDir)
+            ? Directory.GetDirectories(modsDir).OrderBy(d => d, StringComparer.Ordinal).ToList()
+            : new List<string>();
+        var layers = new List<IEnumerable<(string, string)>> { Files(baseDir, "") };
+        layers.AddRange(mods.Select(m => Files(m, $"mods/{Path.GetFileName(m)}/")));
+        var result = LoadFromLayers(layers);
+        return new ContentLoadResult(result.Database, result.Errors, result.Overrides, mods.Select(Path.GetFileName).ToList()!);
+    }
+
+    private static IEnumerable<(string, string)> Files(string root, string prefix) =>
+        Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories)
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .Select(f => (prefix + Path.GetRelativePath(root, f).Replace('\\', '/'), File.ReadAllText(f)));
 
     private static ContentDatabase Empty() => new(
         new Dictionary<string, PartDefinition>(), new Dictionary<string, EngineDefinition>(),
@@ -119,7 +149,30 @@ public static class ContentLoader
         private readonly Dictionary<string, ScenarioDefinition> _scenarios = new(StringComparer.Ordinal);
         private readonly Dictionary<string, Vehicles.VehicleDefinition> _vehicles = new(StringComparer.Ordinal);
 
+        private readonly Dictionary<string, int> _claims = new(StringComparer.Ordinal);
+        private readonly List<string> _overrides = new();
+
+        /// <summary>Layer of the documents being added: 0 = base game, then one per mod in load order.</summary>
+        public int Layer { get; set; }
+
         private void Error(string source, string id, string message) => _errors.Add(new ContentError(source, id, message));
+
+        /// <summary>
+        /// Registers an id. A later layer (a mod) may redefine an id from an earlier one: that replaces
+        /// the definition and is reported as an override. Within one layer, a repeated id is an error.
+        /// </summary>
+        private bool Claim(string kind, string id, string source)
+        {
+            string key = kind + ":" + id;
+            if (!_claims.TryGetValue(key, out int layer) || layer < Layer)
+            {
+                if (_claims.ContainsKey(key)) _overrides.Add($"{source}: overrides {kind} '{id}'");
+                _claims[key] = Layer;
+                return true;
+            }
+            Error(source, id, $"Duplicate {kind} id.");
+            return false;
+        }
 
         public void AddDocument(string source, string json)
         {
@@ -166,7 +219,7 @@ public static class ContentLoader
                 StockParts = d.StockParts ?? new Dictionary<string, string>(), Source = source,
             };
             foreach (var p in v.Validate()) Error(source, v.Id, p);
-            if (_vehicles.ContainsKey(v.Id)) { Error(source, v.Id, "Duplicate vehicle id."); return; }
+            if (!Claim("vehicle", v.Id, source)) return;
             _vehicles[v.Id] = v;
         }
 
@@ -177,7 +230,7 @@ public static class ContentLoader
             try { sc = element.Deserialize<ScenarioDefinition>(ContentJson.Options); }
             catch (JsonException ex) { Error(source, peekId, ex.Message); return; }
             if (sc == null) { Error(source, peekId, "Scenario entry is null."); return; }
-            if (_scenarios.ContainsKey(sc.Id)) { Error(source, sc.Id, "Duplicate scenario id."); return; }
+            if (!Claim("scenario", sc.Id, source)) return;
             _scenarios[sc.Id] = new ScenarioDefinition
             {
                 Id = sc.Id, Name = sc.Name, Description = sc.Description, Engine = sc.Engine, Vehicle = sc.Vehicle, Money = sc.Money, Fuel = sc.Fuel,
@@ -215,7 +268,7 @@ public static class ContentLoader
             if (spec == null) { Error(source, dto.Id, "spec is null."); return; }
             foreach (var problem in spec.Validate()) Error(source, dto.Id, $"spec: {problem}");
 
-            if (_parts.ContainsKey(dto.Id)) { Error(source, dto.Id, "Duplicate part id."); return; }
+            if (!Claim("part", dto.Id, source)) return;
             _parts[dto.Id] = new PartDefinition
             {
                 Id = dto.Id,
@@ -285,7 +338,7 @@ public static class ContentLoader
             try { engine.AssemblyOrder(); }
             catch (InvalidOperationException ex) { Error(source, dto.Id, ex.Message); }
 
-            if (_engines.ContainsKey(dto.Id)) { Error(source, dto.Id, "Duplicate engine id."); return; }
+            if (!Claim("engine", dto.Id, source)) return;
             _engines[dto.Id] = engine;
         }
 
@@ -297,7 +350,7 @@ public static class ContentLoader
             catch (JsonException ex) { Error(source, peekId, ex.Message); return; }
             if (fuel == null) { Error(source, peekId, "Fuel entry is null."); return; }
             foreach (var p in fuel.Validate()) Error(source, fuel.Id, p);
-            if (_fuels.ContainsKey(fuel.Id)) { Error(source, fuel.Id, "Duplicate fuel id."); return; }
+            if (!Claim("fuel", fuel.Id, source)) return;
             _fuels[fuel.Id] = fuel;
         }
 
@@ -309,7 +362,7 @@ public static class ContentLoader
             catch (JsonException ex) { Error(source, peekId, ex.Message); return; }
             if (tune == null) { Error(source, peekId, "Tune entry is null."); return; }
             foreach (var p in tune.Validate()) Error(source, tune.Id, p);
-            if (_tunes.ContainsKey(tune.Id)) { Error(source, tune.Id, "Duplicate tune id."); return; }
+            if (!Claim("tune", tune.Id, source)) return;
             _tunes[tune.Id] = new TuneDocument
             {
                 Id = tune.Id, Name = tune.Name, Description = tune.Description,
@@ -380,7 +433,7 @@ public static class ContentLoader
                     if (!v.StockParts.ContainsKey(slot.Id)) Error(v.Source, v.Id, $"No stock part for required slot '{slot.Id}'.");
             }
             var db = new ContentDatabase(_parts, _engines, _fuels, _tunes, _scenarios, _vehicles);
-            return new ContentLoadResult(db, _errors);
+            return new ContentLoadResult(db, _errors, _overrides);
         }
     }
 }

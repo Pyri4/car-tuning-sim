@@ -13,8 +13,22 @@ the code is right and this file must be fixed.
 - JSON is **snake_case**. `//` and `/* */` comments and trailing commas are allowed.
 - **Unknown fields are errors** (catches typos such as `bore_m`). Missing required fields are errors.
 - The loader collects *all* errors (file, item id, message) instead of stopping at the first.
-- Ids must be unique across the whole root.
-- Run `dotnet run --project tools/CarSim.Cli -- validate` to check content.
+- Ids must be unique within a layer (the base game, or one mod).
+- Run `dotnet run --project tools/CarSim.Cli -- validate` to check content (and every mod).
+
+## Mods
+- Each folder under `content/mods/` (or `CARSIM_MODS_DIR`) is a mod, loaded after the base game in
+  ordinal folder-name order. Files inside use exactly the base format.
+- A mod can add anything (parts, engines, fuels, tunes, scenarios, vehicles) and can **redefine** an
+  id from the base game or an earlier mod: the whole definition is replaced, and the loader lists every
+  override (`carsim validate`, the Garage tab).
+- Mod content goes through the same validation as base content, and cross-references (stock parts,
+  scenario slots, ...) are checked after all layers load, so a mod may refer to base content and vice
+  versa.
+- Saves refer to parts by id: removing a mod whose parts are in a save gives a clear load error naming
+  the missing id.
+- Example: `docs/example-mod/club_clutch_pack/` adds a clutch and redefines a tyre. Copy the folder
+  into `content/mods/` to load it; `carsim validate --mods docs/example-mod` checks it in place.
 
 ## Units convention
 Field names carry their unit. The simulation converts to SI once, at load time.

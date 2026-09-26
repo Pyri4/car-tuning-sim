@@ -66,14 +66,23 @@ public sealed record ContentError(string Source, string ItemId, string Message)
 
 public sealed class ContentLoadResult
 {
-    public ContentLoadResult(ContentDatabase database, IReadOnlyList<ContentError> errors)
+    public ContentLoadResult(ContentDatabase database, IReadOnlyList<ContentError> errors,
+        IReadOnlyList<string>? overrides = null, IReadOnlyList<string>? mods = null)
     {
         Database = database;
         Errors = errors;
+        Overrides = overrides ?? Array.Empty<string>();
+        Mods = mods ?? Array.Empty<string>();
     }
 
     public ContentDatabase Database { get; }
     public IReadOnlyList<ContentError> Errors { get; }
+
+    /// <summary>Definitions a mod replaced ("mods/x/parts.json: overrides part 'clutch.oem'").</summary>
+    public IReadOnlyList<string> Overrides { get; }
+
+    /// <summary>Mods loaded after the base content, in load order.</summary>
+    public IReadOnlyList<string> Mods { get; }
     public bool Success => Errors.Count == 0;
 
     /// <summary>Returns the database or throws with every collected error.</summary>

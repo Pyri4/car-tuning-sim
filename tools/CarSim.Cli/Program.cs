@@ -14,7 +14,8 @@ public static class Program
         carsim — Car Tuning Simulator command-line tools
 
         Usage:
-          carsim validate [--content <dir>]            Load and validate all content.
+          carsim validate [--content <dir>] [--mods <dir>]
+                                                        Load and validate the base content and every mod.
           carsim inspect [<engine-id>] [--content <dir>]
                                                         Show the stock build, derived geometry and compatibility report.
           carsim sweep [<engine-id>] [--swap slot=part,...] [--fuel <id>] [--tune <id>] [--from 1000] [--to 8000] [--step 500]
@@ -60,11 +61,16 @@ public static class Program
         return 1;
     }
 
+    private static string ModsDir(CliOptions o) =>
+        o.Named.GetValueOrDefault("mods") ?? Path.GetFullPath(Path.Combine(o.ContentDir, "..", "mods"));
+
     private static int Validate(CliOptions o)
     {
-        var result = ContentLoader.LoadDirectory(o.ContentDir);
+        var result = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o));
         var db = result.Database;
         Console.WriteLine($"Content: {o.ContentDir}");
+        Console.WriteLine(result.Mods.Count == 0 ? $"  no mods in {ModsDir(o)}" : $"  mods: {string.Join(", ", result.Mods)}");
+        foreach (var ov in result.Overrides) Console.WriteLine($"    {ov}");
         Console.WriteLine($"  {db.Parts.Count} parts, {db.Engines.Count} engines, {db.Fuels.Count} fuels, {db.Tunes.Count} tunes");
         if (result.Success)
         {
@@ -81,7 +87,7 @@ public static class Program
     /// <summary>Builds the stock engine with --swap/--add parts, --fuel and --tune applied.</summary>
     private static Built BuildEngine(CliOptions o)
     {
-        var db = ContentLoader.LoadDirectory(o.ContentDir).GetOrThrow();
+        var db = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o)).GetOrThrow();
         var engine = db.GetEngine(o.Positional.FirstOrDefault() ?? db.Engines.Keys.First());
         var factory = new PartInstanceFactory();
         var assembly = EngineAssembly.CreateStock(engine, db, factory);
@@ -249,7 +255,7 @@ public static class Program
 
     private static int Inspect(CliOptions o)
     {
-        var db = ContentLoader.LoadDirectory(o.ContentDir).GetOrThrow();
+        var db = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o)).GetOrThrow();
         var engineId = o.Positional.FirstOrDefault() ?? db.Engines.Keys.First();
         var engine = db.GetEngine(engineId);
         var assembly = EngineAssembly.CreateStock(engine, db, new PartInstanceFactory());

@@ -182,8 +182,11 @@ See SIMULATION_SPEC.md for equations and PARTS_DATABASE.md for the data schema.
 - Base content lives in `content/base/` as JSON (comments and trailing commas allowed).
 - The loader discovers every `*.json` file under a content root, reads each object's `category`
   (or document `kind`), and deserializes it into the typed definition for that category.
-- Shipping plan: exported builds carry `content/` as loose files beside the executable. Mods will be
-  additional content roots loaded after `base` (override-by-id) *(planned)*.
+- Shipping plan: exported builds carry `content/` as loose files beside the executable.
+- Mods: each folder under `content/mods/` is a content layer loaded after `base` in name order
+  (`ContentLoader.LoadWithMods`). Later layers may add content and replace definitions by id (reported
+  as overrides); duplicates within one layer are errors; cross-references are validated once all
+  layers are loaded. See PARTS_DATABASE.md, "Mods".
 - New part *categories* require code (the simulation must know what the properties mean); new
   *parts* in existing categories require only data.
 
@@ -237,3 +240,6 @@ reports all missing content at once (e.g. a removed mod).
 | 2026-09-26 | Assembly order defined as data (`install_after` graph per engine family) | Disassembly/reassembly gameplay without hardcoded sequences |
 | 2026-09-26 | Vehicle dynamics in the core (planar + load transfer), Godot renders | Deterministic, testable; flat test track needs no 3D physics |
 | 2026-09-26 | Dyno pulls end at the rev limiter | An absorption dyno cannot motor the engine; over-revs come from tuning or missed shifts |
+| 2026-09-26 | Friction parts (clutch, brakes, tyres) carry heat and energy-based wear; gearbox/differential use the engine's stress-ratio fatigue | Upgrades interact (a stronger clutch moves the weak link to the gearbox); wear persists on part instances |
+| 2026-09-26 | Automated clutch engages smoothly after shifts (engine torque + 80 N·m while syncing) | Full-throttle snap engagements put engine inertia through the gearbox on every shift, which no driver does |
+| 2026-09-26 | Mods are content layers after `base`, override by id | Mods can rebalance as well as add, without code; overrides are visible, not silent |

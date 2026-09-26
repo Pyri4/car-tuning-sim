@@ -92,6 +92,9 @@ public partial class GarageView : HBoxContainer
         if (State.ContentErrors.Count > 0)
             _info.AddChild(Ui.Wrapped($"{State.ContentErrors.Count} content error(s): {string.Join("; ", State.ContentErrors.Take(3))}", 13, Ui.Danger));
         _info.AddChild(Ui.Wrapped($"Content: {State.ContentDir}", 12, Ui.Muted));
+        _info.AddChild(Ui.Wrapped(State.Mods.Count == 0
+            ? $"No mods (put mod folders in {State.ModsDir})."
+            : $"Mods: {string.Join(", ", State.Mods)} ({State.ContentOverrides.Count} override(s))", 12, Ui.Muted));
 
         Ui.Clear(_shelf);
         _shelf.AddChild(Ui.Heading($"Shelf ({G.Inventory.Count} parts)"));

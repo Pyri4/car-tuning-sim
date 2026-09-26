@@ -1,0 +1,20 @@
+{
+  // Example mod: copy the club_clutch_pack folder into content/mods/ to load it.
+  // Mods load after the base game, in folder-name order. They can add content and redefine
+  // existing ids (the whole definition is replaced; the loader reports each override).
+  "parts": [
+    // A new part: a clutch between the sport and twin-plate options.
+    { "id": "clutch.stage2_cerametallic", "name": "Stage 2 cerametallic clutch", "category": "clutch", "manufacturer": "Club Pack",
+      "price": 780, "mass_kg": 6.6,
+      "description": "Puck-style cerametallic disc: grabby on the street, holds 420 N·m and shrugs off heat.",
+      "spec": { "max_torque_nm": 420, "fade_start_c": 420, "life_mj": 160, "heat_capacity_j_per_k": 4300 } },
+
+    // An override: the base game's rear street tyre, re-specified by the mod as a harder-wearing
+    // touring compound (less grip, much longer tread life).
+    { "id": "tires.street_225_50r16", "name": "Touring tyres 225/50 R16 (pair)", "category": "tires", "manufacturer": "Club Pack",
+      "price": 310, "mass_kg": 39,
+      "spec": { "width_mm": 225, "aspect_ratio": 50, "rim_diameter_in": 16, "peak_friction": 0.92, "load_sensitivity": 0.11,
+                "peak_slip_ratio": 0.11, "peak_slip_angle_deg": 7.5, "rolling_resistance": 0.011, "inertia_kg_m2": 1.2,
+                "compound": "touring", "tread_life_mj": 140 } }
+  ]
+}
