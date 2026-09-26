@@ -53,6 +53,17 @@ public class CombustionModelTests
     }
 
     [Fact]
+    public void LightLoadDoesNotKnockEvenWithCruiseTiming()
+    {
+        // Overrun at 20 kPa with a 40° part-load advance: far too little end-gas pressure to knock.
+        double overrun = CombustionModel.KnockLimitedAdvance(Reference with { PortPressurePa = 20_000, Rpm = 3500 });
+        Assert.True(overrun > 50, $"KLSA {overrun:F1}° at 20 kPa");
+        // Above the light-load threshold the limit is the plain linear model.
+        double half = CombustionModel.KnockLimitedAdvance(Reference with { PortPressurePa = 0.5 * 101_325 });
+        Assert.Equal(24.0 + 14.0 * 0.5, half, 6);
+    }
+
+    [Fact]
     public void KnockLimitRespondsToEachFactorInTheRightDirection()
     {
         double baseline = CombustionModel.KnockLimitedAdvance(Reference);

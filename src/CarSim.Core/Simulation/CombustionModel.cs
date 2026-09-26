@@ -67,6 +67,12 @@ public static class CombustionModel
         double Lambda,
         double DeckClearanceMm);
 
+    /// <summary>Port pressure ratio below which the knock limit rises steeply (light load).</summary>
+    public const double LightLoadPressureRatio = 0.45;
+
+    /// <summary>Extra knock-limit degrees per unit of pressure ratio below <see cref="LightLoadPressureRatio"/>.</summary>
+    public const double LightLoadKnockMargin = 60.0;
+
     /// <summary>
     /// Knock-limited spark advance (degrees BTDC): the most advance the end gas tolerates.
     /// Reference: RON 95, CR 10.5, 1 atm port pressure, 40 °C charge, 90 °C coolant, λ 1, 3000 rpm → 24°.
@@ -76,7 +82,10 @@ public static class CombustionModel
         double klsa = 24.0;
         klsa += 1.3 * (c.Octane - 95.0);
         klsa -= 3.2 * (c.CompressionRatio - 10.5);
-        klsa -= 14.0 * (c.PortPressurePa / PhysicalConstants.StandardPressure - 1.0);
+        double pr = c.PortPressurePa / PhysicalConstants.StandardPressure;
+        klsa -= 14.0 * (pr - 1.0);
+        // Light load: too little end-gas pressure to autoignite, whatever the timing (overrun, cruise).
+        klsa += LightLoadKnockMargin * Math.Max(0.0, LightLoadPressureRatio - pr);
         klsa -= 0.25 * (c.ChargeTemperatureK - 313.15);
         klsa -= 0.20 * Math.Max(0.0, c.CoolantTemperatureK - 363.15);
         klsa += 20.0 * (1.0 - Math.Min(c.Lambda, 1.3));

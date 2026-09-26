@@ -109,7 +109,9 @@ Harmonic lift profile over the advertised event (duration@1mm + 50°):
 - Knock-limited spark advance (degrees):
   `24 + 1.3(RON − 95) − 3.2(CR − 10.5) − 14(p_port/1 atm − 1) − 0.25(T_charge − 313 K)
    − 0.20·max(0, T_coolant − 363 K) + 20(1 − min(λ, 1.3)) + 2.5(rpm − 3000)/1000
-   − 1.5·max(0, deck_clearance_mm − 1)`.
+   − 1.5·max(0, deck_clearance_mm − 1) + 60·max(0, 0.45 − p_port/1 atm)`. The last term keeps light
+  load (overrun, cruise below ~45 kPa) knock-free whatever the part-load timing: there is too little
+  end-gas pressure to autoignite.
 - Knock intensity `KI = max(0, advance − KLSA)` degrees. Effects: −1 %/° torque, +4 %/° peak
   pressure, +8 K/° piston crown temperature, +1 %/° heat to coolant (capped at 10°).
 - `W_i = burned · LHV · η · f_λ · f_spark · f_knock`, `IMEP = W_i / V_d`.
