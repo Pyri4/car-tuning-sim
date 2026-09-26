@@ -180,7 +180,7 @@ public static class ContentLoader
             if (_scenarios.ContainsKey(sc.Id)) { Error(source, sc.Id, "Duplicate scenario id."); return; }
             _scenarios[sc.Id] = new ScenarioDefinition
             {
-                Id = sc.Id, Name = sc.Name, Description = sc.Description, Engine = sc.Engine, Money = sc.Money, Fuel = sc.Fuel,
+                Id = sc.Id, Name = sc.Name, Description = sc.Description, Engine = sc.Engine, Vehicle = sc.Vehicle, Money = sc.Money, Fuel = sc.Fuel,
                 Tune = sc.Tune, Wear = sc.Wear, Fatigue = sc.Fatigue, Inventory = sc.Inventory, Source = source,
             };
         }
@@ -340,16 +340,23 @@ public static class ContentLoader
             foreach (var sc in _scenarios.Values)
             {
                 if (!_engines.TryGetValue(sc.Engine, out var engine)) { Error(sc.Source, sc.Id, $"Unknown engine '{sc.Engine}'."); continue; }
+                Vehicles.VehicleDefinition? vehicle = null;
+                if (sc.Vehicle.Length > 0)
+                {
+                    if (!_vehicles.TryGetValue(sc.Vehicle, out vehicle)) Error(sc.Source, sc.Id, $"Unknown vehicle '{sc.Vehicle}'.");
+                    else if (vehicle.Engine != sc.Engine) Error(sc.Source, sc.Id, $"Vehicle '{sc.Vehicle}' takes engine '{vehicle.Engine}', not '{sc.Engine}'.");
+                }
+                bool KnownSlot(string slot) => engine.FindSlot(slot) != null || vehicle?.FindSlot(slot) != null;
                 if (!_fuels.ContainsKey(sc.Fuel)) Error(sc.Source, sc.Id, $"Unknown fuel '{sc.Fuel}'.");
                 if (sc.Tune.Length > 0 && !_tunes.ContainsKey(sc.Tune)) Error(sc.Source, sc.Id, $"Unknown tune '{sc.Tune}'.");
                 foreach (var (slot, wear) in sc.Wear)
                 {
-                    if (engine.FindSlot(slot) == null) Error(sc.Source, sc.Id, $"wear references unknown slot '{slot}'.");
+                    if (!KnownSlot(slot)) Error(sc.Source, sc.Id, $"wear references unknown slot '{slot}'.");
                     if (!(wear >= 0 && wear <= 1)) Error(sc.Source, sc.Id, $"wear for '{slot}' must be within [0, 1].");
                 }
                 foreach (var (slot, modes) in sc.Fatigue)
                 {
-                    if (engine.FindSlot(slot) == null) Error(sc.Source, sc.Id, $"fatigue references unknown slot '{slot}'.");
+                    if (!KnownSlot(slot)) Error(sc.Source, sc.Id, $"fatigue references unknown slot '{slot}'.");
                     foreach (var (mode, v) in modes)
                     {
                         if (!Damage.FailureModeNames.TryParse(mode, out _)) Error(sc.Source, sc.Id, $"Unknown failure mode '{mode}'.");

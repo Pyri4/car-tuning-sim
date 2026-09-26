@@ -101,6 +101,8 @@ public class GarageTests
         Assert.Equal(550, loaded.Tune.InjectorFlowCcMin);
         Assert.Equal(g.Inventory.Select(p => p.InstanceId).OrderBy(x => x), loaded.Inventory.Select(p => p.InstanceId).OrderBy(x => x));
         Assert.Equal(g.Engine.Installed.Keys.OrderBy(k => k), loaded.Engine.Installed.Keys.OrderBy(k => k));
+        Assert.Equal(g.Chassis!.Installed.Keys.OrderBy(k => k), loaded.Chassis!.Installed.Keys.OrderBy(k => k));
+        Assert.Equal(0.50, loaded.Chassis.PartIn("tires_rear")!.Wear, 9);
         Assert.Equal(0.55, loaded.Engine.PartIn("main_bearings")!.Wear, 9);
         Assert.Equal(0.30, loaded.Engine.PartIn("pistons")!.Damage.FatigueOf(FailureMode.Detonation), 9);
         Assert.Equal(FailureMode.CrankshaftOverspeed, loaded.Engine.PartIn("crankshaft")!.Damage.Failure!.Mode);
@@ -109,6 +111,52 @@ public class GarageTests
         var ids = loaded.Engine.AllParts.Concat(loaded.Inventory).Select(p => p.InstanceId).ToList();
         Assert.Equal(ids.Count, ids.Distinct().Count());
         Assert.Equal(json, SaveSystem.Serialize(SaveSystem.Deserialize(json, TestContent.Database)));
+    }
+
+    [Fact]
+    public void ProjectCarCanBeDrivenOnlyWithTheEngineInIt()
+    {
+        var g = NewGame();
+        Assert.NotNull(g.Chassis);
+        Assert.Equal(0.40, g.Chassis!.PartIn("clutch")!.Wear, 9);
+        var (sim, problem) = g.CreateVehicleSimulation();
+        Assert.NotNull(sim);
+        Assert.Equal("", problem);
+        g.RemoveEngineFromCar();
+        var (none, why) = g.CreateVehicleSimulation();
+        Assert.Null(none);
+        Assert.Contains("stand", why);
+    }
+
+    [Fact]
+    public void ChassisPartsSwapThroughTheShelf()
+    {
+        var g = NewGame();
+        Assert.True(g.CanAccess("differential"), "chassis parts are reachable with the engine in the car");
+        Assert.True(g.RemovePart("differential").Ok);
+        Assert.False(g.CreateVehicleSimulation().Sim != null, "no differential, no driving");
+        Assert.True(g.Buy("differential.lsd_410").Ok);
+        var lsd = g.Inventory.Single(p => p.Definition.Id == "differential.lsd_410");
+        Assert.True(g.InstallPart(lsd, "differential").Ok);
+        Assert.Equal("differential.lsd_410", g.PartIn("differential")!.Definition.Id);
+        Assert.NotNull(g.CreateVehicleSimulation().Sim);
+    }
+
+    [Fact]
+    public void DamageFromDrivingPersistsInTheGarage()
+    {
+        var g = NewGame();
+        var (sim, _) = g.CreateVehicleSimulation();
+        sim!.State.Gear = 2;
+        sim.State.U = 45;
+        for (int w = 0; w < 4; w++) sim.State.WheelOmega[w] = sim.State.U / sim.Config.TireOf(w).Radius;
+        var input = new CarSim.Core.Vehicles.VehicleInputs();
+        for (int i = 0; i < 2000; i++) sim.Step(0.002, input);
+        Assert.True(sim.Engine.Damage.Seized, "grabbing 2nd at 160 km/h over-revs the engine");
+        Assert.NotEmpty(g.FailedParts);
+        Assert.Null(g.CreateVehicleSimulation().Sim);
+        var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(g), TestContent.Database);
+        Assert.NotEmpty(loaded.FailedParts);
     }
 
     [Fact]

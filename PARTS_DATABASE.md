@@ -191,9 +191,12 @@ See SIMULATION_SPEC.md (ECU section) — `rpm_axis`, `load_axis_kpa`, `target_la
 `knock_control_enabled`.
 
 ## Scenarios (`scenarios`)
-New-game starting points: `id`, `name`, `description`, `engine`, `money`, `fuel`, `tune` (empty = the
-engine's stock tune), `wear` (slot → 0–1), `fatigue` (slot → {failure_mode: 0–1}), `inventory`
-(part ids on the shelf). Failure modes use snake_case names (`detonation`, `head_gasket_breach`, ...).
+New-game starting points: `id`, `name`, `description`, `engine`, `vehicle` (optional car id; its
+`engine` must match the scenario's), `money`, `fuel`, `tune` (empty = the engine's stock tune), `wear`
+(engine or chassis slot → 0–1), `fatigue` (slot → {failure_mode: 0–1}), `inventory` (part ids on the
+shelf). Failure modes use snake_case names (`detonation`, `head_gasket_breach`, ...). With a vehicle,
+the garage holds the car's stock chassis parts alongside the engine; the car can be driven only with
+the engine installed in it, every required chassis slot filled, and a runnable, unseized engine.
 
 ## Compatibility
 Two mechanisms, both validated by `AssemblyValidator`:

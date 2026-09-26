@@ -5,6 +5,7 @@ using CarSim.Core.Engines;
 using CarSim.Core.Fuels;
 using CarSim.Core.Parts;
 using CarSim.Core.Simulation;
+using CarSim.Core.Vehicles;
 
 namespace CarSim.Gameplay;
 
@@ -31,8 +32,9 @@ public sealed class Garage
     private readonly List<string> _log = new();
 
     public Garage(ContentDatabase content, EngineAssembly engine, EcuTune tune, string fuelId, double money, PartInstanceFactory factory,
-        bool engineInCar = true)
+        bool engineInCar = true, VehicleAssembly? chassis = null)
     {
+        Chassis = chassis;
         Content = content;
         Engine = engine;
         Tune = tune;
@@ -44,6 +46,11 @@ public sealed class Garage
 
     public ContentDatabase Content { get; }
     public EngineAssembly Engine { get; }
+
+    /// <summary>The car's chassis parts (null for an engine-only game).</summary>
+    public VehicleAssembly? Chassis { get; }
+
+    public VehicleDefinition? Vehicle => Chassis?.Definition;
     public PartInstanceFactory Factory { get; }
     public EcuTune Tune { get; set; }
     public string FuelId { get; private set; }
@@ -71,7 +78,13 @@ public sealed class Garage
                 if (FailureModeNames.TryParse(name, out var mode)) p.Damage.Accumulate(mode, value);
         }
         string tuneId = sc.Tune.Length > 0 ? sc.Tune : engineDef.StockTune;
-        var garage = new Garage(content, engine, EcuTune.FromDocument(content.GetTune(tuneId)), sc.Fuel, sc.Money, factory);
+        var chassis = sc.Vehicle.Length > 0 ? VehicleAssembly.CreateStock(content.GetVehicle(sc.Vehicle), content, factory) : null;
+        if (chassis != null)
+        {
+            foreach (var (slot, wear) in sc.Wear)
+                if (chassis.PartIn(slot) is { } p) p.Wear = wear;
+        }
+        var garage = new Garage(content, engine, EcuTune.FromDocument(content.GetTune(tuneId)), sc.Fuel, sc.Money, factory, true, chassis);
         foreach (var id in sc.Inventory) garage._inventory.Add(factory.Create(content.GetPart(id)));
         garage.Note($"New game: {sc.Name}.");
         return garage;
@@ -85,7 +98,10 @@ public sealed class Garage
 
     // ---- Access -------------------------------------------------------------------------------
 
-    public bool CanAccess(string slotId) => !EngineInCar || (Engine.Definition.FindSlot(slotId)?.AccessibleInVehicle ?? false);
+    public bool IsChassisSlot(string slotId) => Chassis?.Definition.FindSlot(slotId) != null && Engine.Definition.FindSlot(slotId) == null;
+
+    public bool CanAccess(string slotId) =>
+        IsChassisSlot(slotId) || !EngineInCar || (Engine.Definition.FindSlot(slotId)?.AccessibleInVehicle ?? false);
 
     public ActionResult RemoveEngineFromCar()
     {
@@ -109,6 +125,14 @@ public sealed class Garage
 
     public ActionResult RemovePart(string slotId)
     {
+        if (IsChassisSlot(slotId))
+        {
+            var cr = Chassis!.Remove(slotId, out var removed);
+            if (!cr.Ok) return ActionResult.Fail(cr.Message);
+            _inventory.Add(removed!);
+            Note(cr.Message);
+            return ActionResult.Success(cr.Message);
+        }
         var slot = Engine.Definition.FindSlot(slotId);
         if (slot == null) return ActionResult.Fail($"Unknown slot '{slotId}'.");
         if (!CanAccess(slotId)) return ActionResult.Fail($"{slot.Label} cannot be reached with the engine in the car. Remove the engine first.");
@@ -122,6 +146,14 @@ public sealed class Garage
     public ActionResult InstallPart(PartInstance part, string slotId)
     {
         if (!_inventory.Contains(part)) return ActionResult.Fail($"{part.Definition.Name} is not on the shelf.");
+        if (IsChassisSlot(slotId))
+        {
+            var cr = Chassis!.Install(slotId, part);
+            if (!cr.Ok) return ActionResult.Fail(cr.Message);
+            _inventory.Remove(part);
+            Note(cr.Message);
+            return ActionResult.Success(cr.Message);
+        }
         var slot = Engine.Definition.FindSlot(slotId);
         if (slot == null) return ActionResult.Fail($"Unknown slot '{slotId}'.");
         if (!CanAccess(slotId)) return ActionResult.Fail($"{slot.Label} cannot be reached with the engine in the car. Remove the engine first.");
@@ -134,7 +166,12 @@ public sealed class Garage
 
     /// <summary>Slots of the engine that accept <paramref name="part"/>'s category.</summary>
     public IEnumerable<EngineSlotDefinition> SlotsFor(PartInstance part) =>
-        Engine.Definition.Slots.Where(s => s.Category == part.Category);
+        Engine.Definition.Slots.Concat(Chassis?.Definition.Slots ?? Array.Empty<EngineSlotDefinition>()).Where(s => s.Category == part.Category);
+
+    /// <summary>Whether <paramref name="slotId"/> currently holds a part (engine or chassis).</summary>
+    public bool IsFilled(string slotId) => IsChassisSlot(slotId) ? Chassis!.PartIn(slotId) != null : Engine.IsInstalled(slotId);
+
+    public PartInstance? PartIn(string slotId) => IsChassisSlot(slotId) ? Chassis!.PartIn(slotId) : Engine.PartIn(slotId);
 
     // ---- Economy ------------------------------------------------------------------------------
 
@@ -183,8 +220,24 @@ public sealed class Garage
         return (new EngineSimulation(result.Configuration!, Tune, EngineState.Warm()), result.Report);
     }
 
+    /// <summary>Builds a drivable car: the engine must be in the car and able to run, the chassis complete.</summary>
+    public (VehicleSimulation? Sim, string Problem) CreateVehicleSimulation()
+    {
+        if (Chassis == null) return (null, "This game has no car.");
+        if (!EngineInCar) return (null, "The engine is on the stand. Install it in the car first.");
+        var missing = Chassis.MissingRequiredSlots();
+        if (missing.Count > 0) return (null, $"The car is missing: {string.Join(", ", missing.Select(s => s.Label))}.");
+        var (engineSim, report) = CreateSimulation();
+        if (engineSim == null) return (null, "The engine cannot run: " + string.Join(" ", report.Errors.Select(e => e.Message)));
+        if (engineSim.Damage.Seized) return (null, "The engine is seized. Replace the broken parts first.");
+        var config = new VehicleConfiguration(Chassis.Definition, Chassis, Engine, Content);
+        var sim = new VehicleSimulation(config, engineSim);
+        sim.StartIdling();
+        return (sim, "");
+    }
+
     /// <summary>Parts (installed or on the shelf) that have failed.</summary>
-    public IEnumerable<PartInstance> FailedParts => Engine.AllParts.Concat(_inventory).Where(p => p.IsFailed);
+    public IEnumerable<PartInstance> FailedParts => Engine.AllParts.Concat(Chassis?.Installed.Values ?? Enumerable.Empty<PartInstance>()).Concat(_inventory).Where(p => p.IsFailed);
 
     internal void RestoreInventory(IEnumerable<PartInstance> parts) => _inventory.AddRange(parts);
 

@@ -5,6 +5,7 @@ using CarSim.Core.Damage;
 using CarSim.Core.Ecu;
 using CarSim.Core.Engines;
 using CarSim.Core.Parts;
+using CarSim.Core.Vehicles;
 
 namespace CarSim.Gameplay;
 
@@ -33,6 +34,8 @@ public static class SaveSystem
         public long NextInstanceId { get; set; }
         public string FuelId { get; set; } = "";
         public Dictionary<string, PartSave> Installed { get; set; } = new();
+        public string VehicleId { get; set; } = "";
+        public Dictionary<string, PartSave> Chassis { get; set; } = new();
         public List<PartSave> Inventory { get; set; } = new();
         public TuneDocument? Tune { get; set; }
         public List<string> Log { get; set; } = new();
@@ -64,7 +67,9 @@ public static class SaveSystem
             Money = g.Money,
             NextInstanceId = g.Factory.NextId,
             FuelId = g.FuelId,
-            Installed = g.Engine.Installed.ToDictionary(kv => kv.Key, kv => Save(kv.Value)),
+            Installed = g.Engine.Installed.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => Save(kv.Value)),
+            VehicleId = g.Vehicle?.Id ?? "",
+            Chassis = g.Chassis?.Installed.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => Save(kv.Value)) ?? new(),
             Inventory = g.Inventory.Select(Save).ToList(),
             Tune = g.Tune.ToDocument(),
             Log = g.Log.TakeLast(200).ToList(),
@@ -95,7 +100,8 @@ public static class SaveSystem
         var problems = new List<string>();
         if (!content.Engines.TryGetValue(file.EngineId, out var engineDef)) problems.Add($"Unknown engine '{file.EngineId}'.");
         if (!content.Fuels.ContainsKey(file.FuelId)) problems.Add($"Unknown fuel '{file.FuelId}'.");
-        foreach (var ps in file.Installed.Values.Concat(file.Inventory))
+        if (file.VehicleId.Length > 0 && !content.Vehicles.ContainsKey(file.VehicleId)) problems.Add($"Unknown vehicle '{file.VehicleId}'.");
+        foreach (var ps in file.Installed.Values.Concat(file.Inventory).Concat(file.Chassis.Values))
             if (!content.Parts.ContainsKey(ps.PartId)) problems.Add($"Unknown part '{ps.PartId}' (instance {ps.InstanceId}); was a mod removed?");
         if (file.Tune == null) problems.Add("Save has no ECU tune.");
         else problems.AddRange(file.Tune.Validate().Select(p => $"Tune: {p}"));
@@ -108,8 +114,18 @@ public static class SaveSystem
             var r = engine.Install(slot.Id, Load(ps, content));
             if (!r.Ok) throw new InvalidDataException($"Cannot restore {slot.Label}: {r.Message}");
         }
+        VehicleAssembly? chassis = null;
+        if (file.VehicleId.Length > 0)
+        {
+            chassis = new VehicleAssembly(content.GetVehicle(file.VehicleId));
+            foreach (var (slot, ps) in file.Chassis.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            {
+                var r = chassis.Install(slot, Load(ps, content));
+                if (!r.Ok) throw new InvalidDataException($"Cannot restore chassis slot {slot}: {r.Message}");
+            }
+        }
         var garage = new Garage(content, engine, EcuTune.FromDocument(file.Tune!), file.FuelId, file.Money,
-            new PartInstanceFactory(file.NextInstanceId), file.EngineInCar);
+            new PartInstanceFactory(file.NextInstanceId), file.EngineInCar, chassis);
         garage.RestoreInventory(file.Inventory.Select(ps => Load(ps, content)));
         garage.RestoreLog(file.Log);
         return garage;
