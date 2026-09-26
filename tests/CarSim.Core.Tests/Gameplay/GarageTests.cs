@@ -147,6 +147,20 @@ public class GarageTests
     }
 
     [Fact]
+    public void ABrokenChassisPartKeepsTheCarOffTheTrackUntilReplaced()
+    {
+        var g = NewGame();
+        g.PartIn("clutch")!.Damage.Fail(CarSim.Core.Damage.FailureMode.ClutchBurnout, 0);
+        var (sim, problem) = g.CreateVehicleSimulation();
+        Assert.Null(sim);
+        Assert.Contains("OEM clutch", problem);
+        Assert.True(g.RemovePart("clutch").Ok);
+        Assert.True(g.Buy("clutch.sport").Ok);
+        Assert.True(g.InstallPart(g.Inventory.Single(p => p.Definition.Id == "clutch.sport"), "clutch").Ok);
+        Assert.NotNull(g.CreateVehicleSimulation().Sim);
+    }
+
+    [Fact]
     public void DamageFromDrivingPersistsInTheGarage()
     {
         var g = NewGame();
