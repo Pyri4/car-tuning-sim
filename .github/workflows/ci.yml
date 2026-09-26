@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    name: Core build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore CarTuningSim.sln
+      - name: Build
+        run: dotnet build CarTuningSim.sln --no-restore -c Release
+      - name: Test
+        run: dotnet test CarTuningSim.sln --no-build -c Release --logger "console;verbosity=normal"
+      - name: CLI smoke (content validation and a dyno sweep)
+        run: |
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep --from 2000 --to 7000 --step 1000
+
+  godot-smoke:
+    name: Godot headless smoke test
+    runs-on: ubuntu-latest
+    needs: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Download Godot 4.7.2 (.NET)
+        run: |
+          curl -sSL --fail -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_linux_x86_64.zip
+          unzip -q godot.zip -d godot-bin
+          GODOT_BIN=$(find "$PWD/godot-bin" -type f -name 'Godot_v*mono_linux*x86_64' | head -1)
+          chmod +x "$GODOT_BIN"
+          echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
+      - name: Build game assembly
+        run: dotnet build game/CarTuningSim.csproj
+      - name: Import project
+        run: timeout 300 "$GODOT_BIN" --headless --path game --import || true
+      - name: Smoke test (content, garage, dyno pull)
+        run: |
+          timeout 300 "$GODOT_BIN" --headless --path game -- --smoke-test | tee smoke.log
+          grep -q "SMOKE TEST PASSED" smoke.log
+      - name: Drive smoke test (test track, autopilot)
+        run: |
+          timeout 300 "$GODOT_BIN" --headless --path game -- --drive --smoke-test | tee drive.log
+          grep -q "DRIVE SMOKE TEST PASSED" drive.log

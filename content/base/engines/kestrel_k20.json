@@ -1,0 +1,62 @@
+{
+  // Kestrel K20: fictional 2.0 L DOHC 16-valve inline-four. Square 86 × 86 mm, zero-deck,
+  // 10.5:1 compression in factory form. The prototype's only engine family.
+  "engines": [
+    {
+      "id": "kestrel_k20",
+      "name": "Kestrel K20 2.0L DOHC I4",
+      "cylinders": 4,
+      "layout": "inline",
+      "description": "Naturally aspirated 1998 cc twin-cam four from an ageing sports compact. Square bore/stroke, cast pistons, 7,600 rpm factory limit.",
+      "slots": [
+        { "id": "block",           "category": "block",           "display_name": "Cylinder block" },
+        { "id": "main_bearings",   "category": "main_bearings",   "display_name": "Main bearings",   "install_after": ["block"] },
+        { "id": "crankshaft",      "category": "crankshaft",      "display_name": "Crankshaft",      "install_after": ["main_bearings"] },
+        { "id": "rod_bearings",    "category": "rod_bearings",    "display_name": "Rod bearings",    "install_after": ["crankshaft"] },
+        { "id": "connecting_rods", "category": "connecting_rods", "display_name": "Connecting rods", "install_after": ["rod_bearings"] },
+        { "id": "pistons",         "category": "pistons",         "display_name": "Pistons",         "install_after": ["connecting_rods"] },
+        { "id": "oil_pump",        "category": "oil_pump",        "display_name": "Oil pump",        "install_after": ["crankshaft"] },
+        { "id": "oil_pan",         "category": "oil_pan",         "display_name": "Oil pan",         "install_after": ["oil_pump", "connecting_rods"] },
+        { "id": "flywheel",        "category": "flywheel",        "display_name": "Flywheel",        "install_after": ["crankshaft"] },
+        { "id": "head_gasket",     "category": "head_gasket",     "display_name": "Head gasket",     "install_after": ["pistons"],         "accessible_in_vehicle": true },
+        { "id": "cylinder_head",   "category": "cylinder_head",   "display_name": "Cylinder head",   "install_after": ["head_gasket"],     "accessible_in_vehicle": true },
+        { "id": "valve_springs",   "category": "valve_springs",   "display_name": "Valve springs",   "install_after": ["cylinder_head"],   "accessible_in_vehicle": true },
+        { "id": "camshafts",       "category": "camshafts",       "display_name": "Camshafts",       "install_after": ["valve_springs"],   "accessible_in_vehicle": true },
+        { "id": "intake_manifold", "category": "intake_manifold", "display_name": "Intake manifold", "install_after": ["cylinder_head"],   "accessible_in_vehicle": true },
+        { "id": "throttle_body",   "category": "throttle_body",   "display_name": "Throttle body",   "install_after": ["intake_manifold"], "accessible_in_vehicle": true },
+        { "id": "injectors",       "category": "injectors",       "display_name": "Fuel injectors",  "install_after": ["intake_manifold"], "accessible_in_vehicle": true },
+        { "id": "fuel_pump",       "category": "fuel_pump",       "display_name": "Fuel pump",                                              "accessible_in_vehicle": true },
+        { "id": "exhaust_manifold","category": "exhaust_manifold","display_name": "Exhaust manifold","install_after": ["cylinder_head"],   "accessible_in_vehicle": true },
+        { "id": "turbocharger",    "category": "turbocharger",    "display_name": "Turbocharger",    "install_after": ["exhaust_manifold"],"accessible_in_vehicle": true, "required": false },
+        { "id": "intercooler",     "category": "intercooler",     "display_name": "Intercooler",     "install_after": ["turbocharger"],    "accessible_in_vehicle": true, "required": false },
+        { "id": "exhaust",         "category": "exhaust",         "display_name": "Exhaust system",  "install_after": ["exhaust_manifold"],"accessible_in_vehicle": true },
+        { "id": "radiator",        "category": "radiator",        "display_name": "Radiator",                                               "accessible_in_vehicle": true },
+        { "id": "ecu",             "category": "ecu",             "display_name": "ECU",                                                    "accessible_in_vehicle": true }
+      ],
+      "stock_parts": {
+        "block": "k20.block.oem",
+        "main_bearings": "k20.main_bearings.oem",
+        "crankshaft": "k20.crankshaft.oem",
+        "rod_bearings": "k20.rod_bearings.oem",
+        "connecting_rods": "k20.rods.oem",
+        "pistons": "k20.pistons.oem",
+        "oil_pump": "k20.oil_pump.oem",
+        "oil_pan": "k20.oil_pan.oem",
+        "flywheel": "k20.flywheel.oem",
+        "head_gasket": "k20.head_gasket.oem",
+        "cylinder_head": "k20.head.oem",
+        "valve_springs": "k20.valve_springs.oem",
+        "camshafts": "k20.cams.oem",
+        "intake_manifold": "k20.intake.oem",
+        "throttle_body": "throttle.60mm",
+        "injectors": "injectors.310cc",
+        "fuel_pump": "fuel_pump.oem_170",
+        "exhaust_manifold": "k20.exhaust_manifold.oem",
+        "exhaust": "exhaust.oem_57mm",
+        "radiator": "radiator.oem",
+        "ecu": "ecu.k20_oem"
+      },
+      "stock_tune": "k20.stock"
+    }
+  ]
+}

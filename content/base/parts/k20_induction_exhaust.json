@@ -1,0 +1,52 @@
+{
+  "parts": [
+    {
+      "id": "k20.intake.oem", "name": "K20 OEM intake manifold", "category": "intake_manifold", "manufacturer": "Kestrel",
+      "price": 450, "mass_kg": 4.5, "requires": ["k20.intake_flange"],
+      "description": "Long runners for mid-range torque; includes the factory airbox and filter.",
+      "spec": { "runner_length_mm": 340, "flow_cfm": 460 }
+    },
+    {
+      "id": "k20.intake.short_runner", "name": "Short-runner race intake", "category": "intake_manifold", "manufacturer": "Flowworks",
+      "price": 1100, "mass_kg": 3.9, "requires": ["k20.intake_flange"],
+      "description": "Short runners and an open filter shift the tuned peak upward and flow much more.",
+      "spec": { "runner_length_mm": 230, "flow_cfm": 640 }
+    },
+    {
+      "id": "k20.exhaust_manifold.oem", "name": "K20 OEM cast exhaust manifold", "category": "exhaust_manifold", "manufacturer": "Kestrel",
+      "price": 300, "mass_kg": 6.5, "requires": ["k20.exhaust_flange"],
+      "spec": { "flow_cfm": 520, "primary_length_mm": 350, "scavenging_gain": 0.015 }
+    },
+    {
+      "id": "k20.exhaust_manifold.header421", "name": "4-2-1 tubular header", "category": "exhaust_manifold", "manufacturer": "Flowworks",
+      "price": 780, "mass_kg": 4.8, "requires": ["k20.exhaust_flange"],
+      "description": "Long tuned primaries: strong scavenging near the tuned speed.",
+      "spec": { "flow_cfm": 720, "primary_length_mm": 820, "scavenging_gain": 0.05 }
+    },
+    {
+      "id": "throttle.60mm", "name": "60 mm throttle body", "category": "throttle_body", "manufacturer": "Kestrel",
+      "price": 250, "mass_kg": 1.2,
+      "spec": { "bore_mm": 60, "flow_cfm": 520 }
+    },
+    {
+      "id": "throttle.70mm", "name": "70 mm throttle body", "category": "throttle_body", "manufacturer": "Flowworks",
+      "price": 420, "mass_kg": 1.3,
+      "spec": { "bore_mm": 70, "flow_cfm": 700 }
+    },
+    {
+      "id": "exhaust.oem_57mm", "name": "OEM exhaust (57 mm, catalyst, two silencers)", "category": "exhaust", "manufacturer": "Kestrel",
+      "price": 500, "mass_kg": 18.0,
+      "spec": { "flow_cfm": 380, "diameter_mm": 57, "has_catalyst": true }
+    },
+    {
+      "id": "exhaust.sport_63mm", "name": "Sport cat-back (63 mm, high-flow catalyst)", "category": "exhaust", "manufacturer": "Flowworks",
+      "price": 850, "mass_kg": 13.0,
+      "spec": { "flow_cfm": 560, "diameter_mm": 63, "has_catalyst": true }
+    },
+    {
+      "id": "exhaust.race_76mm", "name": "Straight-through race exhaust (76 mm, no catalyst)", "category": "exhaust", "manufacturer": "Flowworks",
+      "price": 1100, "mass_kg": 9.0,
+      "spec": { "flow_cfm": 820, "diameter_mm": 76, "has_catalyst": false }
+    }
+  ]
+}

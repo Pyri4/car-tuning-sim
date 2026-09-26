@@ -1,0 +1,75 @@
+{
+  "parts": [
+    {
+      "id": "k20.head_gasket.oem", "name": "K20 OEM MLS head gasket (0.7 mm)", "category": "head_gasket", "manufacturer": "Kestrel",
+      "price": 90, "mass_kg": 0.3,
+      "spec": { "bore_mm": 87.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 130, "material": "mls" }
+    },
+    {
+      "id": "k20.head_gasket.thick", "name": "Thick MLS head gasket (1.3 mm)", "category": "head_gasket", "manufacturer": "Sealmaster",
+      "price": 150, "mass_kg": 0.35,
+      "description": "A cheap way to drop compression about 0.6 points for boost. Costs quench and some efficiency.",
+      "spec": { "bore_mm": 87.0, "compressed_thickness_mm": 1.3, "max_cylinder_pressure_bar": 160, "material": "mls" }
+    },
+    {
+      "id": "k20.head_gasket.race", "name": "Copper-ringed race MLS gasket (0.7 mm)", "category": "head_gasket", "manufacturer": "Sealmaster",
+      "price": 220, "mass_kg": 0.3,
+      "spec": { "bore_mm": 87.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 210, "material": "mls/copper" }
+    },
+    {
+      "id": "k20.head.oem", "name": "K20 OEM cylinder head", "category": "cylinder_head", "manufacturer": "Kestrel",
+      "price": 1900, "mass_kg": 16.0, "requires": ["k20.deck"],
+      "provides": ["k20.cam_carrier", "k20.intake_flange", "k20.exhaust_flange"],
+      "description": "Pent-roof 4-valve head. Intake flow flattens out above ~9 mm lift.",
+      "spec": {
+        "chamber_volume_cc": 50.4, "valve_moving_mass_g": 95, "valves_per_cylinder": 4,
+        "intake_port_flow_cfm":  [[1, 32], [2, 65], [3, 95], [4, 122], [5, 145], [6, 163], [7, 177], [8, 188], [9, 196], [10, 201], [11, 204], [12, 205]],
+        "exhaust_port_flow_cfm": [[1, 26], [2, 52], [3, 76], [4, 97], [5, 114], [6, 127], [7, 137], [8, 144], [9, 149], [10, 152], [11, 154], [12, 155]]
+      }
+    },
+    {
+      "id": "k20.head.ported", "name": "CNC-ported K20 head", "category": "cylinder_head", "manufacturer": "Flowworks",
+      "price": 3900, "mass_kg": 15.8, "requires": ["k20.deck"],
+      "provides": ["k20.cam_carrier", "k20.intake_flange", "k20.exhaust_flange"],
+      "description": "Five-axis ported, lightened valves. Big gains at high lift; needs cam lift to use them.",
+      "spec": {
+        "chamber_volume_cc": 51.0, "valve_moving_mass_g": 85, "valves_per_cylinder": 4,
+        "intake_port_flow_cfm":  [[1, 33], [2, 68], [3, 101], [4, 131], [5, 158], [6, 180], [7, 198], [8, 213], [9, 225], [10, 234], [11, 240], [12, 244]],
+        "exhaust_port_flow_cfm": [[1, 27], [2, 55], [3, 81], [4, 105], [5, 125], [6, 141], [7, 154], [8, 164], [9, 172], [10, 178], [11, 182], [12, 184]]
+      }
+    },
+    {
+      "id": "k20.valve_springs.oem", "name": "K20 OEM valve springs", "category": "valve_springs", "manufacturer": "Kestrel",
+      "price": 120, "mass_kg": 0.8, "requires": ["k20.cam_carrier"],
+      "spec": { "seat_force_n": 210, "open_force_n": 560, "max_lift_mm": 11.0 }
+    },
+    {
+      "id": "k20.valve_springs.performance", "name": "Dual performance valve springs + Ti retainers", "category": "valve_springs", "manufacturer": "Featherline",
+      "price": 380, "mass_kg": 0.9, "requires": ["k20.cam_carrier"],
+      "spec": { "seat_force_n": 280, "open_force_n": 780, "max_lift_mm": 12.8 }
+    },
+    {
+      "id": "k20.cams.oem", "name": "K20 OEM camshafts", "category": "camshafts", "manufacturer": "Kestrel",
+      "price": 600, "mass_kg": 4.2, "requires": ["k20.cam_carrier"],
+      "spec": { "intake_duration_deg": 224, "intake_lift_mm": 9.8, "exhaust_duration_deg": 220, "exhaust_lift_mm": 9.2, "lobe_separation_deg": 112 }
+    },
+    {
+      "id": "k20.cams.sport", "name": "Sport camshafts (244/240)", "category": "camshafts", "manufacturer": "Flowworks",
+      "price": 900, "mass_kg": 4.2, "requires": ["k20.cam_carrier"],
+      "description": "Moves the torque peak up ~800 rpm. Idle gets lumpy.",
+      "spec": { "intake_duration_deg": 244, "intake_lift_mm": 10.8, "exhaust_duration_deg": 240, "exhaust_lift_mm": 10.3, "lobe_separation_deg": 110 }
+    },
+    {
+      "id": "k20.cams.race", "name": "Race camshafts (264/258)", "category": "camshafts", "manufacturer": "Flowworks",
+      "price": 1250, "mass_kg": 4.3, "requires": ["k20.cam_carrier"],
+      "description": "High-RPM naturally aspirated cams. Requires springs rated for 11.8 mm lift.",
+      "spec": { "intake_duration_deg": 264, "intake_lift_mm": 11.8, "exhaust_duration_deg": 258, "exhaust_lift_mm": 11.2, "lobe_separation_deg": 108 }
+    },
+    {
+      "id": "k20.cams.turbo", "name": "Turbo camshafts (236/228, wide LSA)", "category": "camshafts", "manufacturer": "Flowworks",
+      "price": 850, "mass_kg": 4.2, "requires": ["k20.cam_carrier"],
+      "description": "Low overlap keeps exhaust backpressure from pushing charge back into the intake.",
+      "spec": { "intake_duration_deg": 236, "intake_lift_mm": 10.2, "exhaust_duration_deg": 228, "exhaust_lift_mm": 9.6, "lobe_separation_deg": 114 }
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  // Parts that are not specific to one engine family.
+  "parts": [
+    {
+      "id": "injectors.310cc", "name": "310 cc/min injectors (set of 4)", "category": "injectors", "manufacturer": "Kestrel",
+      "price": 280, "mass_kg": 0.3,
+      "spec": { "count": 4, "flow_cc_min": 310, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 0.90 }
+    },
+    {
+      "id": "injectors.550cc", "name": "550 cc/min injectors (set of 4)", "category": "injectors", "manufacturer": "Precision Flow",
+      "price": 520, "mass_kg": 0.3,
+      "spec": { "count": 4, "flow_cc_min": 550, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 1.00 }
+    },
+    {
+      "id": "injectors.1000cc", "name": "1000 cc/min injectors (set of 4)", "category": "injectors", "manufacturer": "Precision Flow",
+      "price": 890, "mass_kg": 0.35,
+      "spec": { "count": 4, "flow_cc_min": 1000, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 1.10 }
+    },
+    {
+      "id": "fuel_pump.oem_170", "name": "OEM in-tank fuel pump", "category": "fuel_pump", "manufacturer": "Kestrel",
+      "price": 160, "mass_kg": 0.8,
+      "description": "Delivers about 85 L/h at 3 bar. Enough for the factory engine, not much more.",
+      "spec": { "free_flow_lph": 170, "max_pressure_kpa": 600, "regulated_pressure_kpa": 300 }
+    },
+    {
+      "id": "fuel_pump.hf_330", "name": "High-flow in-tank pump", "category": "fuel_pump", "manufacturer": "Precision Flow",
+      "price": 260, "mass_kg": 0.9,
+      "spec": { "free_flow_lph": 330, "max_pressure_kpa": 800, "regulated_pressure_kpa": 300 }
+    },
+    {
+      "id": "fuel_pump.race_560", "name": "Race fuel pump + surge tank", "category": "fuel_pump", "manufacturer": "Precision Flow",
+      "price": 690, "mass_kg": 2.5,
+      "spec": { "free_flow_lph": 560, "max_pressure_kpa": 900, "regulated_pressure_kpa": 300 }
+    },
+    {
+      "id": "radiator.oem", "name": "OEM radiator", "category": "radiator", "manufacturer": "Kestrel",
+      "price": 220, "mass_kg": 5.5,
+      "spec": { "heat_rejection_w_per_k": 1300, "reference_air_speed_ms": 15, "coolant_capacity_l": 2.5, "thermostat_open_c": 88 }
+    },
+    {
+      "id": "radiator.alloy_race", "name": "Dual-core aluminium race radiator", "category": "radiator", "manufacturer": "Coolrun",
+      "price": 540, "mass_kg": 5.0,
+      "spec": { "heat_rejection_w_per_k": 2400, "reference_air_speed_ms": 15, "coolant_capacity_l": 3.2, "thermostat_open_c": 82 }
+    },
+    {
+      "id": "ecu.k20_oem", "name": "K20 OEM ECU (reflashable)", "category": "ecu", "manufacturer": "Kestrel",
+      "price": 600, "mass_kg": 0.9,
+      "description": "Factory unit with a 1-bar MAP sensor: it cannot measure boost, so it cannot fuel for it.",
+      "spec": { "map_sensor_max_kpa": 105, "boost_control": false, "knock_control": true, "max_rev_limit_rpm": 8200, "tables_editable": true }
+    },
+    {
+      "id": "ecu.standalone", "name": "Standalone programmable ECU", "category": "ecu", "manufacturer": "Apex Engine Management",
+      "price": 1500, "mass_kg": 0.7,
+      "description": "4-bar MAP sensor, closed-loop boost control, knock control, 12,000 rpm capable.",
+      "spec": { "map_sensor_max_kpa": 400, "boost_control": true, "knock_control": true, "max_rev_limit_rpm": 12000, "tables_editable": true }
+    }
+  ]
+}

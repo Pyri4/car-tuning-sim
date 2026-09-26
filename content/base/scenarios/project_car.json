@@ -1,0 +1,31 @@
+{
+  "scenarios": [
+    {
+      "id": "project_car",
+      "name": "The Kestrel project car",
+      "description": "A tired 2.0 twin-cam coupe bought cheap. It runs, but the oil light flickers at idle and it has lost its edge. Tear it down, find out why, and build it back better.",
+      "engine": "kestrel_k20",
+      "vehicle": "kestrel_s2",
+      "money": 9000,
+      "fuel": "gasoline_95",
+      // The discoveries waiting for the player:
+      "wear": {
+        "main_bearings": 0.55,
+        "rod_bearings": 0.60,
+        "pistons": 0.45,
+        "valve_springs": 0.35,
+        "injectors": 0.20,
+        "fuel_pump": 0.25,
+        "exhaust": 0.30,
+        "radiator": 0.00,
+        "clutch": 0.40,
+        "tires_rear": 0.50
+      },
+      "fatigue": {
+        "pistons": { "detonation": 0.30 },
+        "head_gasket": { "head_gasket_breach": 0.20 }
+      },
+      "inventory": []
+    }
+  ]
+}
