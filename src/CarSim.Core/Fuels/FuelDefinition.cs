@@ -11,6 +11,15 @@ public sealed class FuelDefinition
     /// <summary>Research octane number. Higher resists knock.</summary>
     public required double OctaneRon { get; init; }
 
+    /// <summary>
+    /// Motor octane number (defaults to RON − 10). The gap RON − MON is the fuel's sensitivity: under boost
+    /// a high-sensitivity fuel (ethanol) resists knock better than its RON says (see <c>KnockModel.OctaneIndex</c>).
+    /// </summary>
+    public double? OctaneMon { get; init; }
+
+    /// <summary>RON − MON.</summary>
+    [JsonIgnore] public double OctaneSensitivity => OctaneRon - (OctaneMon ?? OctaneRon - 10.0);
+
     /// <summary>Mass air/fuel ratio for complete combustion (λ = 1).</summary>
     public required double StoichiometricAfr { get; init; }
 
@@ -48,6 +57,7 @@ public sealed class FuelDefinition
     {
         var p = new List<string>();
         if (!(OctaneRon >= 60 && OctaneRon <= 130)) p.Add($"octane_ron out of range: {OctaneRon}");
+        if (OctaneMon is double mon && !(mon <= OctaneRon && mon >= OctaneRon - 30)) p.Add($"octane_mon must be at most octane_ron and within 30 of it: {mon}");
         if (!(StoichiometricAfr >= 3 && StoichiometricAfr <= 20)) p.Add($"stoichiometric_afr out of range: {StoichiometricAfr}");
         if (!(LowerHeatingValueMjKg >= 10 && LowerHeatingValueMjKg <= 60)) p.Add($"lower_heating_value_mj_kg out of range: {LowerHeatingValueMjKg}");
         if (!(DensityKgL >= 0.5 && DensityKgL <= 1.2)) p.Add($"density_kg_l out of range: {DensityKgL}");

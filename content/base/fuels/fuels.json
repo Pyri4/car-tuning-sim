@@ -1,15 +1,15 @@
 {
   "fuels": [
-    { "id": "gasoline_91", "name": "Regular unleaded (RON 91)", "octane_ron": 91, "stoichiometric_afr": 14.7,
+    { "id": "gasoline_91", "name": "Regular unleaded (RON 91)", "octane_ron": 91, "octane_mon": 82.5, "stoichiometric_afr": 14.7,
       "lower_heating_value_mj_kg": 43.4, "density_kg_l": 0.745, "charge_cooling_factor": 1.0 },
-    { "id": "gasoline_95", "name": "Premium unleaded (RON 95)", "octane_ron": 95, "stoichiometric_afr": 14.7,
+    { "id": "gasoline_95", "name": "Premium unleaded (RON 95)", "octane_ron": 95, "octane_mon": 85, "stoichiometric_afr": 14.7,
       "lower_heating_value_mj_kg": 43.3, "density_kg_l": 0.748, "charge_cooling_factor": 1.0 },
-    { "id": "gasoline_98", "name": "Super premium (RON 98)", "octane_ron": 98, "stoichiometric_afr": 14.7,
+    { "id": "gasoline_98", "name": "Super premium (RON 98)", "octane_ron": 98, "octane_mon": 88, "stoichiometric_afr": 14.7,
       "lower_heating_value_mj_kg": 43.2, "density_kg_l": 0.750, "charge_cooling_factor": 1.0 },
-    { "id": "e85", "name": "E85 (85% ethanol)", "octane_ron": 105, "stoichiometric_afr": 9.8,
+    { "id": "e85", "name": "E85 (85% ethanol)", "octane_ron": 105, "octane_mon": 88, "stoichiometric_afr": 9.8,
       "lower_heating_value_mj_kg": 29.2, "density_kg_l": 0.781, "charge_cooling_factor": 3.5,
       "description": "Huge knock resistance and charge cooling, but needs ~45% more fuel flow than gasoline." },
-    { "id": "race_110", "name": "Leaded race fuel (RON 110)", "octane_ron": 110, "stoichiometric_afr": 14.4,
+    { "id": "race_110", "name": "Leaded race fuel (RON 110)", "octane_ron": 110, "octane_mon": 102, "stoichiometric_afr": 14.4,
       "lower_heating_value_mj_kg": 43.0, "density_kg_l": 0.720, "charge_cooling_factor": 1.1 }
   ]
 }

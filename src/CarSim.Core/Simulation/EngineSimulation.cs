@@ -216,9 +216,11 @@ public sealed class EngineSimulation
         double mbt = CombustionModel.MbtAdvance(rpm, chargeDensityRatio);
         double ringWear = c.Part(PartCategory.Pistons).Wear;
         double cr = g.CompressionRatio;
-        double knockLimit = CombustionModel.KnockLimitedAdvance(new CombustionModel.KnockConditions(
-            rpm, fuel.OctaneRon, cr, air.PortPressure, air.ChargeTemperature, s.CoolantTemperature,
-            double.IsFinite(lambda) ? lambda : 1.0, Units.MToMm(g.DeckClearance)));
+        double knockLimit = firing
+            ? KnockModel.KnockLimitedAdvance(new CombustionModel.KnockConditions(
+                rpm, fuel.OctaneRon, cr, air.PortPressure, air.ChargeTemperature, s.CoolantTemperature,
+                lambda, Units.MToMm(g.DeckClearance), air.ExhaustPortPressure / air.PortPressure, fuel.OctaneSensitivity), advance)
+            : double.PositiveInfinity;
         double knock = firing ? CombustionModel.KnockIntensity(advance, knockLimit) : 0.0;
 
         double burnedFuel = 0.0, grossWork = 0.0;

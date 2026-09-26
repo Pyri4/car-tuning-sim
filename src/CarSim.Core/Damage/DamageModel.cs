@@ -251,8 +251,10 @@ public sealed class DamageModel
         var w = new List<EngineWarning>();
         if (!t.Running && t.Rpm < 100) return w;
         if (t.KnockIntensity > 0.3)
+            // What a knock sensor reports: how hard it knocks, not where the limit is.
             w.Add(new("knock", t.KnockIntensity > 2 ? WarningLevel.Danger : WarningLevel.Caution,
-                $"Knock: timing {t.KnockIntensity:F1}° past the knock limit ({t.KnockLimitAdvance:F1}° BTDC)."));
+                (t.KnockIntensity > 2 ? "Heavy knock" : "Knock") + " on the knock sensor" +
+                (t.KnockRetard > 0.05 ? $" — the ECU is pulling {t.KnockRetard:F1}° of timing." : ".")));
         if (t.Rpm > 500 && t.OilPressure < t.OilPressureRequired)
             w.Add(new("oil_pressure", WarningLevel.Danger,
                 $"Low oil pressure: {t.OilPressureBar:F2} bar, bearings need {Units.PaToBar(t.OilPressureRequired):F2} bar at {t.Rpm:F0} rpm."));

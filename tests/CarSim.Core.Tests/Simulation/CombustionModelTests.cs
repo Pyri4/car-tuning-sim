@@ -5,10 +5,6 @@ namespace CarSim.Core.Tests.Simulation;
 
 public class CombustionModelTests
 {
-    private static CombustionModel.KnockConditions Reference => new(
-        Rpm: 3000, Octane: 95, CompressionRatio: 10.5, PortPressurePa: PhysicalConstants.StandardPressure,
-        ChargeTemperatureK: 313.15, CoolantTemperatureK: 363.15, Lambda: 1.0, DeckClearanceMm: 0.0);
-
     [Fact]
     public void IndicatedEfficiencyRisesWithCompressionWithDiminishingReturns()
     {
@@ -44,37 +40,6 @@ public class CombustionModelTests
         Assert.InRange(best, 0.85, 0.9);
         Assert.True(Torque(1.1) < Torque(1.0));
         Assert.True(Torque(1.5) < 0.5, "very lean mixtures misfire");
-    }
-
-    [Fact]
-    public void KnockLimitReferencePoint()
-    {
-        Assert.Equal(24.0, CombustionModel.KnockLimitedAdvance(Reference), 9);
-    }
-
-    [Fact]
-    public void LightLoadDoesNotKnockEvenWithCruiseTiming()
-    {
-        // Overrun at 20 kPa with a 40° part-load advance: far too little end-gas pressure to knock.
-        double overrun = CombustionModel.KnockLimitedAdvance(Reference with { PortPressurePa = 20_000, Rpm = 3500 });
-        Assert.True(overrun > 50, $"KLSA {overrun:F1}° at 20 kPa");
-        // Above the light-load threshold the limit is the plain linear model.
-        double half = CombustionModel.KnockLimitedAdvance(Reference with { PortPressurePa = 0.5 * 101_325 });
-        Assert.Equal(24.0 + 14.0 * 0.5, half, 6);
-    }
-
-    [Fact]
-    public void KnockLimitRespondsToEachFactorInTheRightDirection()
-    {
-        double baseline = CombustionModel.KnockLimitedAdvance(Reference);
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { Octane = 98 }) > baseline, "octane");
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { CompressionRatio = 12 }) < baseline, "compression");
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { PortPressurePa = 180_000 }) < baseline, "boost");
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { ChargeTemperatureK = 353 }) < baseline, "hot charge");
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { CoolantTemperatureK = 383 }) < baseline, "hot coolant");
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { Lambda = 0.8 }) > baseline, "rich mixture");
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { Rpm = 6000 }) > baseline, "less time at high rpm");
-        Assert.True(CombustionModel.KnockLimitedAdvance(Reference with { DeckClearanceMm = 3 }) < baseline, "poor quench");
     }
 
     [Fact]

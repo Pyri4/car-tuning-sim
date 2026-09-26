@@ -56,7 +56,7 @@ public static class CombustionModel
         return Math.Max(0.1, 1.0 - k * d * d);
     }
 
-    /// <summary>Inputs to the knock-limit estimate.</summary>
+    /// <summary>Inputs to the knock model (<see cref="KnockModel"/>).</summary>
     public readonly record struct KnockConditions(
         double Rpm,
         double Octane,
@@ -65,34 +65,9 @@ public static class CombustionModel
         double ChargeTemperatureK,
         double CoolantTemperatureK,
         double Lambda,
-        double DeckClearanceMm);
-
-    /// <summary>Port pressure ratio below which the knock limit rises steeply (light load).</summary>
-    public const double LightLoadPressureRatio = 0.45;
-
-    /// <summary>Extra knock-limit degrees per unit of pressure ratio below <see cref="LightLoadPressureRatio"/>.</summary>
-    public const double LightLoadKnockMargin = 60.0;
-
-    /// <summary>
-    /// Knock-limited spark advance (degrees BTDC): the most advance the end gas tolerates.
-    /// Reference: RON 95, CR 10.5, 1 atm port pressure, 40 °C charge, 90 °C coolant, λ 1, 3000 rpm → 24°.
-    /// </summary>
-    public static double KnockLimitedAdvance(in KnockConditions c)
-    {
-        double klsa = 24.0;
-        klsa += 1.3 * (c.Octane - 95.0);
-        klsa -= 3.2 * (c.CompressionRatio - 10.5);
-        double pr = c.PortPressurePa / PhysicalConstants.StandardPressure;
-        klsa -= 14.0 * (pr - 1.0);
-        // Light load: too little end-gas pressure to autoignite, whatever the timing (overrun, cruise).
-        klsa += LightLoadKnockMargin * Math.Max(0.0, LightLoadPressureRatio - pr);
-        klsa -= 0.25 * (c.ChargeTemperatureK - 313.15);
-        klsa -= 0.20 * Math.Max(0.0, c.CoolantTemperatureK - 363.15);
-        klsa += 20.0 * (1.0 - Math.Min(c.Lambda, 1.3));
-        klsa += 2.5 * (c.Rpm - 3000.0) / 1000.0;
-        klsa -= 1.5 * Math.Max(0.0, c.DeckClearanceMm - 1.0);
-        return klsa;
-    }
+        double DeckClearanceMm,
+        double ExhaustToIntakePressureRatio = 1.0,
+        double OctaneSensitivity = 0.0);
 
     /// <summary>Knock intensity: degrees of advance beyond the knock limit (0 = no knock).</summary>
     public static double KnockIntensity(double advance, double knockLimit) => Math.Max(0.0, advance - knockLimit);

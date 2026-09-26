@@ -245,7 +245,8 @@ The family must fit the engine model (`EngineTopology`), or it fails to load:
 Other slots (categories the model does not read) are free-form.
 
 ## Fuels (`fuels`)
-`id`, `name`, `octane_ron`, `stoichiometric_afr`, `lower_heating_value_mj_kg`, `density_kg_l`,
+`id`, `name`, `octane_ron`, `octane_mon` (default RON − 10; RON − MON is the fuel's sensitivity, which
+counts under boost), `stoichiometric_afr`, `lower_heating_value_mj_kg`, `density_kg_l`,
 `charge_cooling_factor` (evaporative cooling per kg of stoichiometric charge relative to gasoline = 1.0; sets the latent heat `350 kJ/kg · factor · AFR/14.7`), `description`.
 
 ## Tunes (`tunes`)

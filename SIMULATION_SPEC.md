@@ -130,12 +130,29 @@ The ECU only knows its sensors and its calibration; it never sees the engine's t
   beyond λ ≈ 1.5).
 - MBT `= 14 + 14·√(clamp(rpm/6000, 0.05, 1.5)) − 7·(ρ_charge/ρ_ref − 1)` degrees.
 - Spark factor `= 1 − k·(adv − MBT)²`, `k = 0.0003` retarded, `0.0004` over-advanced.
-- Knock-limited spark advance (degrees):
-  `24 + 1.3(RON − 95) − 3.2(CR − 10.5) − 14(p_port/1 atm − 1) − 0.25(T_charge − 313 K)
-   − 0.20·max(0, T_coolant − 363 K) + 20(1 − min(λ, 1.3)) + 2.5(rpm − 3000)/1000
-   − 1.5·max(0, deck_clearance_mm − 1) + 60·max(0, 0.45 − p_port/1 atm)`. The last term keeps light
-  load (overrun, cruise below ~45 kPa) knock-free whatever the part-load timing: there is too little
-  end-gas pressure to autoignite.
+- Knock (`Simulation/KnockModel.cs`): end-gas autoignition, Livengood–Wu. The end gas knocks if
+  `∫ dt/τ ≥ 1` before 90 % of the charge has burned, with the Douaud–Eyzat delay
+  `τ = 17.68 ms · (OI/100)^3.402 · (p/atm)^−1.7 · exp(3800 K/T) · exp(2(1 − λ))`.
+  - Cycle: single zone in 2° steps from 70° BTDC. Polytropic compression (n = 1.32) from the port
+    pressure. The compression-start temperature is the charge mixed with hot residual gas:
+    `x_r = 1/(1 + (CR − 1)·(p_in/p_ex)·(900 K/T_charge))`, ≈ 4 % and +20 K at full throttle.
+  - Heat release: Thornton's rule, 2.94 MJ per kg of air at λ ≤ 1 (× partial oxidation when rich,
+    ÷ λ when lean). 80 % of it raises the pressure, on a Wiebe curve (a = 5, m + 1 = 3) whose
+    duration puts 50 % burned at 8° ATDC when spark is at MBT. The resulting peak pressures match
+    the engine's PCP model (56–69 bar at WOT and MBT).
+  - End gas: isentropic with the cylinder pressure, + 0.5 K per K of coolant above 90 °C. Poor
+    quench keeps it alive 3° longer per mm of deck clearance beyond 1 mm.
+  - OI is Kalghatgi's octane index, `RON − K·(RON − MON)`. K is 0 naturally aspirated and falls by
+    0.5 per bar of boost to −1, so under boost high-sensitivity fuels (E85: RON 105, MON 88) beat
+    their RON.
+  - KLSA is found from the integral at the running advance and 4° less (ln I is nearly linear in
+    advance). The engine knocks exactly when `I(advance) ≥ 1`, and the degrees past the limit are
+    accurate near it. There is no light-load special case: at part load the end gas never gets hot
+    and dense enough. Cost ≈ 12 µs per engine step.
+  - Result, stock K20 (CR 10.5) at WOT: knock-limited below ≈ 3200 rpm on RON 91, ≈ 2900 on RON 95
+    and ≈ 2700 on RON 98 (11.6° under MBT at 1500 rpm on RON 95). Above that it can run MBT.
+    Octane is worth ≈ 0.5° per RON at the limit. The factory table's knock-limited cells sit
+    1.5° under the RON 95 limit; on RON 91 the knock sensor retards them.
 - Knock intensity `KI = max(0, advance − KLSA)` degrees. Effects: −1 %/° torque, +4 %/° peak
   pressure, +8 K/° piston crown temperature, +1 %/° heat to coolant (capped at 10°).
 - `W_i = burned · LHV · η · f_λ · f_spark · f_knock`, `IMEP = W_i / V_d`.
