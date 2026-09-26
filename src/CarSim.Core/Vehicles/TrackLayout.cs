@@ -2,11 +2,6 @@ namespace CarSim.Core.Vehicles;
 
 public enum Surface { Asphalt, Kerb, Grass }
 
-/// <summary>
-/// A closed circuit: a centreline sampled every ~2 m (from a Catmull-Rom spline through control points)
-/// with a constant width, kerbs and grass run-off. Provides surface grip for the tyres, progress along
-/// the lap, and the geometry the game renders.
-/// </summary>
 /// <summary>A piece of circuit: a straight, or a constant-radius arc turning left or right.</summary>
 public readonly record struct TrackSegment(double Length, double Radius = 0, double AngleDeg = 0, bool Left = true)
 {
@@ -173,6 +168,12 @@ public sealed class LapTimer
     public double? LastLap { get; private set; }
     public double? BestLap { get; private set; }
     public double CurrentLapTime(double now) => double.IsNaN(_lapStart) ? 0 : now - _lapStart;
+
+    /// <summary>Whether the lap in progress is being timed (false before the first crossing and after <see cref="Invalidate"/>).</summary>
+    public bool Timing => !double.IsNaN(_lapStart);
+
+    /// <summary>Voids the lap in progress (e.g. after a recovery); timing restarts at the next crossing.</summary>
+    public void Invalidate() => _lapStart = double.NaN;
 
     /// <summary>Update with the car's nearest centreline index; returns true when a lap was completed.</summary>
     public bool Update(int index, double time)
