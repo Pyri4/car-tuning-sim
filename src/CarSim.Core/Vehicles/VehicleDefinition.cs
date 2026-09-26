@@ -29,6 +29,9 @@ public sealed class VehicleDefinition
     public double FrontalAreaM2 { get; init; } = 1.9;
     public double MaxSteerDeg { get; init; } = 32;
 
+    /// <summary>Wheel travel from the factory ride height to the bump stops, mm (lowering takes it away).</summary>
+    public double BumpTravelMm { get; init; } = 75;
+
     public required IReadOnlyList<EngineSlotDefinition> Slots { get; init; }
     public IReadOnlyDictionary<string, string> StockParts { get; init; } = new Dictionary<string, string>();
 
@@ -65,6 +68,7 @@ public sealed class VehicleDefinition
         if (!(TrackFrontM >= 1 && TrackFrontM <= 2.2) || !(TrackRearM >= 1 && TrackRearM <= 2.2)) p.Add("track widths out of range.");
         if (!(CgHeightM >= 0.2 && CgHeightM <= 1.2)) p.Add("cg_height_m out of range.");
         if (!(YawInertiaKgM2 > 100)) p.Add("yaw_inertia_kg_m2 out of range.");
+        if (!(BumpTravelMm >= 20 && BumpTravelMm <= 250)) p.Add("bump_travel_mm out of range (20–250).");
         void CheckRole(string what, List<EngineSlotDefinition> slots)
         {
             if (slots.Count == 0) p.Add($"needs a slot for {what}.");

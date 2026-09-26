@@ -65,6 +65,12 @@ public sealed class VehicleConfiguration
         RollDampingRatio = rollDamping / (2 * Math.Sqrt(kRoll * rollInertia));
         FrontRollShare = RollStiffnessFront / kRoll;
 
+        // Ride: unsprung mass from the fitted parts (a tyre pair is one axle's two corners).
+        Ride = new RideModel(this,
+            chassis.PartIn(TiresFrontSlot)!.Definition.MassKg / 2.0, chassis.PartIn(TiresRearSlot)!.Definition.MassKg / 2.0,
+            chassis.PartIn(BrakesSlot)!.Definition.MassKg, chassis.PartIn(SuspensionSlot)!.Definition.MassKg,
+            Units.MmToM(def.BumpTravelMm));
+
         double kPitch = 2 * kf * CgToFront * CgToFront + 2 * kr * CgToRear * CgToRear;
         double cPitch = 2 * Suspension.FrontDamperNsM * CgToFront * CgToFront + 2 * Suspension.RearDamperNsM * CgToRear * CgToRear;
         double pitchInertia = Mass * Wheelbase * Wheelbase / 4 * 0.9;
@@ -91,6 +97,9 @@ public sealed class VehicleConfiguration
     public SuspensionSpec Suspension { get; }
     public BrakeSpec Brakes { get; }
     public bool RearWheelDrive { get; }
+
+    /// <summary>Mechanical grip over road roughness: tyre-load fluctuation, bump travel, bottoming.</summary>
+    public RideModel Ride { get; }
 
     public double Mass { get; }
     public double FrontWeightFraction { get; }

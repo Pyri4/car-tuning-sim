@@ -397,6 +397,32 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
   stiffer suspension transfers load faster; more front roll stiffness gives more understeer.
 - Steering: front wheels (no Ackermann), 50 ms actuator lag.
 
+### Ride and mechanical grip (`RideModel`)
+The planar model has no wheel hop, so road roughness enters through a linear quarter-car per axle,
+solved once per set-up in the frequency domain and scaled at run time:
+- Sprung mass = static corner load/g − unsprung; unsprung = tyre pair/2 + brakes/4 + ½·suspension/4
+  + 12 kg hub; spring = wheel rate; damper per wheel; tyre radial rate `4.4 · p_hot · width`
+  (≈ 200 N/mm for 205 mm at 220 kPa).
+- Road: ISO 8608 `G(n) = G₀·(n/0.1)⁻²` — circuit asphalt 4·10⁻⁶ m³, kerbs 256·10⁻⁶, grass 1024·10⁻⁶.
+  Road velocity is then white noise of intensity `(2π)²·G₀·0.01·v`, so every variance is exactly
+  proportional to speed: `σ_Fz = √(v·G₀·I)`, `I` = ∫|H(f)|² over 0.05–200 Hz (600-point log grid).
+  Checked against a time-domain Monte Carlo quarter car to 10 %.
+- Uncorrelated left/right bumps are half heave (anti-roll bar idle) and half roll (bar adds
+  `2·K_arb/t²` to the wheel rate), so bars cost grip on bumps.
+- Bump travel = vehicle `bump_travel_mm` + ride-height offset. Each corner's compression from roll
+  (`θ·t/2`) and pitch (`ΔF/2k`) against its travel, with the roughness spread of suspension travel
+  (floor 2 mm), gives the share of time on the bump stop `P = Φ((δ − travel)/σ_δ)`; on the stop the
+  wheel rate gains 300 N/mm and `σ² = (1 − P)·σ²_free + P·σ²_stop`.
+- Grip × `1/(1 + 0.6·(σ_Fz/Fz)²)` on every tyre force (load sensitivity plus force lag after load
+  dips; the 0.6 is empirical). Telemetry: `MechanicalGrip`, `Bottoming` per wheel.
+- Consequences: on circuit asphalt the effect is ≈ 0.1 % (a smooth skidpad still rewards stiff and
+  low, as it does in reality); on kerb-grade roughness the OEM suspension keeps ≈ 93 % grip and track
+  coilovers ≈ 88 %, damping has an optimum near ζ ≈ 0.3 inside the coilovers' range, and the lowest
+  ride height lands on the bump stops (−60 mm: 0.826 g vs 0.848 g at −50 mm). The chassis bench reports
+  a bumpy skidpad beside the smooth one.
+- Not modelled: roll centres / geometric load transfer (all transfer is elastic and delayed), per-corner
+  vertical dynamics in the time domain, discrete kerb strikes, aero platform.
+
 ### Driveline
 - Clutch: torque `clamp(K·(ω_engine − ω_gearbox), ±engagement·capacity)`, K = 0.8 × reduced inertia /
   substep (stiff but stable). The engine is integrated on its side of the clutch with its rotating inertia.

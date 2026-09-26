@@ -35,4 +35,16 @@ public static class MathUtil
     }
 
     public static bool IsFinite(double v) => !double.IsNaN(v) && !double.IsInfinity(v);
+
+    /// <summary>
+    /// Standard normal cumulative distribution Φ(x), via the Abramowitz–Stegun 7.1.26 error-function
+    /// approximation (|error| &lt; 1.5·10⁻⁷, deterministic).
+    /// </summary>
+    public static double NormalCdf(double x)
+    {
+        double z = Math.Abs(x) / Math.Sqrt(2.0);
+        double t = 1.0 / (1.0 + 0.3275911 * z);
+        double erf = 1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.Exp(-z * z);
+        return x >= 0 ? 0.5 * (1.0 + erf) : 0.5 * (1.0 - erf);
+    }
 }

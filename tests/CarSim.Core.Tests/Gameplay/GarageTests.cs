@@ -170,6 +170,7 @@ public class GarageTests
         var stock = ChassisBench.Run(g);
         Assert.True(stock.Ok, stock.Problem);
         Assert.InRange(stock.SkidpadG, 0.8, 1.05);
+        Assert.InRange(stock.BumpySkidpadG, 0.6 * stock.SkidpadG, 0.98 * stock.SkidpadG);
         Assert.InRange(stock.BrakingDistance100M, 38, 55);
         Assert.InRange(stock.FrontBrakeShare, 0.6, 0.8);
         Assert.Equal(tyreWear, g.PartIn("tires_rear")!.Wear);

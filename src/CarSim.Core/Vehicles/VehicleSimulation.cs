@@ -66,6 +66,8 @@ public sealed class VehicleSimulation
 
     private readonly int[] _nearest = { -1, -1, -1, -1 };
     private readonly double[] _surfaceGrip = { 1, 1, 1, 1 };
+    private readonly double[] _rideGrip = { 1, 1, 1, 1 };
+    private readonly double[] _bottoming = new double[4];
 
     /// <summary>Surface under each wheel this step.</summary>
     public Surface[] WheelSurface { get; } = new Surface[4];
@@ -130,6 +132,7 @@ public sealed class VehicleSimulation
             ComputeLoads();
             // Body roll (positive when cornering left: the body leans right) changes each wheel's camber.
             double rollDeg = s.LatTransfer / rollStiffness * 180.0 / Math.PI;
+            UpdateRideGrip(rollDeg, Math.Sqrt(s.U * s.U + s.V * s.V));
             double fxBody = 0, fyBody = 0, mz = 0;
             for (int w = 0; w < 4; w++)
             {
@@ -144,7 +147,7 @@ public sealed class VehicleSimulation
                 _slipRatio[w] = (s.WheelOmega[w] * tire.Radius - ul) / denom;
                 _slipAngle[w] = Math.Atan2(vl, denom);
                 var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w], WheelLeanLeftDeg(w, rollDeg), _tyreState[w]);
-                double grip = _surfaceGrip[w] * Wear.GripFactor(w);
+                double grip = _surfaceGrip[w] * Wear.GripFactor(w) * _rideGrip[w];
                 fx *= grip;
                 fy *= grip;
                 _energy.Tyre[w] += (Math.Abs(fx * (s.WheelOmega[w] * tire.Radius - ul)) + Math.Abs(fy * vl)) * h;
@@ -275,6 +278,29 @@ public sealed class VehicleSimulation
         }
     }
 
+    /// <summary>
+    /// Mechanical grip per wheel from road roughness: each corner's compression from roll and pitch sets
+    /// how often it reaches its bump stop, which with speed and surface sets its tyre-load fluctuation.
+    /// </summary>
+    private void UpdateRideGrip(double rollDeg, double speed)
+    {
+        var c = Config;
+        double roll = rollDeg * Math.PI / 180.0;
+        double pitchFront = State.LongTransfer / 2.0 / (c.Suspension.FrontSpringNMm * 1000);
+        double pitchRear = -State.LongTransfer / 2.0 / (c.Suspension.RearSpringNMm * 1000);
+        for (int w = 0; w < 4; w++)
+        {
+            bool front = w < 2;
+            int axle = front ? 0 : 1;
+            // Cornering left (positive roll) compresses the right-hand springs.
+            double side = w == Wheel.FL || w == Wheel.RL ? -1.0 : 1.0;
+            double compression = side * roll * (front ? c.TrackFront : c.TrackRear) / 2.0 + (front ? pitchFront : pitchRear);
+            var surface = WheelSurface[w];
+            _bottoming[w] = c.Ride.BottomingProbability(axle, compression, speed, surface);
+            _rideGrip[w] = RideModel.GripFactor(_fz[w], c.Ride.TyreLoadSigma(axle, speed, surface, _bottoming[w]));
+        }
+    }
+
     private static void Filter(ref double x, ref double rate, double target, double wn, double zeta, double h)
     {
         double acc = wn * wn * (target - x) - 2.0 * zeta * wn * rate;
@@ -398,10 +424,12 @@ public sealed class VehicleSimulation
             t.SlipRatio[w] = _slipRatio[w];
             t.SlipAngle[w] = _slipAngle[w];
             t.WheelSpeed[w] = s.WheelOmega[w] * Config.TireOf(w).Radius;
-            double available = TireModel.Friction(Config.TireOf(w), _fz[w], _tyreState[w]) * _fz[w] * _surfaceGrip[w];
+            double available = TireModel.Friction(Config.TireOf(w), _fz[w], _tyreState[w]) * _fz[w] * _surfaceGrip[w] * _rideGrip[w] * Wear.GripFactor(w);
             t.TyreTemperatureC[w] = Units.KToC(Tyres.TemperatureK[w]);
             t.TyrePressureKpa[w] = _tyreState[w].PressureKpa;
             t.TyreUsage[w] = available > 0 ? Math.Sqrt(_fx[w] * _fx[w] + _fy[w] * _fy[w]) / available : 0.0;
+            t.MechanicalGrip[w] = _rideGrip[w];
+            t.Bottoming[w] = _bottoming[w];
         }
         return t;
     }

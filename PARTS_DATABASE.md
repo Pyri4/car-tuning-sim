@@ -211,7 +211,8 @@ Requires `boost.source`.
 `id`, `name`, `description`, `engine` (engine family id), `drivetrain` (`rwd`|`fwd`), `curb_mass_kg`
 and `front_weight_fraction` (factory build), `wheelbase_m`, `track_front_m`, `track_rear_m`,
 `cg_height_m`, `yaw_inertia_kg_m2`, `drag_coefficient`, `frontal_area_m2`, `max_steer_deg`,
-`slots`, `stock_parts`.
+`bump_travel_mm` (wheel travel from factory ride height to the bump stops, default 75; lowering
+takes it away), `slots`, `stock_parts`.
 
 Slot ids are free; the vehicle model finds each part by its role: exactly one required slot of each
 of `clutch`, `gearbox`, `differential`, `suspension` and `brakes`, and one required `tires` slot per

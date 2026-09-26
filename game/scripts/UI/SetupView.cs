@@ -165,7 +165,7 @@ public partial class SetupView : HSplitContainer
                 changes.Add($"{slot.Label}: {part.Definition.FindAdjustment(field)?.Label ?? field} {value:0.##}{SpecDescriber.UnitOfField(field)}");
         }
         string setup = string.Join(" · ", changes);
-        _benchHistory.Insert(0, $"Skidpad {r.SkidpadG:F3} g   ·   100–0 km/h {r.BrakingDistance100M:F1} m   ·   brakes {r.FrontBrakeShare * 100:F0} % front\n{(setup.Length > 0 ? setup : "default settings")}");
+        _benchHistory.Insert(0, $"Skidpad {r.SkidpadG:F3} g (bumpy {r.BumpySkidpadG:F3} g)   ·   100–0 km/h {r.BrakingDistance100M:F1} m   ·   brakes {r.FrontBrakeShare * 100:F0} % front\n{(setup.Length > 0 ? setup : "default settings")}");
         Ui.Clear(_bench);
         for (int i = 0; i < _benchHistory.Count && i < 8; i++)
             _bench.AddChild(Ui.Wrapped(_benchHistory[i], i == 0 ? 14 : 12, i == 0 ? Ui.Good : Ui.Muted));

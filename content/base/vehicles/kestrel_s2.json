@@ -16,6 +16,7 @@
       "drag_coefficient": 0.35,
       "frontal_area_m2": 1.85,
       "max_steer_deg": 30,
+      "bump_travel_mm": 75,
       "slots": [
         { "id": "clutch", "category": "clutch", "display_name": "Clutch" },
         { "id": "gearbox", "category": "gearbox", "display_name": "Gearbox" },

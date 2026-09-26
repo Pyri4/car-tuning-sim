@@ -96,6 +96,7 @@ public static class ContentLoader
         public double DragCoefficient { get; set; } = 0.33;
         public double FrontalAreaM2 { get; set; } = 1.9;
         public double MaxSteerDeg { get; set; } = 32;
+        public double BumpTravelMm { get; set; } = 75;
         public List<SlotDto>? Slots { get; set; }
         public Dictionary<string, string>? StockParts { get; set; }
     }
@@ -225,7 +226,7 @@ public static class ContentLoader
                 Id = d.Id, Name = d.Name ?? d.Id, Description = d.Description ?? "", Engine = d.Engine ?? "", Drivetrain = d.Drivetrain ?? "rwd",
                 CurbMassKg = d.CurbMassKg, FrontWeightFraction = d.FrontWeightFraction, WheelbaseM = d.WheelbaseM, TrackFrontM = d.TrackFrontM,
                 TrackRearM = d.TrackRearM, CgHeightM = d.CgHeightM, YawInertiaKgM2 = d.YawInertiaKgM2, DragCoefficient = d.DragCoefficient,
-                FrontalAreaM2 = d.FrontalAreaM2, MaxSteerDeg = d.MaxSteerDeg, Slots = slots,
+                FrontalAreaM2 = d.FrontalAreaM2, MaxSteerDeg = d.MaxSteerDeg, BumpTravelMm = d.BumpTravelMm, Slots = slots,
                 StockParts = d.StockParts ?? new Dictionary<string, string>(), Source = source,
             };
             foreach (var p in v.Validate()) Error(source, v.Id, p);

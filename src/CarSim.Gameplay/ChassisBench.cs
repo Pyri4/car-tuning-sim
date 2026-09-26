@@ -2,15 +2,20 @@ using CarSim.Core.Vehicles;
 
 namespace CarSim.Gameplay;
 
-/// <summary>Results of the standard chassis tests for one set-up.</summary>
-public sealed record BenchResult(double SkidpadG, double BrakingDistance100M, double FrontBrakeShare, double FrontRollShare, string Problem = "")
+/// <summary>
+/// Results of the standard chassis tests for one set-up. <see cref="BumpySkidpadG"/> is the same test on a
+/// kerb-grade rough surface, where stiffness, low ride height and damping have a price.
+/// </summary>
+public sealed record BenchResult(double SkidpadG, double BrakingDistance100M, double FrontBrakeShare, double FrontRollShare, string Problem = "",
+    double BumpySkidpadG = 0)
 {
     public bool Ok => Problem.Length == 0;
 }
 
 /// <summary>
 /// Standard chassis tests for comparing set-ups without a lap: steady cornering at 80 km/h (steering
-/// wound on until the car lets go) and a 100–0 km/h stop at the best pedal pressure before lock-up.
+/// wound on until the car lets go) on smooth asphalt and on a bumpy (kerb-grade) surface, and a 100–0 km/h
+/// stop at the best pedal pressure before lock-up.
 /// Runs on a copy of the simulation with wear and damage switched off, so testing costs nothing.
 /// </summary>
 public static class ChassisBench
@@ -25,8 +30,11 @@ public static class ChassisBench
         double frontBrake = c.Brakes.FrontMaxTorqueNm;
         double rearBrake = c.Brakes.RearMaxTorqueNm * c.Brakes.RearPressureFactor;
         double skidpad = Skidpad(Fresh(garage));
+        var bumpy = Fresh(garage);
+        for (int w = 0; w < 4; w++) bumpy.WheelSurface[w] = Surface.Kerb;
+        double bumpySkidpad = Skidpad(bumpy);
         double braking = BestStop(garage);
-        return new BenchResult(skidpad, braking, frontBrake / (frontBrake + rearBrake), c.FrontRollShare);
+        return new BenchResult(skidpad, braking, frontBrake / (frontBrake + rearBrake), c.FrontRollShare, BumpySkidpadG: bumpySkidpad);
     }
 
     private static VehicleSimulation Fresh(Garage garage)

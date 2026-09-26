@@ -69,6 +69,13 @@ public sealed class VehicleTelemetry
     public double[] TyreUsage = new double[4];
     public double[] TyreTemperatureC = new double[4];
     public double[] TyrePressureKpa = new double[4];
+
+    /// <summary>Grip left after road roughness (tyre-load fluctuation), 0–1 per wheel.</summary>
+    public double[] MechanicalGrip = new double[4];
+
+    /// <summary>Share of the time each corner sits on its bump stop (0–1).</summary>
+    public double[] Bottoming = new double[4];
+
     public double ClutchTemperatureC;
     public double ClutchCapacityNm;
     public double BrakeTemperatureFrontC, BrakeTemperatureRearC;
