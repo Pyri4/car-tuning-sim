@@ -347,7 +347,10 @@ How each authored value was set:
 
 Simplifications (the part descriptions say so where a player would notice): the **exhaust VANOS** is held at its park
 position (in this model an exhaust phase would only add overlap, which it treats purely as a filling cost — there is
-no exhaust-opening/blowdown term); **DISA** is one effective runner length (the model has one runner resonance);
+no exhaust-opening/blowdown term); **DISA** is one effective runner length: the model has no intake resonance separate
+from cam timing, so the estimated 380 mm runner has no effect on full-load torque within the VANOS range and the real
+curve's 3,500 rpm hump, 4,000 rpm switch-over dip and second hump cannot be represented (SIMULATION_SPEC.md, "M54
+torque-curve investigation");
 **MS43 meters air with a hot-film mass-air-flow meter**, represented here by the model's speed-density ECU with a
 calibrated VE table; the E46's **returnless 3.5 bar fuel system** is represented as the model's manifold-referenced
 regulator (equivalent to MS43's pressure-compensated injection); the map-controlled thermostat is a fixed 90 °C one;

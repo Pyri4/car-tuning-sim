@@ -11,7 +11,7 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 476 automated tests (435 before the second engine family, 348 before the validation pass): simulation, content, damage, dyno, vehicle
+- 484 automated tests (435 before the second engine family, 348 before the validation pass): simulation, content, damage, dyno, vehicle
   dynamics, wear, gameplay, saves, mods, physical invariants, property sweeps, spec fuzzing and clamp-activation
   checks. CI runs them, a CLI content check and dyno sweep, and two headless Godot smoke tests (dyno pull;
   autopilot drive) on the official Godot 4.7.2 .NET build.
@@ -151,6 +151,10 @@ Question: can another engine family be added through data, or does the simulator
 - [x] Tests: reference bands, same-pipeline matrix over both families, renamed-id identity, a content-only 8-cylinder
       variant, source audit, K20 pinned; mutation-checked
 - [x] Godot: both scenarios' dyno and drive smoke tests headless in CI; scenario picker; cam map and phaser in the UI
+- [x] Torque-curve investigation (review of PR #4): 11 controlled experiments classify the M54's shape discrepancy as
+      missing generic physics (a phaser moves the one filling hump whole), not content or calibration; the missing
+      term was prototyped but not shipped (it needs an unsourced constant and DISA data), and 8 regression tests pin
+      the diagnosis. No simulation or content change
 - Answer: **yes, primarily through data.** Generic simulation code gained one abstraction (cam timing) and no
   engine-specific branch; see "Known issues" for what the M54 still cannot match.
 
@@ -161,24 +165,35 @@ Question: can another engine family be added through data, or does the simulator
 1. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
    spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are now a data change: an adjustable
    `intake_centerline_deg`; wastegate spring preload).
-2. **Two-family calibration.** Re-fit the level-setting constants on both families at once (not per engine), make the
-   VE ceiling depend on the tuned speed, add an exhaust-opening term so exhaust phasing and scavenging mean something.
-3. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
+2. **Intake gas dynamics separate from valve timing, then two-stage intakes.** The M54 torque-curve investigation
+   (SIMULATION_SPEC.md) found the shape's root cause in the VE model: one filling hump for intake closing and runner
+   gas dynamics, moved whole by a cam phaser. The prototype (E10) keeps a share of the tuning curve at the straight-up
+   cam/runner speed; a switched runner (E11) then makes DISA-type intakes content. Prerequisites before shipping:
+   - the gas-dynamic share from a source, not fitted to the M54;
+   - DISA's two effective lengths (or an M54 curve measured with the flap held open and closed);
+   - exact reuse of today's path when the two tuned speeds coincide (the prototype moved the K20 by rounding).
+3. **Two-family calibration.** Re-fit the level-setting constants on both families at once (not per engine), and add an
+   exhaust-opening term so exhaust phasing and scavenging mean something.
+4. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
    boost) using `VehicleSimulation`.
-4. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
+5. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
    record lap telemetry (speed/throttle/brake vs distance) and compare laps.
-5. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
+6. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
    market with seeded random condition, reputation and money loop.
-6. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
+7. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
    skim), per-cylinder state for the key failure modes.
-7. **Audio.** Engine sound from rpm/load/boost (presentation only).
-8. **Exported builds.** Godot export templates in CI and downloadable artifacts.
+8. **Audio.** Engine sound from rpm/load/boost (presentation only).
+9. **Exported builds.** Godot export templates in CI and downloadable artifacts.
 
 ## Known issues
-- Second engine family vs its reference: peak power −10 % (153 vs 170 kW) with torque +1 %; the model's torque plateau
-  runs from idle to ≈ 3,000 rpm and falls earlier than the M54's. With a cam phaser the VE shape reaches its ceiling at
-  any speed it is tuned to (real low-speed filling lacks ram), DISA's mid-range resonance is one effective runner, and
-  high-piston-speed losses cost both families about equally (the K20 sits ≈ 7 % under the real K20A3 it resembles).
+- Second engine family vs its reference: peak power −10 % (153 vs 170 kW) with torque +1 %. The model's curve is a plateau
+  from 1,500 to 2,750 rpm and then a steady fall, where the M54 peaks at 3,500 rpm with a DISA dip near 4,000. Classified
+  in SIMULATION_SPEC.md, "M54 torque-curve investigation" (11 experiments, pinned by `TorqueCurveDiagnosisTests`):
+  - the shape is **missing generic physics**: a phaser moves the one filling hump whole, so it fills at its ceiling at
+    every speed and the runner (and so DISA) has no effect;
+  - part of the top end is **estimated flow content** (up to +6.6 % at 6,000 rpm);
+  - the rest of the level is **the mean-value model's shared simplifications**; high-piston-speed losses cost both
+    families about equally (the K20 sits ≈ 7 % under the real K20A3 it resembles).
   Not modelled for the M54: exhaust VANOS (the model has no exhaust-opening effect), part-load VANOS/EGR strategy,
   hot-film MAF metering (speed-density stands in), the returnless 3.5 bar fuel system (manifold-referenced regulator
   stands in), the map-controlled thermostat, dual-mass-flywheel torsional isolation.
@@ -226,8 +241,9 @@ Question: can another engine family be added through data, or does the simulator
   family ran through them unchanged (+1 % torque, −10 % power against its reference); re-fitting on both families
   together — not per engine — is the honest next step, and would move the K20's pinned numbers deliberately. The
   valvetrain and thermal-conductance terms are size-aware since the validation pass.
-- The VE shape's ceiling does not depend on the speed it is tuned to, which only matters with a cam phaser (optimistic
-  low-speed torque); exhaust phasing has no effect to model until there is an exhaust-opening term.
+- The VE model has one filling hump for intake closing and runner gas dynamics; a cam phaser moves all of it (optimistic
+  low-speed torque with a phaser, runner length inert under one, no two-stage intakes). The split was prototyped and not
+  shipped; see "Next recommended tasks" 2. Exhaust phasing has no effect to model until there is an exhaust-opening term.
 - Tunes are rebuilt field by field in two places (`ContentLoader.AddTune`, `SaveSystem.Migrate`): a new tune field
   must be added to both (the cam map was silently dropped by the loader until caught).
 - The engine step allocates 10.6 KB (NA) / 13.9 KB (turbo), the vehicle step 11.9 KB: closures in the orifice root
