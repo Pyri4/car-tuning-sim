@@ -88,12 +88,12 @@ public sealed class ChassisWearModel
     public ChassisWearModel(VehicleConfiguration config)
     {
         _c = config;
-        _clutch = config.Chassis.PartIn("clutch");
-        _brakes = config.Chassis.PartIn("brakes");
-        _tyresFront = config.Chassis.PartIn("tires_front");
-        _tyresRear = config.Chassis.PartIn("tires_rear");
-        _gearbox = config.Chassis.PartIn("gearbox");
-        _differential = config.Chassis.PartIn("differential");
+        _clutch = config.Chassis.PartIn(config.ClutchSlot);
+        _brakes = config.Chassis.PartIn(config.BrakesSlot);
+        _tyresFront = config.Chassis.PartIn(config.TiresFrontSlot);
+        _tyresRear = config.Chassis.PartIn(config.TiresRearSlot);
+        _gearbox = config.Chassis.PartIn(config.GearboxSlot);
+        _differential = config.Chassis.PartIn(config.DifferentialSlot);
         ClutchTemperature = AmbientK + 20;
         BrakeTemperature[0] = BrakeTemperature[1] = AmbientK + 20;
         _maxClutchC = Units.KToC(ClutchTemperature);
@@ -170,8 +170,8 @@ public sealed class ChassisWearModel
         double a = 1.0 - Math.Exp(-dt / DrivelineLoadTimeConstant);
         GearboxLoadNm += (e.GearboxTorque - GearboxLoadNm) * a;
         DifferentialLoadNm += (e.DifferentialTorque - DifferentialLoadNm) * a;
-        Overload(_gearbox, "gearbox", FailureMode.GearboxOverload, GearboxLoadNm, _c.Gearbox.MaxTorqueNm, ref _peakGearboxLoad, gear, dt, time, warnings);
-        Overload(_differential, "differential", FailureMode.DifferentialOverload, DifferentialLoadNm, _c.Differential.MaxTorqueNm, ref _peakDifferentialLoad, gear, dt, time, warnings);
+        Overload(_gearbox, _c.GearboxSlot, FailureMode.GearboxOverload, GearboxLoadNm, _c.Gearbox.MaxTorqueNm, ref _peakGearboxLoad, gear, dt, time, warnings);
+        Overload(_differential, _c.DifferentialSlot, FailureMode.DifferentialOverload, DifferentialLoadNm, _c.Differential.MaxTorqueNm, ref _peakDifferentialLoad, gear, dt, time, warnings);
 
         // Clutch.
         var cs = _c.Clutch;
@@ -224,8 +224,8 @@ public sealed class ChassisWearModel
             warnings.Add(new EngineWarning("brake_fade", WarningLevel.Caution, $"Brakes fading ({hottest:F0} °C): stopping power down {100 * (1 - Math.Min(BrakeFactor(0), BrakeFactor(1))):F0} %."));
 
         // Tyres: sliding energy wears the tread.
-        WearTyres(_tyresFront, _c.TiresFront, (e.Tyre[Wheel.FL] + e.Tyre[Wheel.FR]) * TyreWearFactor(_c.TiresFront, _c.Suspension.FrontCamberDeg), "tires_front", time, warnings);
-        WearTyres(_tyresRear, _c.TiresRear, (e.Tyre[Wheel.RL] + e.Tyre[Wheel.RR]) * TyreWearFactor(_c.TiresRear, _c.Suspension.RearCamberDeg), "tires_rear", time, warnings);
+        WearTyres(_tyresFront, _c.TiresFront, (e.Tyre[Wheel.FL] + e.Tyre[Wheel.FR]) * TyreWearFactor(_c.TiresFront, _c.Suspension.FrontCamberDeg), _c.TiresFrontSlot, time, warnings);
+        WearTyres(_tyresRear, _c.TiresRear, (e.Tyre[Wheel.RL] + e.Tyre[Wheel.RR]) * TyreWearFactor(_c.TiresRear, _c.Suspension.RearCamberDeg), _c.TiresRearSlot, time, warnings);
 
         Warnings = warnings;
     }
@@ -240,7 +240,7 @@ public sealed class ChassisWearModel
         double r = load / rating;
         peak = Math.Max(peak, load);
         if (r > info.Endurance)
-            warnings.Add(new EngineWarning($"{slot}_overload", r > 1.0 ? WarningLevel.Danger : WarningLevel.Caution,
+            warnings.Add(new EngineWarning($"{part.Definition.Category}_overload", r > 1.0 ? WarningLevel.Danger : WarningLevel.Caution,
                 $"{Label(slot)} overloaded: {load:F0} N·m against a {rating:F0} N·m rating."));
         if (r >= info.InstantRatio || part.Damage.Accumulate(mode, info.FatigueRate(r) * dt))
             FailDriveline(part, slot, mode, load, rating, gear, time);
@@ -264,7 +264,7 @@ public sealed class ChassisWearModel
         double clutchLimit = gearbox ? clutchCapacity : clutchCapacity * gearRatio * _c.Gearbox.Efficiency;
         if (clutchLimit > rating * 1.05)
             factors.Add(gearbox
-                ? $"The {_c.Chassis.PartIn("clutch")?.Definition.Name ?? "clutch"} can pass {clutchCapacity:F0} N·m, more than the gearbox's {rating:F0} N·m: shock loads (launches, fast engagements, downshifts) reached the gear teeth instead of slipping the clutch."
+                ? $"The {_clutch?.Definition.Name ?? "clutch"} can pass {clutchCapacity:F0} N·m, more than the gearbox's {rating:F0} N·m: shock loads (launches, fast engagements, downshifts) reached the gear teeth instead of slipping the clutch."
                 : $"In gear {gear} the clutch can put {clutchLimit:F0} N·m into the differential, more than its {rating:F0} N·m rating: shock loads reached the crown wheel instead of slipping the clutch.");
         double engineLimit = gearbox ? _peakEngineTorque : _peakEngineTorque * gearRatio * _c.Gearbox.Efficiency;
         if (engineLimit > rating * FailureModeInfo.Of(mode).Endurance)
@@ -338,7 +338,7 @@ public sealed class ChassisWearModel
                 : "Replace the clutch.",
             "A clutch that slips in high gears is already failing: stop and replace it before it burns out.",
         };
-        Report(_clutch!, "clutch", FailureMode.ClutchBurnout, time, measured, factors, recommendations);
+        Report(_clutch!, _c.ClutchSlot, FailureMode.ClutchBurnout, time, measured, factors, recommendations);
     }
 
     private void FailBrakes(double time)
@@ -353,7 +353,7 @@ public sealed class ChassisWearModel
         if (_maxBrakeC > bs.FadeStartC)
             factors.Add($"The discs ran to {_maxBrakeC:F0} °C, above the pads' {bs.FadeStartC:F0} °C rating; hot pads wear many times faster.");
         else factors.Add("The pads reached the end of their life.");
-        Report(_brakes!, "brakes", FailureMode.BrakePadsWornOut, time, measured, factors, new List<string>
+        Report(_brakes!, _c.BrakesSlot, FailureMode.BrakePadsWornOut, time, measured, factors, new List<string>
         {
             "Replace the pads (and check the discs for scoring).",
             "For track use, fit brakes with more thermal mass and higher-temperature pads, and give them cool-down laps.",

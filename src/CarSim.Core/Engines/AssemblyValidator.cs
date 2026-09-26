@@ -55,9 +55,20 @@ public static class AssemblyValidator
         var issues = new List<CompatibilityIssue>();
         void Add(IssueSeverity s, string code, string msg, params string[] slots) => issues.Add(new CompatibilityIssue(s, code, msg, slots));
 
-        // Completeness.
-        foreach (var slot in a.MissingRequiredSlots())
+        // Topology: the family must fit the engine model (content loading rejects families that do not;
+        // this also covers definitions built in code).
+        foreach (var problem in EngineTopology.CheckFamily(a.Definition))
+            Add(IssueSeverity.Error, "unsupported_topology", problem);
+
+        // Completeness: required slots, and every category the simulation reads, even where a family
+        // marks its slot optional.
+        var missingSlots = a.MissingRequiredSlots();
+        foreach (var slot in missingSlots)
             Add(IssueSeverity.Error, "missing_part", $"{slot.Label} is not installed.", slot.Id);
+        foreach (var category in EngineTopology.MissingCategories(a))
+            if (!missingSlots.Any(s => s.Category == category))
+                Add(IssueSeverity.Error, "missing_category", $"No {category.Replace('_', ' ')} installed: the engine cannot run without one.",
+                    a.Definition.Slots.Where(s => s.Category == category).Select(s => s.Id).ToArray());
 
         // Interfaces: every requirement must be provided by some other installed part.
         var installed = a.Installed.ToList();

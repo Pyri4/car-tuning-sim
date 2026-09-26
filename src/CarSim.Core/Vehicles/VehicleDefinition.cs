@@ -1,4 +1,5 @@
 using CarSim.Core.Engines;
+using CarSim.Core.Parts;
 
 namespace CarSim.Core.Vehicles;
 
@@ -35,6 +36,25 @@ public sealed class VehicleDefinition
 
     public EngineSlotDefinition? FindSlot(string id) => Slots.FirstOrDefault(s => s.Id == id);
 
+    /// <summary>Chassis categories the vehicle model reads one of (tyres are one per axle).</summary>
+    public static readonly IReadOnlyList<string> SingleCategories = new[]
+    {
+        PartCategory.Clutch, PartCategory.Gearbox, PartCategory.Differential, PartCategory.Suspension, PartCategory.Brakes,
+    };
+
+    public const string FrontAxle = "front";
+    public const string RearAxle = "rear";
+
+    /// <summary>
+    /// The slot that plays a role in the vehicle model: the only slot of <paramref name="category"/>, or for
+    /// per-axle parts the one on <paramref name="axle"/>. Roles come from the data (category, axle), not
+    /// from slot ids, so a car may name its slots as it likes.
+    /// </summary>
+    public string SlotFor(string category, string axle = "") =>
+        Slots.Single(s => s.Category == category && (axle.Length == 0 || s.Axle == axle)).Id;
+
+    public string TireSlot(bool front) => SlotFor(PartCategory.Tires, front ? FrontAxle : RearAxle);
+
     public IReadOnlyList<string> Validate()
     {
         var p = new List<string>();
@@ -45,8 +65,21 @@ public sealed class VehicleDefinition
         if (!(TrackFrontM >= 1 && TrackFrontM <= 2.2) || !(TrackRearM >= 1 && TrackRearM <= 2.2)) p.Add("track widths out of range.");
         if (!(CgHeightM >= 0.2 && CgHeightM <= 1.2)) p.Add("cg_height_m out of range.");
         if (!(YawInertiaKgM2 > 100)) p.Add("yaw_inertia_kg_m2 out of range.");
-        foreach (var required in new[] { "clutch", "gearbox", "differential", "tires_front", "tires_rear", "suspension", "brakes" })
-            if (FindSlot(required) == null) p.Add($"missing slot '{required}'.");
+        void CheckRole(string what, List<EngineSlotDefinition> slots)
+        {
+            if (slots.Count == 0) p.Add($"needs a slot for {what}.");
+            else if (slots.Count > 1) p.Add($"slots {string.Join(", ", slots.Select(s => $"'{s.Id}'"))} are all {what}: the vehicle model uses one.");
+            else if (!slots[0].Required) p.Add($"slot '{slots[0].Id}' ({what}) cannot be optional.");
+        }
+        foreach (string category in SingleCategories)
+            CheckRole($"'{category}'", Slots.Where(s => s.Category == category).ToList());
+        foreach (string axle in new[] { FrontAxle, RearAxle })
+            CheckRole($"'{PartCategory.Tires}' on the {axle} axle", Slots.Where(s => s.Category == PartCategory.Tires && s.Axle == axle).ToList());
+        foreach (var slot in Slots)
+            if (slot.Axle.Length > 0 && (slot.Axle is not (FrontAxle or RearAxle) || slot.Category != PartCategory.Tires))
+                p.Add($"slot '{slot.Id}': axle '{slot.Axle}' is only valid as \"front\"/\"rear\" on tyre slots.");
+            else if (slot.Category == PartCategory.Tires && slot.Axle.Length == 0)
+                p.Add($"tyre slot '{slot.Id}' needs \"axle\": \"front\" or \"rear\".");
         return p;
     }
 }

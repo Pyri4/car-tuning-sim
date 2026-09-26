@@ -20,8 +20,8 @@
         { "id": "clutch", "category": "clutch", "display_name": "Clutch" },
         { "id": "gearbox", "category": "gearbox", "display_name": "Gearbox" },
         { "id": "differential", "category": "differential", "display_name": "Differential" },
-        { "id": "tires_front", "category": "tires", "display_name": "Front tyres" },
-        { "id": "tires_rear", "category": "tires", "display_name": "Rear tyres" },
+        { "id": "tires_front", "category": "tires", "axle": "front", "display_name": "Front tyres" },
+        { "id": "tires_rear", "category": "tires", "axle": "rear", "display_name": "Rear tyres" },
         { "id": "suspension", "category": "suspension", "display_name": "Suspension" },
         { "id": "brakes", "category": "brakes", "display_name": "Brakes" }
       ],

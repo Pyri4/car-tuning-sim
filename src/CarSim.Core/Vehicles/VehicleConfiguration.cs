@@ -19,13 +19,20 @@ public sealed class VehicleConfiguration
         var missing = chassis.MissingRequiredSlots();
         if (missing.Count > 0) throw new InvalidOperationException("Chassis incomplete: " + string.Join(", ", missing.Select(s => s.Label)));
 
-        Clutch = chassis.SpecIn<ClutchSpec>("clutch")!;
-        Gearbox = chassis.SpecIn<GearboxSpec>("gearbox")!;
-        Differential = chassis.SpecIn<DifferentialSpec>("differential")!;
-        TiresFront = chassis.SpecIn<TireSpec>("tires_front")!;
-        TiresRear = chassis.SpecIn<TireSpec>("tires_rear")!;
-        Suspension = chassis.SpecIn<SuspensionSpec>("suspension")!;
-        Brakes = chassis.SpecIn<BrakeSpec>("brakes")!;
+        ClutchSlot = def.SlotFor(PartCategory.Clutch);
+        GearboxSlot = def.SlotFor(PartCategory.Gearbox);
+        DifferentialSlot = def.SlotFor(PartCategory.Differential);
+        TiresFrontSlot = def.TireSlot(front: true);
+        TiresRearSlot = def.TireSlot(front: false);
+        SuspensionSlot = def.SlotFor(PartCategory.Suspension);
+        BrakesSlot = def.SlotFor(PartCategory.Brakes);
+        Clutch = chassis.SpecIn<ClutchSpec>(ClutchSlot)!;
+        Gearbox = chassis.SpecIn<GearboxSpec>(GearboxSlot)!;
+        Differential = chassis.SpecIn<DifferentialSpec>(DifferentialSlot)!;
+        TiresFront = chassis.SpecIn<TireSpec>(TiresFrontSlot)!;
+        TiresRear = chassis.SpecIn<TireSpec>(TiresRearSlot)!;
+        Suspension = chassis.SpecIn<SuspensionSpec>(SuspensionSlot)!;
+        Brakes = chassis.SpecIn<BrakeSpec>(BrakesSlot)!;
         RearWheelDrive = def.Drivetrain == "rwd";
 
         // Mass: factory curb mass adjusted by how much heavier/lighter the fitted parts are.
@@ -67,6 +74,15 @@ public sealed class VehicleConfiguration
 
     public VehicleDefinition Definition { get; }
     public VehicleAssembly Chassis { get; }
+
+    /// <summary>Slot ids filling each role in the vehicle model (resolved from the car's data).</summary>
+    public string ClutchSlot { get; }
+    public string GearboxSlot { get; }
+    public string DifferentialSlot { get; }
+    public string TiresFrontSlot { get; }
+    public string TiresRearSlot { get; }
+    public string SuspensionSlot { get; }
+    public string BrakesSlot { get; }
     public ClutchSpec Clutch { get; }
     public GearboxSpec Gearbox { get; }
     public DifferentialSpec Differential { get; }

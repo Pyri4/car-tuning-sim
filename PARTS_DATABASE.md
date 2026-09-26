@@ -208,21 +208,37 @@ Requires `boost.source`.
 `id`, `name`, `description`, `engine` (engine family id), `drivetrain` (`rwd`|`fwd`), `curb_mass_kg`
 and `front_weight_fraction` (factory build), `wheelbase_m`, `track_front_m`, `track_rear_m`,
 `cg_height_m`, `yaw_inertia_kg_m2`, `drag_coefficient`, `frontal_area_m2`, `max_steer_deg`,
-`slots` (must include `clutch`, `gearbox`, `differential`, `tires_front`, `tires_rear`, `suspension`,
-`brakes`), `stock_parts`.
+`slots`, `stock_parts`.
+
+Slot ids are free; the vehicle model finds each part by its role: exactly one required slot of each
+of `clutch`, `gearbox`, `differential`, `suspension` and `brakes`, and one required `tires` slot per
+axle, marked `"axle": "front"` / `"axle": "rear"` (`axle` is only valid on tyre slots).
 
 ## Engine families (`engines`)
 
 | Field | Meaning |
 |---|---|
 | `id`, `name`, `description` | Identity |
-| `cylinders`, `layout` | Must match the installed block |
+| `cylinders`, `layout` | `cylinders` must match the installed block; `layout` is `inline`, `v` or `flat` (descriptive for now) |
 | `slots[]` | `id`, `category`, `display_name`, `required` (default true), `install_after` (slot ids that must be installed first — also defines removal order), `accessible_in_vehicle` |
 | `stock_parts` | slot id → part id (factory build) |
 | `stock_tune` | tune id (factory calibration) |
 
 The `install_after` graph must be acyclic. A slot can be filled only when all of its
 `install_after` slots are filled; it can be emptied only when no filled slot lists it.
+
+The family must fit the engine model (`EngineTopology`), or it fails to load:
+- one **required** slot for each of `block`, `main_bearings`, `crankshaft`, `rod_bearings`,
+  `connecting_rods`, `pistons`, `head_gasket`, `cylinder_head`, `valve_springs`, `camshafts`,
+  `intake_manifold`, `throttle_body`, `injectors`, `fuel_pump`, `exhaust_manifold`, `exhaust`, `oil_pump`,
+  `oil_pan`, `radiator`, `flywheel`, `ecu` — the model has no fallback without them;
+- at most one slot each for the optional `turbocharger` (empty = naturally aspirated) and
+  `intercooler` (empty = none);
+- no category the model reads in more than one slot. Per-cylinder and per-bank parts are sold as a
+  set in one slot (four pistons; a V engine's pair of heads). Twin turbos, per-bank intake/exhaust,
+  dry sumps and superchargers need model work first.
+
+Other slots (categories the model does not read) are free-form.
 
 ## Fuels (`fuels`)
 `id`, `name`, `octane_ron`, `stoichiometric_afr`, `lower_heating_value_mj_kg`, `density_kg_l`,

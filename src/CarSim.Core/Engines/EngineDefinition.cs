@@ -16,6 +16,9 @@ public sealed class EngineSlotDefinition
     /// <summary>Whether the part can be serviced with the engine still in the car.</summary>
     public bool AccessibleInVehicle { get; init; }
 
+    /// <summary>Vehicle slots only: "front" or "rear" for parts fitted per axle (tyres); empty otherwise.</summary>
+    public string Axle { get; init; } = "";
+
     public string Label => string.IsNullOrEmpty(DisplayName) ? Id : DisplayName;
 }
 

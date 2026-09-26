@@ -132,6 +132,7 @@ public static class ContentLoader
         public bool Required { get; set; } = true;
         public List<string>? InstallAfter { get; set; }
         public bool AccessibleInVehicle { get; set; }
+        public string? Axle { get; set; }
     }
 
     private sealed class EngineDto
@@ -217,7 +218,7 @@ public static class ContentLoader
             {
                 if (string.IsNullOrWhiteSpace(s.Id) || string.IsNullOrWhiteSpace(s.Category)) { Error(source, d.Id, "Every slot needs 'id' and 'category'."); continue; }
                 if (!PartSpecRegistry.IsKnownCategory(s.Category)) Error(source, d.Id, $"Slot '{s.Id}' has unknown category '{s.Category}'.");
-                slots.Add(new EngineSlotDefinition { Id = s.Id, Category = s.Category, DisplayName = s.DisplayName ?? "", Required = s.Required, AccessibleInVehicle = true });
+                slots.Add(new EngineSlotDefinition { Id = s.Id, Category = s.Category, DisplayName = s.DisplayName ?? "", Required = s.Required, AccessibleInVehicle = true, Axle = s.Axle ?? "" });
             }
             var v = new Vehicles.VehicleDefinition
             {
@@ -341,6 +342,7 @@ public static class ContentLoader
                 }
                 if (!PartSpecRegistry.IsKnownCategory(s.Category))
                     Error(source, dto.Id, $"Slot '{s.Id}' has unknown category '{s.Category}'.");
+                if (!string.IsNullOrEmpty(s.Axle)) Error(source, dto.Id, $"Slot '{s.Id}': 'axle' is only meaningful on vehicle slots.");
                 slots.Add(new EngineSlotDefinition
                 {
                     Id = s.Id,
@@ -372,6 +374,7 @@ public static class ContentLoader
             };
             try { engine.AssemblyOrder(); }
             catch (InvalidOperationException ex) { Error(source, dto.Id, ex.Message); }
+            foreach (var problem in EngineTopology.CheckFamily(engine)) Error(source, dto.Id, problem);
 
             if (!Claim("engine", dto.Id, source)) return;
             _engines[dto.Id] = engine;
