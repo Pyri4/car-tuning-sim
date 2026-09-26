@@ -1,0 +1,42 @@
+{
+  "vehicles": [
+    {
+      // Proportions of the car the M54 reference engine came in (a mid-size rear-drive coupé): 2.73 m wheelbase,
+      // ~1.45 t, near 50:50. Chassis numbers are representative, not a validation target.
+      "id": "isar_c30",
+      "name": "Isar C30 coupé",
+      "description": "Front-engined, rear-drive four-seat coupé with the 3.0-litre straight six. Heavier and softer than the Kestrel, with torque everywhere.",
+      "engine": "isar_m54",
+      "drivetrain": "rwd",
+      "curb_mass_kg": 1450,
+      "front_weight_fraction": 0.51,
+      "wheelbase_m": 2.725,
+      "track_front_m": 1.481,
+      "track_rear_m": 1.488,
+      "cg_height_m": 0.48,
+      "yaw_inertia_kg_m2": 2750,
+      "drag_coefficient": 0.30,
+      "frontal_area_m2": 2.07,
+      "max_steer_deg": 32,
+      "bump_travel_mm": 80,
+      "slots": [
+        { "id": "clutch", "category": "clutch", "display_name": "Clutch" },
+        { "id": "gearbox", "category": "gearbox", "display_name": "Gearbox" },
+        { "id": "differential", "category": "differential", "display_name": "Differential" },
+        { "id": "tires_front", "category": "tires", "axle": "front", "display_name": "Front tyres" },
+        { "id": "tires_rear", "category": "tires", "axle": "rear", "display_name": "Rear tyres" },
+        { "id": "suspension", "category": "suspension", "display_name": "Suspension" },
+        { "id": "brakes", "category": "brakes", "display_name": "Brakes" }
+      ],
+      "stock_parts": {
+        "clutch": "clutch.isar_c30_oem",
+        "gearbox": "gearbox.isar_5mt",
+        "differential": "differential.isar_open_307",
+        "tires_front": "tires.street_205_55r16",
+        "tires_rear": "tires.street_225_50r16",
+        "suspension": "suspension.isar_c30_oem",
+        "brakes": "brakes.isar_c30_oem"
+      }
+    }
+  ]
+}

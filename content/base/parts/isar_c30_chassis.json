@@ -1,0 +1,25 @@
+{
+  // Driveline and chassis parts of the Isar C30 coupé (the car the M54 comes in), sized for a 1.45 t car with
+  // 300 N·m: the Kestrel S2's 280 N·m clutch and soft 1.25 t springs would not do. Tyres are shared stock sizes.
+  "parts": [
+    { "id": "clutch.isar_c30_oem", "name": "Isar C30 OEM clutch (240 mm)", "category": "clutch", "manufacturer": "Isar", "price": 420, "mass_kg": 8.5,
+      "description": "Holds about 400 N·m new: margin for the six's torque, not for much more.",
+      "spec": { "max_torque_nm": 400, "fade_start_c": 250, "life_mj": 150, "heat_capacity_j_per_k": 5000 } },
+
+    { "id": "gearbox.isar_5mt", "name": "Isar 5-speed manual", "category": "gearbox", "manufacturer": "Isar", "price": 2100, "mass_kg": 36,
+      "description": "Long-legged five-speed with a direct fifth. Rated for 480 N·m.",
+      "spec": { "ratios": [4.21, 2.49, 1.66, 1.24, 1.00], "reverse_ratio": 3.85, "efficiency": 0.95, "max_torque_nm": 480, "shift_time_s": 0.28, "input_inertia_kg_m2": 0.025 } },
+
+    { "id": "differential.isar_open_307", "name": "Open differential (3.07)", "category": "differential", "manufacturer": "Isar", "price": 700, "mass_kg": 27,
+      "spec": { "final_drive_ratio": 3.07, "type": "open", "max_torque_nm": 2200 } },
+
+    { "id": "suspension.isar_c30_oem", "name": "Isar C30 OEM springs, dampers and anti-roll bars", "category": "suspension", "manufacturer": "Isar", "price": 900, "mass_kg": 48,
+      "description": "Comfort-biased touring set-up: soft springs, a stiff front bar for stable understeer.",
+      "spec": { "front_spring_n_mm": 26, "rear_spring_n_mm": 32, "front_damper_ns_m": 1900, "rear_damper_ns_m": 2000, "front_arb_nm_deg": 650, "rear_arb_nm_deg": 250,
+                "ride_height_offset_mm": 0, "front_camber_deg": -0.8, "rear_camber_deg": -1.5, "front_camber_gain": 0.35, "rear_camber_gain": 0.45 } },
+
+    { "id": "brakes.isar_c30_oem", "name": "Isar C30 OEM brakes (vented, 325/320 mm)", "category": "brakes", "manufacturer": "Isar", "price": 620, "mass_kg": 36,
+      "spec": { "front_max_torque_nm": 2500, "rear_max_torque_nm": 1100, "fade_start_c": 450, "pad_life_mj": 240,
+                "front_heat_capacity_j_per_k": 8700, "rear_heat_capacity_j_per_k": 6900 } }
+  ]
+}

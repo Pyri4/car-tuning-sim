@@ -1,0 +1,19 @@
+{
+  // Isar M54 induction and exhaust manifolds, sized for the 3.0 six (not the K20's). Flow ratings are
+  // estimates; see PARTS_DATABASE.md, "Isar M54 reference engine". Its ECU, radiator, fuel pump, injectors,
+  // throttle and exhaust system bolt to anything and live in universal.json.
+  "parts": [
+    {
+      "id": "m54.intake.disa", "name": "M54 OEM intake manifold (DISA)", "category": "intake_manifold", "manufacturer": "Isar",
+      "price": 650, "mass_kg": 5.5, "requires": ["m54.intake_flange"],
+      "description": "Plastic manifold with long curved runners and the DISA resonance flap; includes the airbox, filter and air-mass meter.",
+      "spec": { "runner_length_mm": 380, "flow_cfm": 680 }
+    },
+    {
+      "id": "m54.exhaust_manifold.oem", "name": "M54 OEM exhaust manifolds (2 × 3-into-1, catalysts)", "category": "exhaust_manifold", "manufacturer": "Isar",
+      "price": 950, "mass_kg": 14.0, "requires": ["m54.exhaust_flange"],
+      "description": "A pair of short cast 3-into-1 manifolds, each with a close-coupled catalyst: good for emissions, not for scavenging.",
+      "spec": { "flow_cfm": 700, "primary_length_mm": 300, "scavenging_gain": 0.012 }
+    }
+  ]
+}
