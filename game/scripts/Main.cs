@@ -5,9 +5,9 @@ using Godot;
 namespace CarTuningSim;
 
 /// <summary>
-/// Root of the prototype UI: a status bar and tabs for the garage, engine, tuning, dyno and reports.
-/// Command-line (after "--"): --tab=garage|workshop|tuning|dyno|reports|drive, --select=slot, --autorun,
-/// --dyno-end=rpm, --screenshot=file.png, --frames=N.
+/// Root of the prototype UI: a status bar and tabs for the garage, workshop, tuning, dyno and reports.
+/// Command-line (after "--"): --tab=garage|workshop|tuning|dyno|reports, --select=slot, --autorun,
+/// --dyno-end=rpm, --screenshot=file.png, --frames=N, --drive (go straight to the test track; see DriveScene).
 /// </summary>
 public partial class Main : Control
 {
@@ -19,6 +19,13 @@ public partial class Main : Control
         var args = OS.GetCmdlineUserArgs();
         string? Arg(string name) => args.FirstOrDefault(a => a.StartsWith($"--{name}="))?[(name.Length + 3)..];
         bool Flag(string name) => args.Contains($"--{name}");
+
+        if (Flag("drive") && !_droveAlready)
+        {
+            _droveAlready = true;
+            CallDeferred(nameof(GoDrive));
+            return;
+        }
 
         Theme = Ui.BuildTheme();
         var background = new ColorRect { Color = new Color(0.13f, 0.14f, 0.17f) };
@@ -46,7 +53,8 @@ public partial class Main : Control
         _tabs.AddChild(dyno);
         _tabs.AddChild(new ReportsView { Name = "Reports" });
 
-        var tab = Arg("tab");
+        var tab = GameState.Instance.ReturnTab ?? Arg("tab");
+        GameState.Instance.ReturnTab = null;
         if (tab != null)
         {
             for (int i = 0; i < _tabs.GetTabCount(); i++)
@@ -57,18 +65,31 @@ public partial class Main : Control
         UpdateStatus();
         AddChild(new ScreenshotHelper());
         if (SmokeTest.Requested) CallDeferred(nameof(RunSmokeTest));
+        if (GameState.Instance.ReturnMessage is { } message)
+        {
+            GameState.Instance.ReturnMessage = null;
+            Callable.From(() => Ui.Message(this, "Test track", message)).CallDeferred();
+        }
         GD.Print($"Car Tuning Simulator ready. Content: {GameState.Instance.ContentDir} ({GameState.Instance.Content.Parts.Count} parts, {GameState.Instance.ContentErrors.Count} errors)");
     }
 
     public override void _ExitTree() => GameState.Instance.Changed -= UpdateStatus;
 
+    private static bool _droveAlready;
+
     private void RunSmokeTest() => SmokeTest.Run(GetTree());
+
+    private void GoDrive() => GetTree().ChangeSceneToFile("res://scenes/Drive.tscn");
 
     private void UpdateStatus()
     {
         var g = GameState.Instance.Garage;
         var report = g.Validate();
-        string health = report.CanRun ? "engine can run" : $"engine cannot run ({report.Errors.Count()} problems)";
+        var broken = g.Engine.AllParts.Where(p => p.IsFailed).Select(p => p.Definition.Name).ToList();
+        string health = CarSim.Core.Damage.DamageModel.IsSeized(g.Engine) ? $"ENGINE SEIZED ({string.Join(", ", broken)})"
+            : !report.CanRun ? $"engine cannot run ({report.Errors.Count()} problems)"
+            : broken.Count > 0 ? $"engine runs, damaged ({string.Join(", ", broken)})"
+            : "engine can run";
         _status.Text = $"Money {g.Money:N0}   ·   {(g.EngineInCar ? "engine in car" : "engine on stand")}   ·   {health}   ·   {g.Fuel.Name}   ·   tune: {g.Tune.Name}";
     }
 }

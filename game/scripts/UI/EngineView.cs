@@ -155,7 +155,9 @@ public partial class EngineView : HSplitContainer
             sb.Append($"CR [b]{geometry.CompressionRatio:F2}:1[/b]  ·  piston-to-head {Units.MToMm(geometry.PistonToHeadClearance):F2} mm\n");
         }
         sb.Append($"Compression test: [b]{EngineDiagnostics.CompressionTestBar(G.Engine):F1} bar[/b]\n");
-        sb.Append(report.CanRun ? "[color=#73d973]Engine can run.[/color]\n" : "[color=#f2594d]Engine cannot run:[/color]\n");
+        if (DamageModel.IsSeized(G.Engine))
+            sb.Append("[color=#f2594d]Engine is seized: replace the failed parts.[/color]\n");
+        else sb.Append(report.CanRun ? "[color=#73d973]Engine can run.[/color]\n" : "[color=#f2594d]Engine cannot run:[/color]\n");
         foreach (var issue in report.Issues.Where(i => i.Severity != IssueSeverity.Info))
         {
             string color = issue.Severity == IssueSeverity.Error ? "#f2594d" : "#f2cc4d";

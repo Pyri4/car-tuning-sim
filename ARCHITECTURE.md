@@ -108,9 +108,13 @@ after load. Runtime state (installed parts, wear, fatigue) lives in separate ins
 definitions can be shared.
 
 ### Gameplay (`src/CarSim.Gameplay`)
-Pure C# (no Godot): `Garage` (project car engine, shelf inventory, money, fuel, tune, engine-in-car
-access rule, buy/sell), data-defined new-game scenarios (`content/base/scenarios/`), and versioned
-JSON save/load (`SaveSystem`). Jobs, reputation and a parts market are planned.
+Pure C# (no Godot): `Garage` (project car engine and chassis parts, shelf inventory, money, fuel,
+tune, engine-in-car access rule, buy/sell, building a drivable `VehicleSimulation`), data-defined
+new-game scenarios (`content/base/scenarios/`), versioned JSON save/load (`SaveSystem`), and
+`DrivingSession` (fixed 2 ms stepping from variable frame times, lap timing, queued gear-shift
+requests, recovery to the track, autopilot hand-over, failure hand-off) with `KeyboardInputFilter`
+(digital keys to smooth inputs with a grip-based steering assist). Jobs, reputation and a parts
+market are planned.
 
 ### Physics
 Decision (2026-09-26): vehicle dynamics run **in the core**, not in Godot's physics engine. The test
@@ -128,10 +132,21 @@ must not contain mechanical formulas; if a UI needs a number, the core exposes i
 The prototype UI is built in C# code (`game/scripts/UI/`) rather than in large `.tscn` files: views
 are reviewable in diffs and the scene file stays trivial (`scenes/Main.tscn`). `GameState` (plain C#)
 holds the session (content, garage, dyno runs, failure reports) and raises `Changed`; views rebuild
-from it. Tabs: Garage (car, fuel, shelf, save/load, log), Engine (component tree, inspection, specs,
-removal order, shelf/shop), Tuning (ECU limits, calibration, tables), Dyno (sweep/steady runs, live
-telemetry, warnings, graphs, comparisons, failure reports), Reports (failure history, inspection).
-The Godot project uses the Compatibility (OpenGL) renderer — the UI does not need Forward+.
+from it. Tabs: Garage (car, fuel, shelf, save/load, log, test-track button), Workshop (engine and
+chassis component tree, inspection, specs, removal order, shelf/shop), Tuning (ECU limits,
+calibration, tables), Dyno (sweep/steady runs, live telemetry, warnings, graphs, comparisons, failure
+reports), Reports (failure history, inspection of engine and chassis).
+
+The test track is a separate scene (`scenes/Drive.tscn`, `game/scripts/Drive/`): the circuit mesh
+is generated from the same `TrackLayout` the tyres read their grip from (asphalt, kerbs, grass), the
+car is a simple primitive model posed from the core state (roll/pitch from the suspension
+load-transfer states, wheel spin and steer), with chase/bumper/trackside cameras and a HUD. Input
+actions are registered at runtime (keyboard and gamepad). The scene owns no physics: it feeds a
+`DrivingSession` and draws it. Mapping: simulation (x, y) → Godot (x, 0, −y); heading → rotation
+about +Y; the car model faces +X.
+
+The Godot project uses the Compatibility (OpenGL) renderer: the UI and the simple 3D track do not
+need Forward+.
 
 ### Tools
 - `tools/CarSim.Cli` – validate content, inspect assemblies, run a dyno sweep and print/CSV-export

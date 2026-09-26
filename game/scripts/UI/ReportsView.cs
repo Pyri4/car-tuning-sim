@@ -4,7 +4,7 @@ using Godot;
 
 namespace CarTuningSim.UI;
 
-/// <summary>Failure reports from this session and a full inspection of the engine.</summary>
+/// <summary>Failure reports from this session and a full inspection of the engine and chassis.</summary>
 public partial class ReportsView : HSplitContainer
 {
     private ItemList _list = null!;
@@ -22,7 +22,7 @@ public partial class ReportsView : HSplitContainer
         _list = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill };
         _list.ItemSelected += idx => Show((int)idx);
         left.AddChild(_list);
-        left.AddChild(Ui.Heading("Engine inspection"));
+        left.AddChild(Ui.Heading("Inspection (engine and car)"));
         _inspection = Ui.VBox(2);
         left.AddChild(Ui.Scroll(_inspection));
         AddChild(Ui.Margin(left, 10));
@@ -43,12 +43,14 @@ public partial class ReportsView : HSplitContainer
             _list.Select(State.FailureReports.Count - 1);
             Show(State.FailureReports.Count - 1);
         }
-        else _text.Text = "No failures yet. Push the engine on the dyno and see what gives.";
+        else _text.Text = "No failures yet. Push the engine on the dyno or the test track and see what gives.";
 
         Ui.Clear(_inspection);
-        foreach (var slot in State.Garage.Engine.Definition.Slots)
+        var g = State.Garage;
+        var slots = g.Engine.Definition.Slots.Concat(g.Vehicle?.Slots ?? System.Array.Empty<CarSim.Core.Engines.EngineSlotDefinition>());
+        foreach (var slot in slots)
         {
-            var part = State.Garage.Engine.PartIn(slot.Id);
+            var part = g.PartIn(slot.Id);
             if (part == null) continue;
             var findings = PartInspector.Inspect(part).Where(f => f.Severity != FindingSeverity.Good).ToList();
             if (findings.Count == 0) continue;

@@ -36,6 +36,12 @@ public sealed class GameState
     public List<DynoRun> Runs { get; } = new();
     public List<FailureReport> FailureReports { get; } = new();
 
+    /// <summary>Tab the main screen opens on when returning from another scene (consumed once).</summary>
+    public string? ReturnTab { get; set; }
+
+    /// <summary>Message shown once when returning to the main screen (e.g. why the car could not be driven).</summary>
+    public string? ReturnMessage { get; set; }
+
     /// <summary>Raised after any change that views should reflect.</summary>
     public event Action? Changed;
 

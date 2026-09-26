@@ -44,6 +44,11 @@ public partial class GarageView : HBoxContainer
         _info.AddChild(Ui.Heading(sc?.Name ?? "Project car"));
         if (sc != null) _info.AddChild(Ui.Wrapped(sc.Description, 14, Ui.Muted));
         _info.AddChild(Ui.Label($"Money: {G.Money:N0}", 18, Ui.Good));
+        if (G.Vehicle is { } car)
+        {
+            _info.AddChild(Ui.Label($"Car: {car.Name}", 15));
+            _info.AddChild(Ui.Wrapped(car.Description, 13, Ui.Muted));
+        }
         _info.AddChild(Ui.Label($"Engine: {G.Engine.Definition.Name}", 15));
         _info.AddChild(Ui.Label(G.EngineInCar ? "The engine is in the car." : "The engine is on the engine stand.", 14, Ui.Muted));
         _info.AddChild(Ui.Button(G.EngineInCar ? "Pull the engine (engine hoist)" : "Install the engine in the car", () =>
@@ -52,6 +57,15 @@ public partial class GarageView : HBoxContainer
             if (!r.Ok) Ui.Message(this, "Engine", r.Message);
             State.NotifyChanged();
         }));
+
+        if (G.Vehicle != null)
+        {
+            var (_, problem) = G.CreateVehicleSimulation();
+            var drive = Ui.Button("Take it to the test track", () => GetTree().ChangeSceneToFile("res://scenes/Drive.tscn"));
+            drive.Disabled = problem.Length > 0;
+            _info.AddChild(drive);
+            if (problem.Length > 0) _info.AddChild(Ui.Wrapped(problem, 13, Ui.Caution));
+        }
 
         var failed = G.FailedParts.ToList();
         if (failed.Count > 0)

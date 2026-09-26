@@ -90,6 +90,9 @@ public sealed class Garage
         return garage;
     }
 
+    /// <summary>Adds an entry to the workshop log (e.g. a test-drive summary).</summary>
+    public void LogEvent(string message) => Note(message);
+
     private void Note(string message)
     {
         _log.Add(message);

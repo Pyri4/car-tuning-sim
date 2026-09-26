@@ -58,8 +58,30 @@ dotnet run --project tools/CarSim.Cli -- sweep --swap exhaust=exhaust.race_76mm
 dotnet run --project tools/CarSim.Cli -- hold --rpm 6500 --sump-g 1.3  # abuse test: warnings, failure report, inspection
 ```
 
+### Driving
+From the Garage tab, **Take it to the test track** (the engine must be in the car, runnable and not
+seized; every chassis slot filled). Controls:
+
+| Key | Action | Gamepad |
+|---|---|---|
+| W / ↑ | throttle | right trigger |
+| S / ↓ | brake | left trigger |
+| A D / ← → | steer (keyboard steering assist limits lock at speed) | left stick |
+| E / Shift, Q / Ctrl | shift up / down (automatic clutch, manual gears) | RB / LB |
+| Space | handbrake | A |
+| T | starter (hold) | Y |
+| R | recover to the track (voids the lap) | Back |
+| P | autopilot (the built-in test driver) | |
+| C | camera: chase, bumper, trackside | X |
+| Esc | back to the garage (a failure takes you to Reports) | Start |
+
+Missed shifts, over-revving, oil surge and overheating break parts exactly as on the dyno; the failure
+report appears on track and in the Reports tab.
+
 Development aids for the game (arguments after `--`): `--tab=dyno`, `--autorun`, `--select=pistons`,
-`--screenshot=out.png --frames=30`, `--smoke-test` (headless CI check).
+`--screenshot=out.png --frames=30`, `--smoke-test` (headless CI check); for the track: `--drive`
+(start there), `--autodrive`, `--warp=20` (simulate 20 s ahead), `--camera=trackside`, and
+`--drive --smoke-test` (headless drive check).
 
 ## Current status
 Early implementation. See ROADMAP.md for what exists and what is next.

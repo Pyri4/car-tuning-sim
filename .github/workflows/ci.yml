@@ -44,3 +44,7 @@ jobs:
         run: |
           timeout 300 "$GODOT_BIN" --headless --path game -- --smoke-test | tee smoke.log
           grep -q "SMOKE TEST PASSED" smoke.log
+      - name: Drive smoke test (test track, autopilot)
+        run: |
+          timeout 300 "$GODOT_BIN" --headless --path game -- --drive --smoke-test | tee drive.log
+          grep -q "DRIVE SMOKE TEST PASSED" drive.log
