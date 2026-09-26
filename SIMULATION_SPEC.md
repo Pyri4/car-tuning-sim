@@ -289,6 +289,16 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
   limiter (fuel cut cannot prevent it) and the damage model reacts (valve float, rods, ...).
 - Radiator air speed = vehicle speed + 2 m/s (fan). Sump acceleration = |(a_x, a_y)| (oil surge).
 
+### Test facility and test driver
+- `TrackLayout.TestFacility()`: 1083 m circuit built from straights and constant-radius arcs (R25
+  hairpin complex, R45 chicane, R55 sweeper, R20 final corner), 11 m wide, closes exactly. Surface
+  grip multiplies tyre forces: asphalt 1.0, kerb (1.2 m) 0.9, grass 0.55.
+- `TrackDriver`: pure pursuit (look-ahead 8 m + 0.6 s) with a speed-scheduled lateral-offset
+  correction; target speed from exact curvature (`√(a_lat/κ)`) with backward braking passes; planned
+  lateral/braking g = 0.8/0.78 × tyre µ; throttle cut on wheelspin or body slip; shifts judged from
+  gearbox-side speed; restarts a stalled engine. Used for lap-time regression tests and demos.
+- Reference laps: stock ≈ 52 s, semi-slicks ≈ 48 s.
+
 ### Calibration reference (stock Kestrel S2, street tyres)
 0–100 km/h ≈ 8.5 s, top speed ≈ 220 km/h (drag-limited), 100–0 ≈ 48 m threshold braking (with a
 0.3 s pedal ramp) vs ≈ 54 m locked, skidpad ≈ 0.9 g (≈ 1.15 g on semi-slicks), mild understeer at the
@@ -314,4 +324,5 @@ and the baffled pan, overheating → blown gasket with power loss, turbo overspe
 the engine, report content, warnings, compression test, damage determinism, tyre force shape,
 combined slip, load sensitivity, acceleration, top speed, gearing, threshold vs locked braking,
 compound grip, roll dynamics, LSD vs open differential, mass from parts, missed downshift over-rev,
-oil surge in sustained corners, driving determinism.
+oil surge in sustained corners, driving determinism, track closure and surfaces, clean autopilot
+lap, lap time vs tyres and power, lap timer.

@@ -39,6 +39,15 @@ public sealed class VehicleSimulation
 
     public VehicleConfiguration Config { get; }
     public EngineSimulation Engine { get; }
+
+    /// <summary>Optional circuit: provides surface grip under each wheel (asphalt, kerb, grass).</summary>
+    public TrackLayout? Track { get; set; }
+
+    private readonly int[] _nearest = { -1, -1, -1, -1 };
+    private readonly double[] _surfaceGrip = { 1, 1, 1, 1 };
+
+    /// <summary>Surface under each wheel this step.</summary>
+    public Surface[] WheelSurface { get; } = new Surface[4];
     public VehicleState State { get; }
     public VehicleTelemetry? Last { get; private set; }
 
@@ -80,6 +89,7 @@ public sealed class VehicleSimulation
 
         UpdateClutch(dt, input, throttle);
 
+        UpdateSurfaces();
         double h = dt / Substeps;
         double steerTarget = Math.Clamp(input.Steer, -1, 1) * c.MaxSteer;
         s.SteerAngle += (steerTarget - s.SteerAngle) * MathUtil.LagFactor(dt, 0.05);
@@ -104,6 +114,8 @@ public sealed class VehicleSimulation
                 _slipRatio[w] = (s.WheelOmega[w] * tire.Radius - ul) / denom;
                 _slipAngle[w] = Math.Atan2(vl, denom);
                 var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w]);
+                fx *= _surfaceGrip[w];
+                fy *= _surfaceGrip[w];
                 _fx[w] = fx;
                 _fy[w] = fy;
                 double bx = fx * cos - fy * sin;
@@ -188,6 +200,21 @@ public sealed class VehicleSimulation
         return Last!;
     }
 
+    private void UpdateSurfaces()
+    {
+        if (Track == null) return;
+        var s = State;
+        double cos = Math.Cos(s.Heading), sin = Math.Sin(s.Heading);
+        for (int w = 0; w < 4; w++)
+        {
+            double wx = s.X + _wheelX[w] * cos - _wheelY[w] * sin;
+            double wy = s.Y + _wheelX[w] * sin + _wheelY[w] * cos;
+            _nearest[w] = Track.Nearest(wx, wy, _nearest[w]);
+            WheelSurface[w] = Track.SurfaceAt(wx, wy, _nearest[w]);
+            _surfaceGrip[w] = TrackLayout.Grip(WheelSurface[w]);
+        }
+    }
+
     private static void Filter(ref double x, ref double rate, double target, double wn, double zeta, double h)
     {
         double acc = wn * wn * (target - x) - 2.0 * zeta * wn * rate;
@@ -266,7 +293,7 @@ public sealed class VehicleSimulation
         double ratio = Config.OverallRatio(s.Gear);
         int d0 = Config.RearWheelDrive ? Wheel.RL : Wheel.FL;
         double gearboxRpm = Units.RadPerSecToRpm(0.5 * (s.WheelOmega[d0] + s.WheelOmega[d0 + 1]) * ratio);
-        if (s.ShiftTimer > 0 || s.Gear == 0) target = 0.0;
+        if (s.ShiftTimer > 0 || s.Gear == 0 || !Engine.State.Running && !input.Starter) target = 0.0;
         else if (rpm < IdleRpm * 0.85 && Math.Abs(gearboxRpm) < rpm + 50) target = 0.0;
         else if (rpm - Math.Abs(gearboxRpm) > 150 && Math.Abs(gearboxRpm) < 2500)
             target = MathUtil.SmoothStep(IdleRpm + 150, IdleRpm + 1800, rpm) * (throttle > 0.02 ? 1.0 : 0.3);
@@ -302,7 +329,7 @@ public sealed class VehicleSimulation
             t.SlipRatio[w] = _slipRatio[w];
             t.SlipAngle[w] = _slipAngle[w];
             t.WheelSpeed[w] = s.WheelOmega[w] * Config.TireOf(w).Radius;
-            double available = TireModel.Friction(Config.TireOf(w), _fz[w]) * _fz[w];
+            double available = TireModel.Friction(Config.TireOf(w), _fz[w]) * _fz[w] * _surfaceGrip[w];
             t.TyreUsage[w] = available > 0 ? Math.Sqrt(_fx[w] * _fx[w] + _fy[w] * _fy[w]) / available : 0.0;
         }
         return t;
