@@ -41,6 +41,19 @@ public sealed class TuneDocument
 
     /// <summary>Stoichiometric AFR the ECU believes the fuel has (fuel calibration).</summary>
     public required double FuelStoichAfr { get; init; }
+
+    /// <summary>
+    /// Injector dead time the ECU adds to every pulse, ms (injector calibration). Wrong by a fraction of a
+    /// millisecond, it barely matters at full load and badly at idle, where pulses are short. Required in content;
+    /// saves from before version 4 are migrated to the installed injectors' value.
+    /// </summary>
+    public double? InjectorDeadTimeMs { get; set; }
+
+    /// <summary>
+    /// Fuel density the ECU converts fuel mass to injector volume with, kg/L (fuel calibration). Required in
+    /// content; saves from before version 4 are migrated to their fuel's density.
+    /// </summary>
+    public double? FuelDensityKgL { get; set; }
     public double IdleRpm { get; init; } = 850;
     public bool KnockControlEnabled { get; init; } = true;
 
@@ -66,6 +79,10 @@ public sealed class TuneDocument
         if (!(IdleRpm >= 300 && IdleRpm < RevLimitRpm)) p.Add($"idle_rpm out of range: {IdleRpm}");
         if (!(InjectorFlowCcMin >= 50 && InjectorFlowCcMin <= 5000)) p.Add($"injector_flow_cc_min out of range: {InjectorFlowCcMin}");
         if (!(FuelStoichAfr >= 3 && FuelStoichAfr <= 20)) p.Add($"fuel_stoich_afr out of range: {FuelStoichAfr}");
+        if (InjectorDeadTimeMs is not double dead) p.Add("injector_dead_time_ms missing (the injector dead time the ECU adds to each pulse).");
+        else if (!(dead >= 0 && dead <= 3)) p.Add($"injector_dead_time_ms out of range: {dead}");
+        if (FuelDensityKgL is not double density) p.Add("fuel_density_kg_l missing (the fuel density the ECU meters with).");
+        else if (!(density >= 0.5 && density <= 1.2)) p.Add($"fuel_density_kg_l out of range: {density}");
         return p;
     }
 

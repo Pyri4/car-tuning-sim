@@ -411,6 +411,7 @@ public static class ContentLoader
                 BoostTargetKpa = tune.BoostTargetKpa, RevLimitRpm = tune.RevLimitRpm,
                 IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
                 InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = source,
+                InjectorDeadTimeMs = tune.InjectorDeadTimeMs, FuelDensityKgL = tune.FuelDensityKgL,
             };
         }
 

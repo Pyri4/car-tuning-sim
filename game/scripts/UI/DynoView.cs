@@ -4,6 +4,7 @@ using System.Linq;
 using CarSim.Core.Common;
 using CarSim.Core.Damage;
 using CarSim.Core.Dyno;
+using CarSim.Core.Ecu;
 using CarSim.Core.Simulation;
 using Godot;
 
@@ -19,7 +20,7 @@ public partial class DynoView : HSplitContainer
 
     private static readonly string[] Channels =
     {
-        "Boost & λ", "Spark advance & knock sensor", "Temperatures (EGT, coolant, oil, charge)",
+        "Boost & λ", "Spark advance & knock sensor", "Temperatures (EGT, coolant, oil, intake air)",
         "Oil pressure vs requirement", "Volumetric efficiency & injector duty", "Turbo: shaft rpm & wastegate",
         "Peak cylinder pressure & rod load",
     };
@@ -106,7 +107,7 @@ public partial class DynoView : HSplitContainer
         _gauges = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _gauges.AddThemeConstantOverride("h_separation", 16);
         foreach (var name in new[] { "Engine speed", "Torque", "Power", "Manifold pressure", "Boost", "λ / AFR", "Injector duty",
-                     "Spark advance", "Knock", "Peak cyl. pressure", "EGT", "Coolant", "Oil", "Charge temp", "Turbo" })
+                     "Spark advance", "Knock", "Peak cyl. pressure", "EGT", "Coolant", "Oil", "Intake air temp", "Turbo" })
         {
             _gauges.AddChild(Ui.Label(name, 14, Ui.Muted));
             var v = Ui.Label("—", 14);
@@ -229,12 +230,12 @@ public partial class DynoView : HSplitContainer
         Set("λ / AFR", t.Firing ? $"{t.Lambda:F2} / {t.Afr:F1}  (target {t.TargetLambda:F2})" : "—", t.Firing && t.Lambda > t.TargetLambda + 0.07 ? Ui.Danger : null);
         Set("Injector duty", $"{t.InjectorDuty * 100:F0} %" + (t.FuelLimit != FuelLimit.None ? $"  {t.FuelLimit}" : ""), t.InjectorDuty > 0.9 || t.FuelLimit != FuelLimit.None ? Ui.Danger : t.InjectorDuty > 0.8 ? Ui.Caution : null);
         Set("Spark advance", $"{t.IgnitionAdvance:F1}° BTDC" + (t.KnockRetard > 0.05 ? $"  (knock retard {t.KnockRetard:F1}°)" : ""));
-        Set("Knock", $"{KnockSensor(t.KnockIntensity)}  (sensor {t.KnockIntensity * 10:F0})", t.KnockIntensity > 0.3 ? Ui.Danger : null);
+        Set("Knock", KnockSensor.Describe(t.KnockSensorLevel), t.KnockSensorLevel >= KnockLevel.Light ? Ui.Danger : t.KnockSensorLevel > KnockLevel.None ? Ui.Caution : null);
         Set("Peak cyl. pressure", $"{t.PeakCylinderPressureBar:F0} bar");
         Set("EGT", $"{t.EgtC:F0} °C", t.EgtC > 950 ? Ui.Caution : null);
         Set("Coolant", $"{t.CoolantC:F0} °C" + (t.CoolantLevel < 0.99 ? $"  level {t.CoolantLevel * 100:F0} %" : ""), t.CoolantC > 110 ? Ui.Danger : t.CoolantC > 100 ? Ui.Caution : null);
         Set("Oil", $"{t.OilC:F0} °C, {t.OilPressureBar:F2} bar (need {Units.PaToBar(t.OilPressureRequired):F2})", t.OilPressure < t.OilPressureRequired ? Ui.Danger : null);
-        Set("Charge temp", $"{Units.KToC(t.ChargeTemperature):F0} °C");
+        Set("Intake air temp", $"{Units.KToC(t.ManifoldTemperature):F0} °C");
         Set("Turbo", t.TurboRpm > 1 ? $"{t.TurboRpm / 1000:F0} krpm, PR {t.CompressorPressureRatio:F2}, η {t.CompressorEfficiency * 100:F0} %, WG {t.WastegateOpening * 100:F0} %" : "—", t.TurboOverspeed ? Ui.Danger : null);
     }
 
@@ -292,9 +293,6 @@ public partial class DynoView : HSplitContainer
     /// What a knock sensor tells a tuner: how hard it is knocking, not how far the timing is from the limit
     /// (MBT and the knock limit are found by experiment; the CLI's hold/sweep still print them for development).
     /// </summary>
-    private static string KnockSensor(double intensity) =>
-        intensity <= 0 ? "quiet" : intensity < 1 ? "light knock" : intensity < 3 ? "knocking" : "heavy knock";
-
     private void AddAux(IReadOnlyList<EngineTelemetry> s, string name, Color color)
     {
         var g = _auxGraph;
@@ -309,13 +307,13 @@ public partial class DynoView : HSplitContainer
                 g.RightMin = 0.6f; g.RightMax = 1.3f;
                 break;
             case 1:
-                g.LeftLabel = "Degrees BTDC"; g.RightLabel = "Knock sensor";
+                g.LeftLabel = "Degrees BTDC"; g.RightLabel = "Knock sensor (0 quiet – 4 heavy)";
                 L("advance", t => t.IgnitionAdvance, color); L("knock retard", t => t.KnockRetard, Ui.Danger, true);
-                R("knock", t => t.KnockIntensity * 10, Ui.Caution);
+                R("knock", t => (double)t.KnockSensorLevel, Ui.Caution);
                 break;
             case 2:
                 g.LeftLabel = "°C"; g.RightLabel = "";
-                L("EGT", t => t.EgtC, color); L("coolant", t => t.CoolantC, Ui.Good, true); L("oil", t => t.OilC, Ui.Caution, true); L("charge", t => Units.KToC(t.ChargeTemperature), Ui.Muted, true);
+                L("EGT", t => t.EgtC, color); L("coolant", t => t.CoolantC, Ui.Good, true); L("oil", t => t.OilC, Ui.Caution, true); L("intake air", t => Units.KToC(t.ManifoldTemperature), Ui.Muted, true);
                 g.LeftMin = 0;
                 break;
             case 3:

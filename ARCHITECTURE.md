@@ -196,7 +196,7 @@ See SIMULATION_SPEC.md for equations and PARTS_DATABASE.md for the data schema.
 
 ## 6. Save/load
 Runtime state (inventory, part instances with wear/fatigue/failures, the assembly, tune, fuel, money,
-engine-in-car flag) serializes to versioned JSON (`SaveSystem`, version 3). Definitions are referenced
+engine-in-car flag) serializes to versioned JSON (`SaveSystem`, version 4). Definitions are referenced
 by id, never embedded, so content updates flow into saves. Loading validates every reference and
 reports all missing content at once (e.g. a removed mod).
 
@@ -205,7 +205,8 @@ time. Version 1 → 2: tunes gained the speed-density `volumetric_efficiency` ta
 `displacement_cc`; a version-1 tune gets the engine's stock-tune table resampled onto its own axes and
 the stock displacement, so the car runs as before on a stock engine and drifts off target λ as far as
 its breathing differs from stock. Version 2 → 3: parts gained a damage ledger (`exposure`), which
-older saves start empty. Saves newer than the game are rejected, and so are unknown failure-mode names
+older saves start empty. Version 3 → 4: tunes gained the injector dead time and fuel density the ECU meters with;
+an older tune gets the installed injectors' dead time and the save's fuel density, so it runs as before. Saves newer than the game are rejected, and so are unknown failure-mode names
 (they used to be dropped, silently healing a failed part).
 
 ---
@@ -272,4 +273,5 @@ older saves start empty. Saves newer than the game are rejected, and so are unkn
 | 2026-09-26 | Ride over road roughness via a frequency-domain quarter car per axle (ISO 8608 surfaces, variance ∝ speed), anti-roll bars in the roll mode, unsprung mass from parts, bump travel and bump stops; grip × 1/(1 + 0.6·(σ/Fz)²) | Springs, dampers, bars and ride height had no downside, so the optimum was always an end stop. A frequency-domain solve adds the physical trade-offs without per-corner time integration (which would need a smaller step and roll-centre geometry); roll centres remain future work |
 | 2026-09-26 | Knock from an end-gas autoignition integral (Livengood–Wu, Douaud–Eyzat delay) over a single-zone Wiebe cycle tied to the MBT model, with residual-gas heating and Kalghatgi's octane index (fuels gain `octane_mon`); factory spark table re-limited on RON 95 | The linear knock limit with a light-load patch sat above MBT everywhere at WOT, so octane never limited the NA engine. The integral makes rpm, boost, temperatures, compression, mixture and octane act through one mechanism; the richness and octane-index terms are the documented empirical parts |
 | 2026-09-26 | Exhaust-port wall heat exchange (exact pipe law, constant UA from bore² × cylinders, sink = coolant) replaces the one-way motoring pickup; the in-cylinder coolant fraction goes 0.28 → 0.265 so the full-load coolant total is unchanged | Validation pass: routing pumping work into the exhaust (to close the energy balance) let a few g/s of overrun gas carry ~10 kW and leave at 1,500–4,500 °C; every lift-and-reapply burned the T28's turbine. The balance stays exact; the walls now bound the gas temperature. A big-turbo gearbox test had passed only because its harness never lifted between pulls |
+| 2026-09-26 | ECU calibration beliefs complete: fuel density and injector dead time are tune fields (injectors carry a real dead time); the boost PI closes on the ECU's MAP reading above 80 % pedal; the knock sensor reports a level, not degrees past the limit; the dyno's IAT channel is the manifold air | Validation pass: the ECU converted fuel mass to injector volume with the true fuel density, closed the boost loop on the true compressor-outlet pressure (a sensor it does not have, unclipped), and the dyno showed knock intensity (= advance − knock limit), so one knocking reading gave the knock limit away. Mutation tests (true air, true density, compressor-outlet feedback) are each caught |
 | 2026-09-26 | Not (yet) modelled: intake/exhaust volume filling dynamics, a blow-off valve part, tabulated compressor/turbine maps | Turbo lag is dominated by rotor inertia (modelled); the quasi-static air path is stable at the 2–5 ms steps used. Filling dynamics would need an implicit solver. Parametric maps are closed-form and authorable from four map numbers; tables are a later content feature |

@@ -97,16 +97,22 @@ The ECU only knows its sensors and its calibration; it never sees the engine's t
 - Speed-density air estimate per cylinder per cycle:
   `m_air_est = VE_table(rpm, MAP_read) · MAP_read · (displacement_cc / cylinders) / (R · IAT)`, with
   IAT the manifold air temperature (the sensor sits upstream of the injectors).
-- Fuel command: `m_f = m_air_est / (λ_target · fuel_stoich_afr_calibrated)`; pulse width uses the
-  calibrated injector flow (`injector_flow_cc_min`).
+- Fuel command: `m_f = m_air_est / (λ_target · fuel_stoich_afr)`; pulse width
+  `= m_f / (fuel_density_kg_l · injector_flow_cc_min) + injector_dead_time_ms` — every term is the tune's belief,
+  never the installed injectors or the fuel in the tank.
 - λ therefore follows the ratio of true to estimated air. Everything the table was not calibrated
   for moves it: cams, head, header, exhaust, intake runners, turbo and manifold, a stroker
   (displacement), and even the fuel — E85's stronger evaporative cooling happens after the IAT sensor
   and packs in ≈ 4–6 % more air than a gasoline table expects. The IAT correction covers most of a
   missing intercooler (≈ 3 % λ error for ≈ 11 % less dense charge). Wrong injector scaling or fuel
-  calibration gives the corresponding AFR error.
-- Not modelled: injector dead time, coolant/warm-up enrichment, transient (wall-film) fuelling,
-  closed-loop λ trim. The wideband λ on the dyno is the feedback the player tunes the VE table with.
+  calibration gives the corresponding AFR error: the stoich ratio, and the density (race fuel is 4 % lighter
+  than pump fuel, E85 4 % denser). A wrong dead time misfuels short pulses: 0.4 ms is ≈ 20 % at idle and
+  ≈ 2 % at full load. A regulator above the injectors' rated pressure runs rich by √(ΔP/ΔP_rated). Coolant
+  temperature moves the mixture too: the charge picks heat up after the IAT sensor, so a cold engine runs
+  lean and a hot one rich (no coolant correction).
+- Not modelled: coolant/warm-up enrichment, transient (wall-film) fuelling, closed-loop λ trim (open-loop
+  errors persist — tested), battery-voltage and pressure dependence of the dead time. The wideband λ on the
+  dyno is the feedback the player tunes the VE table with.
 - `VeCalibrator` (`carsim calibrate-ve`) is the content author's base-map generator: it holds the
   engine on a steady-state dyno over a 13-point throttle sweep at every rpm column, computes
   `VE = m_air · R · IAT / (MAP · V_cyl)` and interpolates onto the table's load axis (two passes, the
@@ -116,10 +122,15 @@ The ECU only knows its sensors and its calibration; it never sees the engine's t
 - Rev limit: `min(tune, hardware max)`, fuel cut with 150 rpm hysteresis.
 - Knock control (if hardware + tune enable it): retard at 6°/s per degree of knock, up to 10°;
   recover at 1°/s.
+- Knock sensor (what the player sees, `Ecu/KnockSensor.cs`): a level — none, trace (< 0.3°), light (< 1°),
+  moderate (< 2.5°), heavy — not the degrees past the limit, from which one reading would give the limit away.
+  Onset is exact, so the limit is found by sweeping timing. The dyno screens and CSV log show only measurable
+  channels (no MBT, knock limit, charge temperature; `iat_c` is the manifold air the sensor reads).
 - Idle: PI on idle-air valve while throttle < 2 %.
 
 ## Fuel system (`Simulation/FuelSystem.cs`)
-- Commanded duty `= pulse_width / (120/rpm)`; physically capped at 100 % (static).
+- Commanded duty `= pulse_width / (120/rpm)`; physically capped at 100 % (static). Fuel flows for
+  `pulse_width − dead_time` of each pulse (`dead_time_ms` per injector; OEM 0.90, 550 cc 1.00, 1000 cc 1.10 ms).
 - Injector flow `∝ √(ΔP / rated ΔP)`, minus up to 25 % with wear (clogging).
 - Pump: `Q = Q_free · (1 − 30 % wear) · (1 − (ΔP + boost)/p_max)`. Regulator is 1:1 manifold
   referenced, so boost reduces pump capacity. If demand exceeds supply, rail ΔP sags until they balance.
@@ -276,8 +287,11 @@ Flows are corrected: `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; `n` = corre
 - Mechanical: wastegate opening = clamp((boost_gauge − spring)/20 kPa, 0, 1) at the compressor outlet,
   first-order lag 0.08 s. Proportional → boost creeps above the spring as flow rises; an undersized
   wastegate cannot hold boost at all (boost creep).
-- ECU (only with `boost_control` hardware and a `boost_target_kpa` table): PI loop on compressor
-  outlet boost (error normalised by the 20 kPa actuator span, integral gain 3/s); the solenoid can only
+- ECU (only with `boost_control` hardware and a `boost_target_kpa` table, above 80 % pedal — below it the
+  solenoid releases and the spring alone sets boost): PI loop on the ECU's **MAP sensor reading** (error
+  normalised by the 20 kPa actuator span, integral gain 3/s). A target above the sensor's range is never seen
+  as reached: the gate stays shut and the engine over-boosts (validator warning
+  `boost_target_above_map_sensor`). The solenoid can only
   keep the gate shut longer (`opening = min(mechanical, PI)`), so targets below the spring are
   unreachable (validator warning). Anti-windup: the integrator stops while the output is pinned in the
   direction of the error (gate held shut during spool, or at the mechanical limit), so a tip-in peaks

@@ -137,7 +137,8 @@ follower + ⅓ spring), `valves_per_cylinder`, `material`.
 
 ### `injectors` (set)
 `count`, `flow_cc_min` (static flow per injector at `rated_pressure_kpa`, default 300),
-`max_duty` (recommended maximum, default 0.85).
+`max_duty` (recommended maximum, default 0.85), `dead_time_ms` (opening delay per pulse, 0–3 ms, default 0;
+constant — no battery-voltage or pressure dependence).
 
 ### `fuel_pump` (pump + manifold-referenced regulator)
 `free_flow_lph` (flow at zero pressure), `max_pressure_kpa` (dead-head), `regulated_pressure_kpa`
@@ -253,10 +254,13 @@ counts under boost), `stoichiometric_afr`, `lower_heating_value_mj_kg`, `density
 See SIMULATION_SPEC.md (ECU section) — `rpm_axis`, `load_axis_kpa`, `target_lambda[load][rpm]`,
 `ignition_advance_deg[load][rpm]`, `volumetric_efficiency[load][rpm]` (speed-density fuel map: VE
 relative to the MAP and intake air temperature the ECU reads, 0.05–3.0), `displacement_cc` (the
-engine size the ECU assumes), `injector_flow_cc_min`, `fuel_stoich_afr`, optional
-`boost_target_kpa[rpm]`, `rev_limit_rpm`, `idle_rpm`, `knock_control_enabled`.
+engine size the ECU assumes), `injector_flow_cc_min`, `injector_dead_time_ms`, `fuel_stoich_afr`,
+`fuel_density_kg_l` (the injector and fuel calibration: the ECU meters with these beliefs, never the installed
+injectors or the fuel in the tank), optional `boost_target_kpa[rpm]` (closed loop on the ECU's MAP sensor above
+80 % pedal), `rev_limit_rpm`, `idle_rpm`, `knock_control_enabled`.
 
-The VE table and displacement are required. Generate a base table for the build the tune is meant
+The VE table, displacement, dead time and fuel density are required (saves older than version 4 get the
+installed injectors' dead time and their fuel's density on load). Generate a base table for the build the tune is meant
 for with `carsim calibrate-ve [build options]` (it prints the rows to paste); an engine whose
 breathing differs from that build runs off its target λ until the table is re-tuned.
 

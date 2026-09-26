@@ -19,9 +19,10 @@ public static class SaveSystem
     /// <summary>
     /// 1: first format. 2: tunes carry a speed-density VE table and displacement (version-1 tunes take them
     /// from the engine's stock tune on load). 3: parts carry a damage ledger (<c>exposure</c>; older saves
-    /// start with an empty one).
+    /// start with an empty one). 4: tunes carry an injector dead time and a fuel density (older tunes take the
+    /// installed injectors' dead time and their fuel's density: the ECU used to meter with the true values).
     /// </summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -181,7 +182,17 @@ public static class SaveSystem
                 InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = tune.Source,
                 VolumetricEfficiency = tune.VolumetricEfficiency ?? ve,
                 DisplacementCc = tune.DisplacementCc ?? stock.DisplacementCc,
+                InjectorDeadTimeMs = tune.InjectorDeadTimeMs, FuelDensityKgL = tune.FuelDensityKgL,
             };
+        }
+        if (file.Version < 4 && file.Tune is { } oldTune)
+        {
+            // Before version 4 the ECU metered fuel with the real fuel density and ignored injector dead time, which
+            // the injectors did not have. Calibrating the tune to the hardware in the save keeps the car running as it did.
+            var injectors = file.Installed.Values.Select(ps => content.Parts.GetValueOrDefault(ps.PartId))
+                .FirstOrDefault(d => d?.Category == PartCategory.Injectors);
+            oldTune.InjectorDeadTimeMs ??= injectors?.Spec is CarSim.Core.Parts.Specs.InjectorSpec inj ? inj.DeadTimeMs : 0.0;
+            oldTune.FuelDensityKgL ??= content.Fuels.TryGetValue(file.FuelId, out var fuel) ? fuel.DensityKgL : 0.745;
         }
         file.Version = CurrentVersion;
     }

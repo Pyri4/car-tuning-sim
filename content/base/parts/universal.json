@@ -4,17 +4,17 @@
     {
       "id": "injectors.310cc", "name": "310 cc/min injectors (set of 4)", "category": "injectors", "manufacturer": "Kestrel",
       "price": 280, "mass_kg": 0.3,
-      "spec": { "count": 4, "flow_cc_min": 310, "rated_pressure_kpa": 300, "max_duty": 0.85 }
+      "spec": { "count": 4, "flow_cc_min": 310, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 0.90 }
     },
     {
       "id": "injectors.550cc", "name": "550 cc/min injectors (set of 4)", "category": "injectors", "manufacturer": "Precision Flow",
       "price": 520, "mass_kg": 0.3,
-      "spec": { "count": 4, "flow_cc_min": 550, "rated_pressure_kpa": 300, "max_duty": 0.85 }
+      "spec": { "count": 4, "flow_cc_min": 550, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 1.00 }
     },
     {
       "id": "injectors.1000cc", "name": "1000 cc/min injectors (set of 4)", "category": "injectors", "manufacturer": "Precision Flow",
       "price": 890, "mass_kg": 0.35,
-      "spec": { "count": 4, "flow_cc_min": 1000, "rated_pressure_kpa": 300, "max_duty": 0.85 }
+      "spec": { "count": 4, "flow_cc_min": 1000, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 1.10 }
     },
     {
       "id": "fuel_pump.oem_170", "name": "OEM in-tank fuel pump", "category": "fuel_pump", "manufacturer": "Kestrel",

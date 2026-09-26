@@ -11,8 +11,11 @@ namespace CarSim.Core.Ecu;
 public sealed class EcuTune
 {
     public EcuTune(string id, string name, Table2D targetLambda, Table2D ignitionAdvance, Table2D volumetricEfficiency, Table2D? boostTarget,
-        double revLimitRpm, double idleRpm, bool knockControlEnabled, double injectorFlowCcMin, double fuelStoichAfr, double displacementCc)
+        double revLimitRpm, double idleRpm, bool knockControlEnabled, double injectorFlowCcMin, double fuelStoichAfr, double displacementCc,
+        double injectorDeadTimeMs, double fuelDensityKgL)
     {
+        InjectorDeadTimeMs = injectorDeadTimeMs;
+        FuelDensityKgL = fuelDensityKgL;
         Id = id;
         Name = name;
         TargetLambda = targetLambda;
@@ -58,6 +61,12 @@ public sealed class EcuTune
     /// <summary>Fuel calibration: the stoichiometric AFR the ECU assumes.</summary>
     public double FuelStoichAfr { get; set; }
 
+    /// <summary>Injector calibration: the dead time the ECU adds to each pulse, ms.</summary>
+    public double InjectorDeadTimeMs { get; set; }
+
+    /// <summary>Fuel calibration: the fuel density the ECU meters with, kg/L.</summary>
+    public double FuelDensityKgL { get; set; }
+
     public double LambdaAt(double rpm, double mapKpa) => TargetLambda.Evaluate(rpm, mapKpa);
     public double AdvanceAt(double rpm, double mapKpa) => IgnitionAdvance.Evaluate(rpm, mapKpa);
     public double VolumetricEfficiencyAt(double rpm, double mapKpa) => VolumetricEfficiency.Evaluate(rpm, mapKpa);
@@ -74,8 +83,10 @@ public sealed class EcuTune
             ?? throw new InvalidDataException($"Tune '{d.Id}' has no volumetric_efficiency table."));
         double displacement = d.DisplacementCc ?? throw new InvalidDataException($"Tune '{d.Id}' has no displacement_cc.");
         Table2D? boost = d.BoostTargetKpa == null ? null : new Table2D(d.RpmAxis, new[] { 0.0 }, new[] { d.BoostTargetKpa });
+        double deadTime = d.InjectorDeadTimeMs ?? throw new InvalidDataException($"Tune '{d.Id}' has no injector_dead_time_ms.");
+        double density = d.FuelDensityKgL ?? throw new InvalidDataException($"Tune '{d.Id}' has no fuel_density_kg_l.");
         return new EcuTune(d.Id, d.Name, lambda, ign, ve, boost, d.RevLimitRpm, d.IdleRpm, d.KnockControlEnabled,
-            d.InjectorFlowCcMin, d.FuelStoichAfr, displacement);
+            d.InjectorFlowCcMin, d.FuelStoichAfr, displacement, deadTime, density);
     }
 
     public TuneDocument ToDocument() => new()
@@ -94,6 +105,8 @@ public sealed class EcuTune
         KnockControlEnabled = KnockControlEnabled,
         InjectorFlowCcMin = InjectorFlowCcMin,
         FuelStoichAfr = FuelStoichAfr,
+        InjectorDeadTimeMs = InjectorDeadTimeMs,
+        FuelDensityKgL = FuelDensityKgL,
     };
 
     public EcuTune Clone() => FromDocument(ToDocument());

@@ -68,9 +68,17 @@ public sealed class EcuController
     public double CommandedFuelPerCycle(double estimatedAirPerCycle, double targetLambda) =>
         estimatedAirPerCycle / (targetLambda * Tune.FuelStoichAfr);
 
-    /// <summary>Injector pulse width (s) to deliver <paramref name="fuelMass"/>, using the calibrated injector flow.</summary>
-    public double PulseWidth(double fuelMass, double fuelDensity) =>
-        fuelMass / (fuelDensity * Units.CcPerMinToM3PerSec(Tune.InjectorFlowCcMin));
+    /// <summary>
+    /// Injector pulse width (s) to deliver <paramref name="fuelMass"/>, from the ECU's own injector and fuel
+    /// calibration: fuel volume at the density it believes, over the flow it believes, plus the dead time it
+    /// believes. It never sees the real fuel or injectors, so a fuel or injector swap is wrong until re-calibrated.
+    /// </summary>
+    public double PulseWidth(double fuelMass)
+    {
+        if (!(fuelMass > 0)) return 0.0;
+        double density = Tune.FuelDensityKgL * 1000.0;
+        return fuelMass / (density * Units.CcPerMinToM3PerSec(Tune.InjectorFlowCcMin)) + Tune.InjectorDeadTimeMs / 1000.0;
+    }
 
     /// <summary>Fuel-cut rev limiter with hysteresis. Returns true while fuel is cut.</summary>
     public bool UpdateRevLimiter(double rpm)

@@ -216,6 +216,11 @@ public static class AssemblyValidator
             if (!ecu.BoostControl)
                 Add(IssueSeverity.Info, "boost_by_spring",
                     $"No electronic boost control: boost is set by the wastegate spring (about {turbo.WastegateSpringKpa:F0} kPa gauge, creeping higher with flow).");
+            if (ecu.BoostControl && context.MaxBoostTargetKpa is double over && over > ecu.MapSensorMaxKpa)
+                Add(IssueSeverity.Warning, "boost_target_above_map_sensor",
+                    $"The boost target ({over:F0} kPa) is above what the ECU's MAP sensor can read ({ecu.MapSensorMaxKpa:F0} kPa): it never sees the target reached, " +
+                    "holds the wastegate shut and over-boosts.",
+                    SlotOf(a, PartCategory.Ecu), SlotOf(a, PartCategory.Turbocharger));
             if (ecu.BoostControl && context.MaxBoostTargetKpa is double target && target < springAbsKpa - 5)
                 Add(IssueSeverity.Warning, "boost_target_below_spring",
                     $"The boost target ({target:F0} kPa) is below what the wastegate spring allows ({springAbsKpa:F0} kPa); the ECU can only hold the wastegate shut, not open it early.",

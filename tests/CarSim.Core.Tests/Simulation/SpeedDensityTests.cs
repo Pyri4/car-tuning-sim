@@ -145,6 +145,7 @@ public class SpeedDensityTests
             Id = d.Id, Name = d.Name, RpmAxis = d.RpmAxis, LoadAxisKpa = d.LoadAxisKpa, TargetLambda = d.TargetLambda,
             IgnitionAdvanceDeg = d.IgnitionAdvanceDeg, VolumetricEfficiency = ve, DisplacementCc = cc, RevLimitRpm = d.RevLimitRpm,
             InjectorFlowCcMin = d.InjectorFlowCcMin, FuelStoichAfr = d.FuelStoichAfr,
+            InjectorDeadTimeMs = d.InjectorDeadTimeMs, FuelDensityKgL = d.FuelDensityKgL,
         };
         Assert.Empty(Copy(d.VolumetricEfficiency, d.DisplacementCc).Validate());
         Assert.Contains(Copy(null, d.DisplacementCc).Validate(), p => p.Contains("volumetric_efficiency missing"));

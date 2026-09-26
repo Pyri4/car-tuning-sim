@@ -46,7 +46,16 @@ public sealed class InjectorSpec : PartSpec
     /// <summary>Recommended maximum duty cycle (0–1). Above it the injector cannot reliably meter.</summary>
     public double MaxDuty { get; init; } = 0.85;
 
+    /// <summary>
+    /// Opening delay (dead time): how much of each electrical pulse passes before fuel flows, ms. Held constant
+    /// (real dead time grows as battery voltage falls and fuel pressure rises; neither is modelled).
+    /// </summary>
+    public double DeadTimeMs { get; init; }
+
     [JsonIgnore] public double RatedPressure => Units.KpaToPa(RatedPressureKpa);
+
+    /// <summary>Dead time, s.</summary>
+    [JsonIgnore] public double DeadTime => DeadTimeMs / 1000.0;
 
     /// <summary>Volumetric flow of one injector at the rated pressure, m³/s.</summary>
     [JsonIgnore] public double RatedFlow => Units.CcPerMinToM3PerSec(FlowCcMin);
@@ -57,6 +66,7 @@ public sealed class InjectorSpec : PartSpec
         check.Range("flow_cc_min", FlowCcMin, 50, 5000);
         check.Range("rated_pressure_kpa", RatedPressureKpa, 100, 1000);
         check.Range("max_duty", MaxDuty, 0.3, 1.0);
+        check.Range("dead_time_ms", DeadTimeMs, 0.0, 3.0);
     }
 }
 

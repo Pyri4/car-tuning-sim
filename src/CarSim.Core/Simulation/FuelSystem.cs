@@ -9,7 +9,7 @@ public readonly record struct FuelDelivery(double FuelPerCycle, double Duty, dou
 /// <c>regulated</c> above manifold pressure while the pump keeps up. The pump's flow falls linearly
 /// with the pressure it pushes against (free flow → zero at dead-head), so boost (which raises the
 /// pump's outlet pressure) eats pump capacity. When demand exceeds supply, rail pressure sags until
-/// the two balance; injector flow scales with √(ΔP).
+/// the two balance; injector flow scales with √(ΔP). Each pulse delivers nothing for the injector's dead time.
 /// </summary>
 public static class FuelSystem
 {
@@ -26,7 +26,9 @@ public static class FuelSystem
             return new FuelDelivery(0, 0, pump.RegulatedPressure, FuelLimit.None);
 
         double commandedDuty = commandedPulseWidth / cycleTime;
-        double duty = Math.Min(1.0, commandedDuty);
+        // Fuel flows only once the injector has opened: the dead time of every pulse delivers nothing. A static
+        // (always open) injector has no pulses to lose it on.
+        double duty = commandedDuty >= 1.0 ? 1.0 : Math.Max(0.0, commandedPulseWidth - injectors.DeadTime) / cycleTime;
         double ratedFlow = injectors.RatedFlow * (1.0 - InjectorWearFlowLoss * Math.Clamp(injectorWear, 0, 1));
         double regulated = pump.RegulatedPressure;
         double boost = manifoldPressure - ambientPressure;

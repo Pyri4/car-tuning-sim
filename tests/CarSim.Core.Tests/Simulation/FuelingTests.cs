@@ -18,24 +18,66 @@ public class FuelingTests
     [Fact]
     public void BiggerInjectorsWithoutRescalingRunRich()
     {
-        var sim = SimFactory.Create(("injectors", "injectors.550cc"));
-        var t = SimFactory.At(sim, 5000);
-        Assert.Equal(t.TargetLambda * 310.0 / 550.0, t.Lambda, 2);
+        // Only the flow scaling wrong (dead time set to the new injectors' 1.00 ms): rich by the flow ratio (to within
+        // the extra charge cooling of so much more fuel evaporating, ≈ 1 %).
         var tune = SimFactory.StockTune();
+        tune.InjectorDeadTimeMs = 1.00;
+        var t = SimFactory.At(SimFactory.Create(SimFactory.Assembly(("injectors", "injectors.550cc")), tune: tune), 5000);
+        Assert.Equal(t.TargetLambda * 310.0 / 550.0, t.Lambda, 2);
+        tune = tune.Clone();
         tune.InjectorFlowCcMin = 550;
         var fixedT = SimFactory.At(SimFactory.Create(SimFactory.Assembly(("injectors", "injectors.550cc")), tune: tune), 5000);
         Assert.Equal(fixedT.TargetLambda, fixedT.Lambda, 3);
     }
 
     [Fact]
+    public void AWrongDeadTimeMattersAtIdleAndHardlyAtFullLoad()
+    {
+        // The ECU believes 0.4 ms more dead time than the injectors have: each pulse opens 0.4 ms too long. Short
+        // idle pulses run rich by tens of percent; long full-load pulses by a few.
+        var tune = SimFactory.StockTune();
+        tune.InjectorDeadTimeMs += 0.4;
+        var idle = SimFactory.At(SimFactory.Create(SimFactory.Assembly(), tune: tune), 900, 0.0, 2.0);
+        var full = SimFactory.At(SimFactory.Create(SimFactory.Assembly(), tune: tune), 6000, 1.0, 1.0);
+        double idleError = idle.TargetLambda / idle.Lambda - 1.0, fullError = full.TargetLambda / full.Lambda - 1.0;
+        Assert.True(idleError > 0.15, $"idle {idleError:P1} rich");
+        Assert.InRange(fullError, 0.005, 0.06);
+        Assert.True(idleError > 4 * fullError);
+        // The same pulse arithmetic, independently: extra fuel = 0.4 ms of injector flow over the opening time.
+        var inj = SimFactory.Create().Config.Injectors;
+        double cycle = 120.0 / 6000.0;
+        double openTime = full.InjectorDuty * cycle - tune.InjectorDeadTimeMs / 1000.0 + 0.4e-3;
+        Assert.Equal(1.0 + 0.4e-3 / (openTime - 0.4e-3), full.TargetLambda / full.Lambda, 2);
+        Assert.Equal(0.90, inj.DeadTimeMs, 6);
+    }
+
+    [Fact]
+    public void TheEcuMetersWithTheFuelDensityItBelievesNotTheRealOne()
+    {
+        // Race fuel is 4 % lighter than the pump fuel the stock tune is calibrated for. With the stoichiometric AFR
+        // updated but not the density, the ECU's injector volume carries 4 % less mass: lean by the density ratio.
+        var race = TestContent.Database.GetFuel("race_110");
+        var tune = SimFactory.StockTune();
+        tune.FuelStoichAfr = race.StoichiometricAfr;
+        var t = SimFactory.At(SimFactory.Create(SimFactory.Assembly(), "race_110", tune), 5000);
+        Assert.Equal(t.TargetLambda * tune.FuelDensityKgL / race.DensityKgL, t.Lambda, 2);
+        var calibrated = tune.Clone();
+        calibrated.FuelDensityKgL = race.DensityKgL;
+        var fixedT = SimFactory.At(SimFactory.Create(SimFactory.Assembly(), "race_110", calibrated), 5000);
+        Assert.Equal(fixedT.TargetLambda, fixedT.Lambda, 2);
+    }
+
+    [Fact]
     public void E85WithGasolineCalibrationRunsLean()
     {
-        // The ECU still divides by 14.7, so it delivers 14.7/9.8 too little fuel. E85 also cools the charge
-        // more than the gasoline the VE table was calibrated on, so a little more air than the ECU expects
-        // gets in: slightly leaner still.
+        // The ECU still divides by 14.7, so it delivers 14.7/9.8 too little fuel — offset slightly by E85 being
+        // denser than the gasoline it meters as (0.781 vs 0.748 kg/L: 4 % more mass per injected volume). E85 also
+        // cools the charge more than the gasoline the VE table was calibrated on, so a little more air than the ECU
+        // expects gets in: slightly leaner again.
+        var e85 = TestContent.Database.GetFuel("e85");
         var t = SimFactory.At(SimFactory.Create(SimFactory.Assembly(), fuel: "e85"), 4000);
-        double stoichError = t.TargetLambda * 14.7 / 9.8;
-        Assert.InRange(t.Lambda, stoichError, stoichError * 1.05);
+        double calibrationError = t.TargetLambda * 14.7 / e85.StoichiometricAfr * SimFactory.StockTune().FuelDensityKgL / e85.DensityKgL;
+        Assert.InRange(t.Lambda, calibrationError, calibrationError * 1.05);
     }
 
     [Fact]

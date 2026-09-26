@@ -226,6 +226,28 @@ public class GarageTests
     }
 
     [Fact]
+    public void AVersion3SaveGetsItsInjectorAndFuelCalibrationFromItsOwnHardware()
+    {
+        // Before version 4 the ECU metered with the real fuel density and the injectors had no dead time. The
+        // migrated tune is calibrated to the save's injectors and fuel, so the car runs exactly as it did.
+        var g = NewGame();
+        var node = System.Text.Json.Nodes.JsonNode.Parse(SaveSystem.Serialize(g))!.AsObject();
+        node["version"] = 3;
+        var tune = node["tune"]!.AsObject();
+        Assert.True(tune.Remove("injector_dead_time_ms") && tune.Remove("fuel_density_kg_l"));
+        var loaded = SaveSystem.Deserialize(node.ToJsonString(), TestContent.Database);
+        var injectors = loaded.Engine.FindByCategory(CarSim.Core.Parts.PartCategory.Injectors)!.Spec<CarSim.Core.Parts.Specs.InjectorSpec>();
+        Assert.Equal(injectors.DeadTimeMs, loaded.Tune.InjectorDeadTimeMs);
+        Assert.Equal(loaded.Fuel.DensityKgL, loaded.Tune.FuelDensityKgL);
+        Assert.Contains($"\"version\": {SaveSystem.CurrentVersion}", SaveSystem.Serialize(loaded));
+        // Without migration the tune would be rejected outright.
+        node["version"] = SaveSystem.CurrentVersion;
+        var ex = Assert.Throws<InvalidDataException>(() => SaveSystem.Deserialize(node.ToJsonString(), TestContent.Database));
+        Assert.Contains("injector_dead_time_ms missing", ex.Message);
+        Assert.Contains("fuel_density_kg_l missing", ex.Message);
+    }
+
+    [Fact]
     public void DrivingALoadedGarageReplaysTheOriginalExactly()
     {
         // Save → load → drive must be bit-identical to driving the original: wear, fatigue, damage ledger,

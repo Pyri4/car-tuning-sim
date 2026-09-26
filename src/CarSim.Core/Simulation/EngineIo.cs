@@ -147,9 +147,19 @@ public sealed record EngineTelemetry
     public bool MapSensorSaturated { get; init; }
 
     public double IgnitionAdvance { get; init; }
+
+    // Model internals (debug and tests only): no player-facing screen or dyno log shows these. Players find best
+    // timing from torque and the knock limit from knock onset.
+    /// <summary>Best-torque (MBT) spark advance at this operating point, degrees BTDC. Debug only.</summary>
     public double MbtAdvance { get; init; }
+    /// <summary>Knock-limited spark advance, degrees BTDC. Debug only.</summary>
     public double KnockLimitAdvance { get; init; }
+    /// <summary>Degrees of advance past the knock limit (0 = no knock). Debug only: players see <see cref="KnockSensorLevel"/>.</summary>
     public double KnockIntensity { get; init; }
+
+    /// <summary>What the knock sensor reports (a coarse level, not the degrees past the limit).</summary>
+    public Ecu.KnockLevel KnockSensorLevel => Ecu.KnockSensor.Level(KnockIntensity);
+
     public double KnockRetard { get; init; }
 
     public double Imep { get; init; }

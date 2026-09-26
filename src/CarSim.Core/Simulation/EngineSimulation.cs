@@ -99,11 +99,19 @@ public sealed class EngineSimulation
     public const double BoostControlIntegralGain = 3.0;
 
     /// <summary>
-    /// Wastegate control and shaft-energy integration: dE/dt = P_turbine − P_compressor − P_friction,
-    /// E = ½·I·ω². The wastegate actuator opens proportionally once compressor-outlet boost exceeds its
-    /// spring; with ECU boost control the solenoid can hold it shut longer (never open it earlier).
+    /// Pedal position above which the ECU closes the boost loop. Below it the solenoid releases and the wastegate
+    /// spring alone sets boost (holding the gate shut against a part-open throttle would spin the turbo up behind it).
     /// </summary>
-    private TurboStep UpdateTurbo(double dt, double rpm, in AirPathResult air, double ambientPressure, double ambientTemperature)
+    public const double BoostControlMinThrottle = 0.8;
+
+    /// <summary>
+    /// Wastegate control and shaft-energy integration: dE/dt = P_turbine − P_compressor − P_friction,
+    /// E = ½·I·ω². The wastegate actuator opens proportionally once compressor-outlet boost (its pneumatic
+    /// reference) exceeds its spring; with ECU boost control the solenoid can hold it shut longer (never open it
+    /// earlier). The ECU closes that loop on its own MAP sensor — clipped at the sensor's range, so a target above
+    /// the range is never seen as reached and the gate stays shut.
+    /// </summary>
+    private TurboStep UpdateTurbo(double dt, double rpm, double throttle, in AirPathResult air, double ambientPressure, double ambientTemperature)
     {
         var c = Config;
         var s = State;
@@ -124,10 +132,11 @@ public sealed class EngineSimulation
         double target = spring;
         double command = mechanical;
         double? ecuTarget = c.Ecu.BoostControl ? Ecu.Tune.BoostTargetKpaAt(rpm) : null;
-        if (ecuTarget is double absKpa)
+        if (ecuTarget is double absKpa && throttle >= BoostControlMinThrottle)
         {
             target = Math.Max(spring, Units.KpaToPa(absKpa) - ambientPressure);
-            double error = (boostGauge - target) / WastegateActuatorSpan;
+            double measuredBoost = Ecu.ReadMap(air.ManifoldPressure) - ambientPressure;
+            double error = (measuredBoost - target) / WastegateActuatorSpan;
             // Anti-windup: stop integrating while the output is pinned in the direction the error pushes it
             // (gate held shut during spool-up, or at the mechanical limit). Otherwise the integrator winds
             // up during spool and the gate opens late: a 20+ kPa boost spike on every tip-in.
@@ -137,6 +146,7 @@ public sealed class EngineSimulation
             if (!pinnedShut && !pinnedOpen) s.BoostControlIntegral += BoostControlIntegralGain * error * dt;
             command = Math.Min(mechanical, MathUtil.Clamp01(error + s.BoostControlIntegral));
         }
+        else s.BoostControlIntegral = 0.0;
         s.WastegateOpening += (command - s.WastegateOpening) * MathUtil.LagFactor(dt, 0.08);
 
         var (turbinePower, _) = TurbochargerModel.Turbine(t, s.TurboOmega, air.TurbineMassFlow,
@@ -203,7 +213,7 @@ public sealed class EngineSimulation
         {
             double estAir = Ecu.EstimatedAirPerCycle(rpm, air.ManifoldPressure, air.ManifoldTemperature, g.Cylinders);
             double fuelCmd = Ecu.CommandedFuelPerCycle(estAir, targetLambda);
-            double pw = Ecu.PulseWidth(fuelCmd, fuel.Density);
+            double pw = Ecu.PulseWidth(fuelCmd);
             delivery = FuelSystem.Deliver(c.Injectors, c.Part(PartCategory.Injectors).Wear, c.FuelPump,
                 c.Part(PartCategory.FuelPump).Wear, fuel.Density, pw, cycleTime, air.ManifoldPressure, input.AmbientPressure);
         }
@@ -326,7 +336,7 @@ public sealed class EngineSimulation
         s.LastFuelAirRatio = firing ? fuelPerCycle / air.AirPerCycle : 0.0;
 
         // ---- Turbocharger ----
-        var turbo = UpdateTurbo(dt, rpm, air, input.AmbientPressure, input.AmbientTemperature);
+        var turbo = UpdateTurbo(dt, rpm, input.Throttle, air, input.AmbientPressure, input.AmbientTemperature);
 
         // ---- ECU post-step ----
         Ecu.UpdateKnockControl(knock, dt);

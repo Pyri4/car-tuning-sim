@@ -112,12 +112,20 @@ public partial class TuningView : HSplitContainer
             _left.AddChild(Ui.Wrapped($"Installed injectors flow {injectors.FlowCcMin:F0} cc/min: the ECU will meter the wrong amount of fuel.", 13, Ui.Danger));
             _left.AddChild(Ui.Button($"Set scaling to {injectors.FlowCcMin:F0} cc/min", () => { Tune.InjectorFlowCcMin = injectors.FlowCcMin; State.Garage.TuneChanged(); State.NotifyChanged(); }));
         }
+        AddSpin("Injector dead time (ms)", 0, 3, 0.01, Tune.InjectorDeadTimeMs, v => Tune.InjectorDeadTimeMs = v);
+        if (injectors != null && Math.Abs(injectors.DeadTimeMs - Tune.InjectorDeadTimeMs) > 0.02)
+        {
+            _left.AddChild(Ui.Wrapped($"The installed injectors' data sheet gives {injectors.DeadTimeMs:F2} ms dead time: short pulses (idle, light load) will be metered wrong.", 13, Ui.Caution));
+            _left.AddChild(Ui.Button($"Set dead time to {injectors.DeadTimeMs:F2} ms", () => { Tune.InjectorDeadTimeMs = injectors.DeadTimeMs; State.Garage.TuneChanged(); State.NotifyChanged(); }));
+        }
         var fuel = State.Garage.Fuel;
         AddSpin("Fuel stoichiometric AFR", 5, 17, 0.1, Tune.FuelStoichAfr, v => Tune.FuelStoichAfr = v);
-        if (Math.Abs(fuel.StoichiometricAfr - Tune.FuelStoichAfr) > 0.05)
+        AddSpin("Fuel density (kg/L)", 0.5, 1.2, 0.001, Tune.FuelDensityKgL, v => Tune.FuelDensityKgL = v);
+        double mixtureError = fuel.StoichiometricAfr / Tune.FuelStoichAfr * fuel.DensityKgL / Tune.FuelDensityKgL - 1.0;
+        if (Math.Abs(fuel.StoichiometricAfr - Tune.FuelStoichAfr) > 0.05 || Math.Abs(fuel.DensityKgL - Tune.FuelDensityKgL) > 0.004)
         {
-            _left.AddChild(Ui.Wrapped($"The tank holds {fuel.Name} (stoich {fuel.StoichiometricAfr:F1}:1): the mixture will be off by {fuel.StoichiometricAfr / Tune.FuelStoichAfr * 100 - 100:+0;-0} %.", 13, Ui.Danger));
-            _left.AddChild(Ui.Button($"Calibrate for {fuel.Name}", () => { Tune.FuelStoichAfr = fuel.StoichiometricAfr; State.Garage.TuneChanged(); State.NotifyChanged(); }));
+            _left.AddChild(Ui.Wrapped($"The tank holds {fuel.Name} (stoich {fuel.StoichiometricAfr:F1}:1, {fuel.DensityKgL:F3} kg/L): the mixture will be off by {mixtureError * 100:+0;-0} %.", 13, Ui.Danger));
+            _left.AddChild(Ui.Button($"Calibrate for {fuel.Name}", () => { Tune.FuelStoichAfr = fuel.StoichiometricAfr; Tune.FuelDensityKgL = fuel.DensityKgL; State.Garage.TuneChanged(); State.NotifyChanged(); }));
         }
 
         _left.AddChild(Ui.Heading("Base maps"));

@@ -48,6 +48,7 @@ public static class SimFactory
             VolumetricEfficiency = Extend(d.VolumetricEfficiency!), DisplacementCc = d.DisplacementCc,
             BoostTargetKpa = d.BoostTargetKpa, RevLimitRpm = d.RevLimitRpm, IdleRpm = d.IdleRpm,
             KnockControlEnabled = d.KnockControlEnabled, InjectorFlowCcMin = d.InjectorFlowCcMin, FuelStoichAfr = d.FuelStoichAfr,
+            InjectorDeadTimeMs = d.InjectorDeadTimeMs, FuelDensityKgL = d.FuelDensityKgL,
         });
     }
 

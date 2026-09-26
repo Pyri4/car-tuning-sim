@@ -52,7 +52,9 @@
       "idle_rpm": 900,
       "knock_control_enabled": true,
       "injector_flow_cc_min": 550,
-      "fuel_stoich_afr": 14.7
+      "injector_dead_time_ms": 1.00,
+      "fuel_stoich_afr": 14.7,
+      "fuel_density_kg_l": 0.750
     }
   ]
 }
