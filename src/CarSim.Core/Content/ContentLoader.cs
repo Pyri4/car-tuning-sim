@@ -35,7 +35,7 @@ public static class ContentLoader
 
     private static ContentDatabase Empty() => new(
         new Dictionary<string, PartDefinition>(), new Dictionary<string, EngineDefinition>(),
-        new Dictionary<string, FuelDefinition>(), new Dictionary<string, TuneDocument>());
+        new Dictionary<string, FuelDefinition>(), new Dictionary<string, TuneDocument>(), new Dictionary<string, ScenarioDefinition>());
 
     // ---- DTOs (file shape) ------------------------------------------------------------------
 
@@ -45,6 +45,7 @@ public static class ContentLoader
         public List<JsonElement>? Engines { get; set; }
         public List<JsonElement>? Fuels { get; set; }
         public List<JsonElement>? Tunes { get; set; }
+        public List<JsonElement>? Scenarios { get; set; }
     }
 
     private sealed class PartDto
@@ -93,6 +94,7 @@ public static class ContentLoader
         private readonly Dictionary<string, EngineDefinition> _engines = new(StringComparer.Ordinal);
         private readonly Dictionary<string, FuelDefinition> _fuels = new(StringComparer.Ordinal);
         private readonly Dictionary<string, TuneDocument> _tunes = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, ScenarioDefinition> _scenarios = new(StringComparer.Ordinal);
 
         private void Error(string source, string id, string message) => _errors.Add(new ContentError(source, id, message));
 
@@ -114,6 +116,22 @@ public static class ContentLoader
             foreach (var e in file.Engines ?? new()) AddEngine(source, e);
             foreach (var e in file.Fuels ?? new()) AddFuel(source, e);
             foreach (var e in file.Tunes ?? new()) AddTune(source, e);
+            foreach (var e in file.Scenarios ?? new()) AddScenario(source, e);
+        }
+
+        private void AddScenario(string source, JsonElement element)
+        {
+            string peekId = PeekId(element);
+            ScenarioDefinition? sc;
+            try { sc = element.Deserialize<ScenarioDefinition>(ContentJson.Options); }
+            catch (JsonException ex) { Error(source, peekId, ex.Message); return; }
+            if (sc == null) { Error(source, peekId, "Scenario entry is null."); return; }
+            if (_scenarios.ContainsKey(sc.Id)) { Error(source, sc.Id, "Duplicate scenario id."); return; }
+            _scenarios[sc.Id] = new ScenarioDefinition
+            {
+                Id = sc.Id, Name = sc.Name, Description = sc.Description, Engine = sc.Engine, Money = sc.Money, Fuel = sc.Fuel,
+                Tune = sc.Tune, Wear = sc.Wear, Fatigue = sc.Fatigue, Inventory = sc.Inventory, Source = source,
+            };
         }
 
         private static string PeekId(JsonElement e) =>
@@ -268,7 +286,29 @@ public static class ContentLoader
                 if (!string.IsNullOrEmpty(engine.StockTune) && !_tunes.ContainsKey(engine.StockTune))
                     Error(engine.Source, engine.Id, $"stock_tune references unknown tune '{engine.StockTune}'.");
             }
-            var db = new ContentDatabase(_parts, _engines, _fuels, _tunes);
+            foreach (var sc in _scenarios.Values)
+            {
+                if (!_engines.TryGetValue(sc.Engine, out var engine)) { Error(sc.Source, sc.Id, $"Unknown engine '{sc.Engine}'."); continue; }
+                if (!_fuels.ContainsKey(sc.Fuel)) Error(sc.Source, sc.Id, $"Unknown fuel '{sc.Fuel}'.");
+                if (sc.Tune.Length > 0 && !_tunes.ContainsKey(sc.Tune)) Error(sc.Source, sc.Id, $"Unknown tune '{sc.Tune}'.");
+                foreach (var (slot, wear) in sc.Wear)
+                {
+                    if (engine.FindSlot(slot) == null) Error(sc.Source, sc.Id, $"wear references unknown slot '{slot}'.");
+                    if (!(wear >= 0 && wear <= 1)) Error(sc.Source, sc.Id, $"wear for '{slot}' must be within [0, 1].");
+                }
+                foreach (var (slot, modes) in sc.Fatigue)
+                {
+                    if (engine.FindSlot(slot) == null) Error(sc.Source, sc.Id, $"fatigue references unknown slot '{slot}'.");
+                    foreach (var (mode, v) in modes)
+                    {
+                        if (!Damage.FailureModeNames.TryParse(mode, out _)) Error(sc.Source, sc.Id, $"Unknown failure mode '{mode}'.");
+                        if (!(v >= 0 && v < 1)) Error(sc.Source, sc.Id, $"fatigue '{mode}' for '{slot}' must be within [0, 1).");
+                    }
+                }
+                foreach (var id in sc.Inventory)
+                    if (!_parts.ContainsKey(id)) Error(sc.Source, sc.Id, $"inventory references unknown part '{id}'.");
+            }
+            var db = new ContentDatabase(_parts, _engines, _fuels, _tunes, _scenarios);
             return new ContentLoadResult(db, _errors);
         }
     }

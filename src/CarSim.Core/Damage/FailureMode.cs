@@ -24,6 +24,26 @@ public enum FailureMode
     TurbineOverTemperature,
 }
 
+public static class FailureModeNames
+{
+    /// <summary>Parses "head_gasket_breach", "HeadGasketBreach" or "headgasketbreach".</summary>
+    public static bool TryParse(string text, out FailureMode mode) =>
+        Enum.TryParse(text.Replace("_", "", StringComparison.Ordinal), ignoreCase: true, out mode);
+
+    /// <summary>snake_case name used in content and saves.</summary>
+    public static string ToSnakeCase(FailureMode mode)
+    {
+        var name = mode.ToString();
+        var sb = new System.Text.StringBuilder(name.Length + 4);
+        for (int i = 0; i < name.Length; i++)
+        {
+            if (char.IsUpper(name[i]) && i > 0) sb.Append('_');
+            sb.Append(char.ToLowerInvariant(name[i]));
+        }
+        return sb.ToString();
+    }
+}
+
 public enum FailureSeverity
 {
     /// <summary>The engine keeps running with a penalty (e.g. blown head gasket, dead turbo).</summary>

@@ -11,13 +11,18 @@ public sealed class ContentDatabase
         IReadOnlyDictionary<string, PartDefinition> parts,
         IReadOnlyDictionary<string, EngineDefinition> engines,
         IReadOnlyDictionary<string, FuelDefinition> fuels,
-        IReadOnlyDictionary<string, TuneDocument> tunes)
+        IReadOnlyDictionary<string, TuneDocument> tunes,
+        IReadOnlyDictionary<string, ScenarioDefinition>? scenarios = null)
     {
         Parts = parts;
         Engines = engines;
         Fuels = fuels;
         Tunes = tunes;
+        Scenarios = scenarios ?? new Dictionary<string, ScenarioDefinition>();
     }
+
+    /// <summary>Starting situations for a new game (which car, how worn, how much money).</summary>
+    public IReadOnlyDictionary<string, ScenarioDefinition> Scenarios { get; }
 
     public IReadOnlyDictionary<string, PartDefinition> Parts { get; }
     public IReadOnlyDictionary<string, EngineDefinition> Engines { get; }
@@ -37,6 +42,9 @@ public sealed class ContentDatabase
 
     public TuneDocument GetTune(string id) =>
         Tunes.TryGetValue(id, out var t) ? t : throw new KeyNotFoundException($"Unknown tune id '{id}'.");
+
+    public ScenarioDefinition GetScenario(string id) =>
+        Scenarios.TryGetValue(id, out var sc) ? sc : throw new KeyNotFoundException($"Unknown scenario id '{id}'.");
 
     /// <summary>All parts of a category, ordered by price then id (deterministic).</summary>
     public IEnumerable<PartDefinition> PartsInCategory(string category) =>

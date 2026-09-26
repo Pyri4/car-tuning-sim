@@ -8,7 +8,7 @@ the code is right and this file must be fixed.
 ## Files and loading
 - Content lives under `content/<root>/` (base game: `content/base/`). Every `*.json` file below the
   root is loaded, in ordinal path order.
-- A file is an object with any of these arrays: `parts`, `engines`, `fuels`, `tunes`.
+- A file is an object with any of these arrays: `parts`, `engines`, `fuels`, `tunes`, `scenarios`.
 - JSON is **snake_case**. `//` and `/* */` comments and trailing commas are allowed.
 - **Unknown fields are errors** (catches typos such as `bore_m`). Missing required fields are errors.
 - The loader collects *all* errors (file, item id, message) instead of stopping at the first.
@@ -168,6 +168,11 @@ The `install_after` graph must be acyclic. A slot can be filled only when all of
 See SIMULATION_SPEC.md (ECU section) — `rpm_axis`, `load_axis_kpa`, `target_lambda[load][rpm]`,
 `ignition_advance_deg[load][rpm]`, optional `boost_target_kpa[rpm]`, `rev_limit_rpm`, `idle_rpm`,
 `knock_control_enabled`.
+
+## Scenarios (`scenarios`)
+New-game starting points: `id`, `name`, `description`, `engine`, `money`, `fuel`, `tune` (empty = the
+engine's stock tune), `wear` (slot → 0–1), `fatigue` (slot → {failure_mode: 0–1}), `inventory`
+(part ids on the shelf). Failure modes use snake_case names (`detonation`, `head_gasket_breach`, ...).
 
 ## Compatibility
 Two mechanisms, both validated by `AssemblyValidator`:

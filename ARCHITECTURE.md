@@ -70,6 +70,7 @@ Directory.Build.props      shared compiler settings (nullable, warnings-as-error
 global.json                .NET SDK pin
 content/base/              base-game content as JSON (parts, engines, fuels, tunes, vehicles)
 src/CarSim.Core/           engine-agnostic simulation + domain model (NO Godot references)
+src/CarSim.Gameplay/       garage, economy, scenarios, save/load (NO Godot references)
 tests/CarSim.Core.Tests/   xUnit tests for the core
 tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno) built on the core
 game/                      Godot 4.7 project (presentation layer); references CarSim.Core
@@ -95,8 +96,9 @@ beyond the content loader. Namespaces:
 - `CarSim.Core.Ecu` – editable tunes (tables + calibration) and the runtime ECU controller.
 - `CarSim.Core.Simulation` – the mean-value engine model: configuration, air path, fuel system,
   combustion, thermal, lubrication, telemetry.
-- `CarSim.Core.Dyno` – dyno runs and telemetry capture.
-- `CarSim.Core.Damage` *(planned)* – stress evaluation, fatigue accumulation, failures and diagnostic reports.
+- `CarSim.Core.Dyno` – incremental dyno runner (sweep/steady-state), run records, comparison, CSV.
+- `CarSim.Core.Damage` – stress evaluation, fatigue accumulation, failures, diagnostic reports,
+  inspection findings, warnings.
 - `CarSim.Core.Vehicles` *(planned)* – drivetrain, gearbox, differential, tires, chassis state.
 
 ### Domain / data
@@ -104,9 +106,10 @@ Content (parts, engines, fuels, tunes, vehicles) is JSON under `content/`. Defin
 after load. Runtime state (installed parts, wear, fatigue) lives in separate instance objects so
 definitions can be shared.
 
-### Gameplay *(planned)*
-Garage, inventory, money, jobs, save/load. Will live in a separate pure C# project
-(`CarSim.Gameplay`) so it stays testable without Godot.
+### Gameplay (`src/CarSim.Gameplay`)
+Pure C# (no Godot): `Garage` (project car engine, shelf inventory, money, fuel, tune, engine-in-car
+access rule, buy/sell), data-defined new-game scenarios (`content/base/scenarios/`), and versioned
+JSON save/load (`SaveSystem`). Jobs, reputation and a parts market are planned.
 
 ### Physics
 The engine and drivetrain models are ours (in the core). Vehicle rigid-body motion and collision will
@@ -156,9 +159,11 @@ See SIMULATION_SPEC.md for equations and PARTS_DATABASE.md for the data schema.
 
 ---
 
-## 6. Save/load *(planned)*
-Runtime state (inventory, part instances with wear/fatigue, assemblies, tunes, money) serializes to
-versioned JSON. Definitions are referenced by id, never embedded, so content updates flow into saves.
+## 6. Save/load
+Runtime state (inventory, part instances with wear/fatigue/failures, the assembly, tune, fuel, money,
+engine-in-car flag) serializes to versioned JSON (`SaveSystem`, version 1). Definitions are referenced
+by id, never embedded, so content updates flow into saves. Loading validates every reference and
+reports all missing content at once (e.g. a removed mod).
 
 ---
 
