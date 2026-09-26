@@ -204,6 +204,13 @@ public static class AssemblyValidator
                     $"Flywheel is rated to {flywheel.MaxRpm:F0} rpm; the rev limit is {rev:F0} rpm.", SlotOf(a, PartCategory.Flywheel));
         }
 
+        // Cam phaser vs ECU.
+        if (cams is { IntakePhaserRangeDeg: > 0 } && ecu is { CamPhaseControl: false })
+            Add(IssueSeverity.Warning, "cam_phaser_uncontrolled",
+                $"The ECU cannot drive the intake cam phaser: it stays at its park position ({cams.InstalledIntakeCenterlineDeg:F0}° ATDC, " +
+                "the fully retarded end), so low-speed torque suffers.",
+                SlotOf(a, PartCategory.Ecu), SlotOf(a, PartCategory.Camshafts));
+
         // Forced induction vs ECU.
         if (turbo != null && ecu != null)
         {

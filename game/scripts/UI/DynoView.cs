@@ -107,7 +107,7 @@ public partial class DynoView : HSplitContainer
         _gauges = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _gauges.AddThemeConstantOverride("h_separation", 16);
         foreach (var name in new[] { "Engine speed", "Torque", "Power", "Manifold pressure", "Boost", "λ / AFR", "Injector duty",
-                     "Spark advance", "Knock", "Peak cyl. pressure", "EGT", "Coolant", "Oil", "Intake air temp", "Turbo" })
+                     "Spark advance", "Intake cam", "Knock", "Peak cyl. pressure", "EGT", "Coolant", "Oil", "Intake air temp", "Turbo" })
         {
             _gauges.AddChild(Ui.Label(name, 14, Ui.Muted));
             var v = Ui.Label("—", 14);
@@ -230,6 +230,7 @@ public partial class DynoView : HSplitContainer
         Set("λ / AFR", t.Firing ? $"{t.Lambda:F2} / {t.Afr:F1}  (target {t.TargetLambda:F2})" : "—", t.Firing && t.Lambda > t.TargetLambda + 0.07 ? Ui.Danger : null);
         Set("Injector duty", $"{t.InjectorDuty * 100:F0} %" + (t.FuelLimit != FuelLimit.None ? $"  {t.FuelLimit}" : ""), t.InjectorDuty > 0.9 || t.FuelLimit != FuelLimit.None ? Ui.Danger : t.InjectorDuty > 0.8 ? Ui.Caution : null);
         Set("Spark advance", $"{t.IgnitionAdvance:F1}° BTDC" + (t.KnockRetard > 0.05 ? $"  (knock retard {t.KnockRetard:F1}°)" : ""));
+        Set("Intake cam", t.IntakeCamAdvance > 0.05 ? $"{t.IntakeCamAdvance:F1}° advanced" : "parked");
         Set("Knock", KnockSensor.Describe(t.KnockSensorLevel), t.KnockSensorLevel >= KnockLevel.Light ? Ui.Danger : t.KnockSensorLevel > KnockLevel.None ? Ui.Caution : null);
         Set("Peak cyl. pressure", $"{t.PeakCylinderPressureBar:F0} bar");
         Set("EGT", $"{t.EgtC:F0} °C", t.EgtC > 950 ? Ui.Caution : null);

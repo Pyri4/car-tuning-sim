@@ -47,6 +47,9 @@ public sealed class Garage
     public ContentDatabase Content { get; }
     public EngineAssembly Engine { get; }
 
+    /// <summary>The scenario this game started from (empty for a garage built by hand or loaded from an older save).</summary>
+    public string ScenarioId { get; set; } = "";
+
     /// <summary>The car's chassis parts (null for an engine-only game).</summary>
     public VehicleAssembly? Chassis { get; }
 
@@ -84,7 +87,10 @@ public sealed class Garage
             foreach (var (slot, wear) in sc.Wear)
                 if (chassis.PartIn(slot) is { } p) p.Wear = wear;
         }
-        var garage = new Garage(content, engine, EcuTune.FromDocument(content.GetTune(tuneId)), sc.Fuel, sc.Money, factory, true, chassis);
+        var garage = new Garage(content, engine, EcuTune.FromDocument(content.GetTune(tuneId)), sc.Fuel, sc.Money, factory, true, chassis)
+        {
+            ScenarioId = sc.Id,
+        };
         foreach (var id in sc.Inventory) garage._inventory.Add(factory.Create(content.GetPart(id)));
         garage.Note($"New game: {sc.Name}.");
         return garage;

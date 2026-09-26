@@ -35,6 +35,7 @@ public partial class TuningView : HSplitContainer
         _table.AddItem("Target λ (1.00 = stoichiometric)");
         _table.AddItem("Volumetric efficiency (fuel map)");
         _table.AddItem("Boost target (kPa absolute)");
+        _table.AddItem("Intake cam advance (° crank)");
         _table.ItemSelected += _ => BuildGrid();
         bar.AddChild(_table);
         bar.AddChild(Ui.Button("−1° boost rows (≥120 kPa)", () => Edit(() => Tune.OffsetIgnition(-1, 110))));
@@ -90,6 +91,10 @@ public partial class TuningView : HSplitContainer
             (hw.MapSensorMaxKpa < 150 ? " — cannot measure boost." : ""), 13, hw.MapSensorMaxKpa < 150 ? Ui.Caution : Ui.Muted));
         _left.AddChild(Ui.Label($"Boost control: {(hw.BoostControl ? "yes" : "no (wastegate spring only)")}", 13, Ui.Muted));
         _left.AddChild(Ui.Label($"Knock control: {(hw.KnockControl ? "yes" : "no")}", 13, Ui.Muted));
+        var cams = State.Garage.Engine.FindByCategory(PartCategory.Camshafts)?.Spec<CamshaftSpec>();
+        if (cams is { IntakePhaserRangeDeg: > 0 })
+            _left.AddChild(Ui.Label(hw.CamPhaseControl ? $"Cam phasing: intake phaser, {cams.IntakePhaserRangeDeg:F0}° of advance"
+                : "Cam phasing: this ECU cannot drive the intake phaser (it stays parked)", 13, hw.CamPhaseControl ? Ui.Muted : Ui.Caution));
         _left.AddChild(Ui.Label($"Max rev limit: {hw.MaxRevLimitRpm:F0} rpm", 13, Ui.Muted));
 
         _left.AddChild(Ui.Heading("Calibration"));
@@ -157,15 +162,18 @@ public partial class TuningView : HSplitContainer
         Ui.Clear(_grid);
         bool editable = State.Garage.Engine.FindByCategory(PartCategory.Ecu)?.Spec<EcuSpec>().TablesEditable ?? false;
         const int boostTable = 3;
-        Table2D? table = _table.Selected switch { 0 => Tune.IgnitionAdvance, 1 => Tune.TargetLambda, 2 => Tune.VolumetricEfficiency, _ => Tune.BoostTarget };
+        Table2D? table = _table.Selected switch { 0 => Tune.IgnitionAdvance, 1 => Tune.TargetLambda, 2 => Tune.VolumetricEfficiency, 3 => Tune.BoostTarget, _ => Tune.IntakeCamAdvance };
         _tableHelp.Text = _table.Selected switch
         {
             0 => "Rows: manifold pressure the ECU reads (kPa). Columns: rpm. More advance → more torque up to MBT, then knock and higher cylinder pressure.",
             1 => "Target λ per load/rpm. Below 1.0 is rich. The actual λ depends on the VE table being right and the injectors and pump keeping up.",
             2 => "Speed-density fuel map: how well the engine fills relative to the manifold pressure and air temperature the ECU reads. " +
                  "Fuel = VE × MAP × displacement ÷ (R × IAT) ÷ (target λ × stoich AFR). A cell 5 % too low runs 5 % lean there.",
-            _ => Tune.BoostTarget == null ? "This tune has no boost table: boost is set by the wastegate spring." :
+            3 => Tune.BoostTarget == null ? "This tune has no boost table: boost is set by the wastegate spring." :
                  "Absolute manifold pressure target per rpm. Only used by ECUs with boost control, and never below the wastegate spring.",
+            _ => Tune.IntakeCamAdvance == null ? "This tune has no cam table: a cam phaser stays at its park position." :
+                 "How far the ECU advances the intake cam from its park position. Earlier intake closing fills better at low rpm, " +
+                 "later closing at high rpm; the VE table was measured with this schedule, so changing it moves λ too.",
         };
         if (table == null) return;
         _grid.Columns = table.Columns + 1;
@@ -181,9 +189,9 @@ public partial class TuningView : HSplitContainer
                 int rr = r, cc = c;
                 var spin = new SpinBox
                 {
-                    MinValue = _table.Selected switch { 0 => -20, 1 => 0.5, 2 => 0.05, _ => 50 },
-                    MaxValue = _table.Selected switch { 0 => 60, 1 => 1.6, 2 => 3.0, _ => 400 },
-                    Step = _table.Selected switch { 0 => 0.5, 1 => 0.01, 2 => 0.005, _ => 5 },
+                    MinValue = _table.Selected switch { 0 => -20, 1 => 0.5, 2 => 0.05, 3 => 50, _ => 0 },
+                    MaxValue = _table.Selected switch { 0 => 60, 1 => 1.6, 2 => 3.0, 3 => 400, _ => 80 },
+                    Step = _table.Selected switch { 0 => 0.5, 1 => 0.01, 2 => 0.005, 3 => 5, _ => 0.5 },
                     Value = table[r, c],
                     Editable = editable,
                     CustomMinimumSize = new Vector2(64, 0),
