@@ -33,6 +33,13 @@ public sealed class EngineConfiguration
     /// <summary>Header tuning constant: tuned rpm ≈ K / primary length (mm).</summary>
     public const double HeaderTuningConstant = 5.2e6;
 
+    /// <summary>
+    /// Exhaust-manifold heat loss to the engine bay per mm of primary pipe per cylinder, W/K (a bare steel
+    /// primary of ≈ 40 mm diameter in underbonnet airflow). A 250 mm log manifold on four cylinders loses
+    /// ≈ 7.5 W/K; an 820 mm tubular header ≈ 25 W/K.
+    /// </summary>
+    public const double ManifoldHeatLossPerPrimaryMm = 0.0075;
+
     private EngineConfiguration(EngineAssembly assembly, FuelDefinition fuel, EngineGeometry geometry)
     {
         Assembly = assembly;
@@ -80,6 +87,7 @@ public sealed class EngineConfiguration
         OverlapDeg = Cams.OverlapDeg;
         ScavengingRpm = HeaderTuningConstant / ExhaustManifold.PrimaryLengthMm;
         ScavengingGain = ExhaustManifold.ScavengingGain;
+        ExhaustManifoldHeatLoss = ManifoldHeatLossPerPrimaryMm * ExhaustManifold.PrimaryLengthMm * geometry.Cylinders;
 
         // Rotating inertia: crank + flywheel + rod big ends (⅔ rod) + half the reciprocating mass at crank radius + accessories.
         double r2 = geometry.CrankRadius * geometry.CrankRadius;
@@ -148,6 +156,9 @@ public sealed class EngineConfiguration
     public double OverlapDeg { get; }
     public double ScavengingRpm { get; }
     public double ScavengingGain { get; }
+
+    /// <summary>Heat-loss conductance of the exhaust manifold to the surroundings, W/K.</summary>
+    public double ExhaustManifoldHeatLoss { get; }
 
     /// <summary>Engine rotating inertia seen at the crank, kg·m².</summary>
     public double RotatingInertia { get; }

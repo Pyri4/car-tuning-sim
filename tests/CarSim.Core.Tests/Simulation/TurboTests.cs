@@ -329,4 +329,74 @@ public class TurboTests
         a.Remove("turbocharger", out _);
         Assert.False(a.Install("intercooler", ic!).Ok, "slot order: intercooler goes on after the turbo");
     }
+
+    [Fact]
+    public void TipInBoostOvershootIsBounded()
+    {
+        // Regression: without anti-windup the integrator wound up while the gate was held shut during
+        // spool-up, and boost spiked to 196 kPa against a 175 kPa target.
+        var sim = TurboSim(TurboBuild());
+        sim.DamageEnabled = false;
+        var input = new EngineInputs { Throttle = 0.1, SpeedMode = SpeedMode.Held, HeldRpm = 5000, CoolantTemperatureOverride = 363.15 };
+        for (int i = 0; i < 600; i++) sim.Step(0.005, input);
+        input.Throttle = 1.0;
+        double peak = 0, settled = 0;
+        for (int i = 0; i < 1600; i++) { var t = sim.Step(0.005, input); peak = Math.Max(peak, t.MapKpa); settled = t.MapKpa; }
+        double gaugeTarget = 175 - 101.325;
+        Assert.True(peak - 175 < 0.08 * gaugeTarget, $"peak {peak:F1} kPa");
+        Assert.InRange(settled, 170, 178);
+    }
+
+    [Fact]
+    public void ShaftPowersBalanceAtSteadyState()
+    {
+        var sim = TurboSim(TurboBuild());
+        var t = SimFactory.At(sim, 6000, 1.0, 5.0);
+        double friction = TurbochargerModel.FrictionPower(sim.Config.Turbo!, sim.State.TurboOmega, sim.Config.Part("turbocharger").Wear);
+        Assert.Equal(t.TurbinePower, t.CompressorPower + friction, 0.01 * t.TurbinePower);
+    }
+
+    [Fact]
+    public void TheManifoldCoolsTheGasBeforeTheTurbineAndLongerPrimariesCoolItMore()
+    {
+        var log = TurboSim(TurboBuild("turbo.t28_ball"));
+        var t = SimFactory.At(log, 6000, 1.0, 4.0);
+        Assert.True(t.TurbineInletTemperature < t.PortGasTemperature - 10);
+        var tubular = TurboSim(TurboBuild("turbo.t35_big"));
+        var pathLog = new AirPath(log.Config);
+        var pathTubular = new AirPath(tubular.Config);
+        Assert.True(tubular.Config.ExhaustManifoldHeatLoss > log.Config.ExhaustManifoldHeatLoss);
+        Assert.True(pathTubular.ManifoldOutletTemperature(1100, 0.15, 298) < pathLog.ManifoldOutletTemperature(1100, 0.15, 298));
+        // Exact pipe solution: never below ambient, however little flows.
+        Assert.InRange(pathLog.ManifoldOutletTemperature(1100, 1e-6, 298), 298, 298.0001);
+    }
+
+    [Fact]
+    public void SurgeAfterLiftOffWearsTheTurboBearingsAndAWornTurboSpoolsSlower()
+    {
+        var sim = TurboSim(TurboBuild());
+        var turbo = sim.Config.Part("turbocharger");
+        var input = new EngineInputs { SpeedMode = SpeedMode.Held, HeldRpm = 5500, CoolantTemperatureOverride = 363.15 };
+        bool surged = false;
+        for (int lift = 0; lift < 5; lift++)
+        {
+            input.Throttle = 1.0;
+            for (int i = 0; i < 600; i++) sim.Step(0.005, input);
+            input.Throttle = 0.0;
+            for (int i = 0; i < 200; i++) surged |= sim.Step(0.005, input).CompressorSurge;
+        }
+        Assert.True(surged);
+        Assert.True(turbo.Wear > 0, "surge hammers the thrust bearing");
+        var worn = new CarSim.Core.Parts.PartInstance("worn", turbo.Definition, 0.5);
+        Assert.Contains(CarSim.Core.Damage.PartInspector.Inspect(worn), f => f.Text.Contains("bearings"));
+
+        double SpoolRpm(double wear)
+        {
+            var a = TurboBuild();
+            a.PartIn("turbocharger")!.Wear = wear;
+            var samples = TransientSweep.Run(TurboSim(a), 2000, 7000, 600);
+            return TransientSweep.FirstAtBoost(samples, 50_000)?.Rpm ?? double.PositiveInfinity;
+        }
+        Assert.True(SpoolRpm(1.0) > SpoolRpm(0.0));
+    }
 }

@@ -113,6 +113,18 @@ public sealed class AirPath
         return MathUtil.Clamp(f, 0.4, 1.03);
     }
 
+    /// <summary>
+    /// Gas temperature leaving the exhaust manifold (turbine inlet): the port gas cools towards ambient
+    /// through the manifold's heat-loss conductance UA, T = T_amb + (T_port − T_amb)·exp(−UA/(ṁ·c_p)) —
+    /// the exact solution for a pipe of uniform wall conductance, so no flow makes it undershoot ambient.
+    /// </summary>
+    public double ManifoldOutletTemperature(double portGasTemperature, double exhaustFlow, double ambientTemperature)
+    {
+        double excess = Math.Max(0.0, portGasTemperature - ambientTemperature);
+        if (exhaustFlow <= 0) return ambientTemperature;
+        return ambientTemperature + excess * Math.Exp(-_c.ExhaustManifoldHeatLoss / (exhaustFlow * PhysicalConstants.ExhaustCp));
+    }
+
     public AirPathResult Solve(in AirPathConditions k)
     {
         var g = _c.Geometry;
@@ -188,7 +200,8 @@ public sealed class AirPath
             pSystemIn = CompressibleFlow.UpstreamPressure(_c.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
             double turbineArea = _c.Turbo.TurbineFlowArea;
             double totalArea = turbineArea + _c.Turbo.WastegateFlowArea * MathUtil.Clamp01(k.WastegateOpening);
-            pTurbineIn = CompressibleFlow.UpstreamPressure(totalArea, pSystemIn, tExh, exhaustFlow, gE, rE);
+            double tTurbineIn = ManifoldOutletTemperature(tExh, exhaustFlow, k.AmbientTemperature);
+            pTurbineIn = CompressibleFlow.UpstreamPressure(totalArea, pSystemIn, tTurbineIn, exhaustFlow, gE, rE);
             turbineFlow = exhaustFlow * turbineArea / totalArea;
         }
         else

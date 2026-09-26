@@ -143,7 +143,7 @@ public class ChassisWearTests
     }
 
     /// <summary>
-    /// A T35 on E85 at 265 kPa: about 470 N·m, more than the stock gearbox is rated for (and the OEM
+    /// A T35 on E85 at 300 kPa: about 475 N·m once spooled (6500 rpm), more than the stock gearbox is rated for (and the OEM
     /// crankshaft, which is why this build has a forged one and race bearings).
     /// </summary>
     private static VehicleSimulation BigTurboCar(params (string slot, string part)[] chassisSwaps)
@@ -157,7 +157,7 @@ public class ChassisWearTests
         Assert.True(a.Install("turbocharger", f.Create(db.GetPart("turbo.t35_big"))).Ok);
         Assert.True(a.Install("intercooler", f.Create(db.GetPart("intercooler.fmic_race"))).Ok);
         var tune = EcuTune.FromDocument(db.GetTune("k20.turbo_base"));
-        for (int c = 0; c < tune.BoostTarget!.Columns; c++) if (tune.BoostTarget[0, c] >= 170) tune.BoostTarget[0, c] = 265;
+        for (int c = 0; c < tune.BoostTarget!.Columns; c++) if (tune.BoostTarget[0, c] >= 170) tune.BoostTarget[0, c] = 300;
         tune.InjectorFlowCcMin = 1000;
         tune.FuelStoichAfr = db.GetFuel("e85").StoichiometricAfr;
         return Car.Create(a, tune, "e85", chassisSwaps);

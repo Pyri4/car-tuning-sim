@@ -206,13 +206,17 @@ Flows are corrected: `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; `n` = corre
 - Turbine and open wastegate are parallel nozzles: turbine inlet pressure is the upstream pressure
   that passes the exhaust flow through `A_turbine + A_wastegate·opening`; the turbine receives the
   `A_turbine / A_total` share of the flow.
+- Turbine inlet temperature T₃: the port gas cools through the manifold's heat-loss conductance
+  (`UA = 0.0075 W/K per mm of primary per cylinder`: 7.5 W/K for the log manifold, 13.5 W/K tubular),
+  `T₃ = T_amb + (T_port − T_amb)·exp(−UA/(ṁ·c_p))` — the exact solution for a uniform pipe. Longer
+  primaries lose more heat (a small spool penalty for the better-flowing tubular manifold).
 - Power `P_t = ṁ_t · η_t · c_p,exh · T₃ · (1 − (p₄/p₃)^((γ−1)/γ))`, with
   `η_t = η_peak · max(0.25, 1 − ((BSR − 0.7)/0.5)²)`, BSR = turbine tip speed / √(2·Δh_s).
 - Turbine outlet temperature drops by `P_t/(ṁ_t·c_p)`; mixed with the (hot) wastegate flow it sets the
   exhaust-system gas temperature on the next step.
-- Drive pressure (turbine inlet / boost) is an emergent result of the power balance. For the mid-size
-  turbo at 0.75 bar it is ≈ 1:1; a small turbine at high rpm drives it well above boost, which is when
-  valve overlap causes reversion.
+- Drive pressure (turbine inlet / boost) is an emergent result of the power balance: ≈ 0.87–0.99 for the
+  mid-size turbo at 0.75 bar (the authored efficiencies are steady-flow map peaks, so this errs slightly
+  optimistic), ≈ 1.35 for the small turbine at high rpm, which is when valve overlap causes reversion.
 
 ### Shaft
 - Energy `E = ½·I·ω²`, `dE/dt = P_t − P_c − k·ω²` (k = 2e−6 journal, 1e−6 ball bearing). No speed clamp:
@@ -224,15 +228,21 @@ Flows are corrected: `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; `n` = corre
   first-order lag 0.08 s. Proportional → boost creeps above the spring as flow rises; an undersized
   wastegate cannot hold boost at all (boost creep).
 - ECU (only with `boost_control` hardware and a `boost_target_kpa` table): PI loop on compressor
-  outlet boost; the solenoid can only keep the gate shut longer (`opening = min(mechanical, PI)`), so
-  targets below the spring are unreachable (validator warning).
+  outlet boost (error normalised by the 20 kPa actuator span, integral gain 3/s); the solenoid can only
+  keep the gate shut longer (`opening = min(mechanical, PI)`), so targets below the spring are
+  unreachable (validator warning). Anti-windup: the integrator stops while the output is pinned in the
+  direction of the error (gate held shut during spool, or at the mechanical limit), so a tip-in peaks
+  within ≈ 3 kPa of the target instead of spiking.
+- Surge (a throttle lift at boost — there is no blow-off valve) wears the turbo's bearings at
+  `0.002/s · surge depth · (PR − 1)`; bearing drag grows × (1 + 3·wear), so a surge-abused turbo spools
+  more slowly. Inspection reports the worn bearings.
 - A stock ECU with a 105 kPa MAP sensor cannot see boost: it meters fuel and picks spark as if at
   105 kPa → lean and over-advanced under boost (validator warning `map_sensor_range`).
 
 ### Calibration reference (forged K20, 550 cc, standalone ECU, RON 98, 175 kPa target)
-Steady-state full boost ≈ 3800 rpm (small), ≈ 4400 rpm (mid), ≈ 6200 rpm (big); peak ≈ 205 hp
-(small: near choke above 5500 rpm, efficiency falling to ≈ 0.4, drive pressure ≈ 1.35× boost), ≈ 233 hp
-(mid), ≈ 236 hp (big). Asked for 200 kPa, the small turbo over-speeds (≈ 1.15× rated at 7000 rpm) and
+Steady-state full boost ≈ 3800 rpm (small), ≈ 4600 rpm (mid), above 6800 rpm (big: ≈ 155 kPa at
+6800 rpm); peak ≈ 205 hp (small: near choke above 5500 rpm, efficiency falling to ≈ 0.4, drive pressure
+≈ 1.35× boost), ≈ 233 hp (mid), ≈ 215 hp (big, not yet at full boost). Asked for 200 kPa, the small turbo over-speeds (≈ 1.15× rated at 7000 rpm) and
 fails; the mid turbo holds 240 kPa at 7000 rpm just above its rating.
 
 ## Damage and failure (`Damage/`)
@@ -366,7 +376,7 @@ instances (persists in the garage and saves).
   stress-ratio law with endurance 0.9, 300 s to failure at the rating, instant failure at 2×. A broken
   gearbox or differential means no drive. Traction limits what reaches them in the low gears (a clutch
   dump on street tyres just spins the wheels); the realistic overload is engine torque above the rating
-  (a T35 on E85 at 265 kPa, ≈ 470 N·m, breaks the 400 N·m stock box in a few pulls; the 550 N·m dog box
+  (a T35 on E85 at 300 kPa, ≈ 475 N·m once spooled, breaks the 400 N·m stock box in a few pulls; the 550 N·m dog box
   survives). The report names engine torque vs rating, and clutch capacity vs rating when the clutch
   could pass more than the gearbox can take.
 - Reference: the stock car at the test driver's pace runs its front brakes at ≈ 240 °C and wears

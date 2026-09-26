@@ -188,7 +188,14 @@ public sealed record EngineTelemetry
     public double CompressorPower { get; init; }
     public double TurbinePower { get; init; }
     public double TurbineInletPressure { get; init; }
+    /// <summary>Exhaust gas temperature leaving the ports (the gas itself, not the lagging sensor), K.</summary>
+    public double PortGasTemperature { get; init; }
+
+    /// <summary>Gas temperature at the turbine inlet, after the manifold's heat loss (= port gas temperature without a turbo), K.</summary>
     public double TurbineInletTemperature { get; init; }
+
+    /// <summary>How deep into surge the compressor is (0 = not surging, 1 = no through-flow).</summary>
+    public double CompressorSurgeDepth { get; init; }
     public double WastegateOpening { get; init; }
 
     /// <summary>Boost target in force (gauge, Pa): the wastegate spring, or the ECU target if it controls boost.</summary>

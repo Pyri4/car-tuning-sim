@@ -27,6 +27,7 @@ public sealed class DamageModel
     public const double SpringFloatWearRate = 0.1;         // per s per unit of (rpm/float − 1)
     public const double KnockRingWearRate = 0.0005;        // per s per degree of knock
     public const double NormalRingWearRate = 2e-7;         // per s
+    public const double SurgeBearingWearRate = 0.002;      // per s at full surge depth, per unit of (PR − 1)
 
     private readonly EngineConfiguration _c;
     private readonly List<FailureReport> _failures = new();
@@ -124,6 +125,11 @@ public sealed class DamageModel
         TryAccumulate(gasket, FailureMode.HeadGasketBreach, gasketRate * dt, t, readings, revLimit, failures);
         if (lost > 0.2)
             TryAccumulate(head, FailureMode.CylinderHeadWarp, CoolantLossHeadRate * (lost - 0.2) / 0.1 * dt, t, readings, revLimit, failures);
+
+        // Compressor surge reverses the flow through the wheel every few milliseconds, hammering the
+        // turbo's thrust bearing; the worn bearing lets the shaft drag (slower spool).
+        if (t.CompressorSurgeDepth > 0 && _c.Turbo != null && _c.Assembly.FindByCategory(PartCategory.Turbocharger) is { } turbo)
+            turbo.Wear += SurgeBearingWearRate * t.CompressorSurgeDepth * Math.Max(0.0, t.CompressorPressureRatio - 1.0) * dt;
 
         // Valve float hammers and fatigues the springs.
         if (t.ValveFloat && t.ValveFloatRpm > 0)
@@ -232,7 +238,7 @@ public sealed class DamageModel
         if (t.ValveFloat)
             w.Add(new("valve_float", WarningLevel.Danger, $"Valve float above {t.ValveFloatRpm:F0} rpm."));
         if (t.CompressorSurge)
-            w.Add(new("surge", WarningLevel.Caution, "Compressor surge."));
+            w.Add(new("surge", WarningLevel.Caution, "Compressor surge: the flow through the compressor is reversing, hammering the turbo's thrust bearing."));
         if (t.EgtC > 950)
             w.Add(new("egt", WarningLevel.Caution, $"Exhaust gas temperature {t.EgtC:F0} °C."));
         foreach (var r in readings)

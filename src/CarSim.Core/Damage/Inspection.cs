@@ -101,6 +101,8 @@ public static class PartInspector
                 return "Big ends discoloured from overheating.";
             case ClutchSpec c:
                 return $"Friction facings worn ({pct}): clamp capacity down to about {c.MaxTorqueNm * (1 - Vehicles.ChassisWearModel.ClutchWearCapacityLoss * w):F0} N·m (new {c.MaxTorqueNm:F0} N·m).";
+            case TurbochargerSpec:
+                return $"Turbo bearings worn ({pct}): shaft play lets the wheels drag, so it spools more slowly. Surge (lifting off at boost) wears them.";
             case BrakeSpec:
                 return w < MajorThreshold ? $"Pads worn ({pct})." : $"Pads nearly down to the backing plates ({pct}).";
             case TireSpec:

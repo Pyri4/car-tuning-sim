@@ -98,7 +98,7 @@ public class EnergyBalanceTests
         double burned = Math.Min(t.FuelMassFlow, t.AirMassFlow / fuel.StoichiometricAfr);
         double latent = (1 - CombustionModel.EvaporatedBeforeInletValveCloses) * (t.FuelMassFlow - burned) * fuel.LatentHeat;
         double carried = (t.AirMassFlow + t.FuelMassFlow) * CarSim.Core.Common.PhysicalConstants.ExhaustCp
-                         * (t.TurbineInletTemperature - t.ChargeTemperature) + latent;
+                         * (t.PortGasTemperature - t.ChargeTemperature) + latent;
         Assert.True(cycles > 0);
         Assert.Equal(1.0, carried / t.ExhaustHeat, 2);
     }
@@ -112,7 +112,7 @@ public class EnergyBalanceTests
         {
             var tune = SimFactory.StockTune();
             tune.SetLambda(lambda, 90);
-            return SimFactory.At(SimFactory.Create(SimFactory.Assembly(), tune: tune), 6000, 1.0, 6.0).TurbineInletTemperature;
+            return SimFactory.At(SimFactory.Create(SimFactory.Assembly(), tune: tune), 6000, 1.0, 6.0).PortGasTemperature;
         }
         double stoich = Egt(1.0), rich = Egt(0.85), veryRich = Egt(0.75);
         Assert.True(rich < stoich - 20, $"λ 1.0 {stoich - 273.15:F0} °C, λ 0.85 {rich - 273.15:F0} °C");

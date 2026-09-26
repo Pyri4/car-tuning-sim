@@ -18,6 +18,7 @@ namespace CarSim.Core.Simulation;
 /// Total shaft power absorbed, W: through-flow work plus recirculation in surge plus disk friction.
 /// </param>
 /// <param name="SpeedRatio">Corrected tip speed / tip speed at the rated maximum shaft speed.</param>
+/// <param name="SurgeDepth">How far left of the surge line: 0 on or right of it, 1 at zero flow.</param>
 public readonly record struct CompressorPoint(
     double PressureRatio,
     double Efficiency,
@@ -27,7 +28,8 @@ public readonly record struct CompressorPoint(
     double ChokeRatio,
     bool Surge,
     double Power,
-    double SpeedRatio = 0.0);
+    double SpeedRatio = 0.0,
+    double SurgeDepth = 0.0);
 
 /// <summary>
 /// Parametric turbocharger model built from the numbers a compressor map conveys. Closed form: no
@@ -173,7 +175,7 @@ public static class TurbochargerModel
         double r = spec.CompressorTipRadius;
         double disk = 0.5 * DiskFrictionCoefficient * density * omega * omega * omega * r * r * r * r * r;
         double power = (m + recirculating) * w + disk;
-        return new CompressorPoint(pr, effective, inletTemperature + w / PhysicalConstants.AirCp, w, mc, x, mc < surgeFlow, power, n);
+        return new CompressorPoint(pr, effective, inletTemperature + w / PhysicalConstants.AirCp, w, mc, x, mc < surgeFlow, power, n, depth);
     }
 
     /// <summary>Upper bound on the pressure ratio at this shaft speed (peak efficiency, zero flow) — brackets the air-path solve.</summary>
@@ -198,8 +200,12 @@ public static class TurbochargerModel
         return (turbineFlow * eff * dhs, eff);
     }
 
-    public static double FrictionPower(TurbochargerSpec spec, double shaftOmega) =>
-        (spec.BallBearing ? BallBearingDrag : JournalBearingDrag) * shaftOmega * shaftOmega;
+    /// <summary>Extra bearing drag of a fully worn bearing (shaft play lets the wheels rub): drag × (1 + 3·wear).</summary>
+    public const double WornBearingDragIncrease = 3.0;
+
+    public static double FrictionPower(TurbochargerSpec spec, double shaftOmega, double bearingWear = 0.0) =>
+        (spec.BallBearing ? BallBearingDrag : JournalBearingDrag) * (1.0 + WornBearingDragIncrease * Math.Clamp(bearingWear, 0.0, 1.0))
+        * shaftOmega * shaftOmega;
 
     /// <summary>Intercooler effectiveness at a given flow and cooling-air speed.</summary>
     public static double IntercoolerEffectiveness(IntercoolerSpec spec, double massFlow, double coolingAirSpeed)

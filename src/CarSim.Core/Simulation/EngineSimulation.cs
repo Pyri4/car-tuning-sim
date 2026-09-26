@@ -90,47 +90,59 @@ public sealed class EngineSimulation
         return p;
     }
 
-    private readonly record struct TurboStep(double TurbinePower, double CompressorPower, double BoostTarget);
+    private readonly record struct TurboStep(double TurbinePower, double CompressorPower, double BoostTarget, double TurbineInletTemperature);
+
+    /// <summary>Wastegate actuator span: boost above the spring over which the gate goes from shut to fully open, Pa.</summary>
+    public const double WastegateActuatorSpan = 20_000.0;
+
+    /// <summary>Integral gain of the ECU boost controller, per second (on the error normalised by the actuator span).</summary>
+    public const double BoostControlIntegralGain = 3.0;
 
     /// <summary>
     /// Wastegate control and shaft-energy integration: dE/dt = P_turbine − P_compressor − P_friction,
     /// E = ½·I·ω². The wastegate actuator opens proportionally once compressor-outlet boost exceeds its
     /// spring; with ECU boost control the solenoid can hold it shut longer (never open it earlier).
     /// </summary>
-    private TurboStep UpdateTurbo(double dt, double rpm, in AirPathResult air, double ambientPressure)
+    private TurboStep UpdateTurbo(double dt, double rpm, in AirPathResult air, double ambientPressure, double ambientTemperature)
     {
         var c = Config;
         var s = State;
         var t = c.Turbo;
-        if (t == null) return default;
+        if (t == null) return new TurboStep(0.0, 0.0, 0.0, s.ExhaustGasTemperature);
+        double turbineInlet = _airPath.ManifoldOutletTemperature(s.ExhaustGasTemperature, air.ExhaustMassFlow, ambientTemperature);
         if (Damage.HasFailure(FailureMode.TurboOverspeed) || Damage.HasFailure(FailureMode.TurbineOverTemperature))
         {
             // A failed turbo no longer compresses: the damaged wheel just freewheels as a restriction.
             s.TurboOmega = 0.0;
-            s.TurbineOutletTemperature = s.ExhaustGasTemperature;
-            return new TurboStep(0.0, 0.0, t.WastegateSpring);
+            s.TurbineOutletTemperature = turbineInlet;
+            return new TurboStep(0.0, 0.0, t.WastegateSpring, turbineInlet);
         }
 
-        const double actuatorSpan = 20_000.0;
         double spring = t.WastegateSpring;
         double boostGauge = air.CompressorOutletPressure - ambientPressure;
-        double mechanical = MathUtil.Clamp01((boostGauge - spring) / actuatorSpan);
+        double mechanical = MathUtil.Clamp01((boostGauge - spring) / WastegateActuatorSpan);
         double target = spring;
         double command = mechanical;
         double? ecuTarget = c.Ecu.BoostControl ? Ecu.Tune.BoostTargetKpaAt(rpm) : null;
         if (ecuTarget is double absKpa)
         {
             target = Math.Max(spring, Units.KpaToPa(absKpa) - ambientPressure);
-            double error = (boostGauge - target) / actuatorSpan;
-            s.BoostControlIntegral = MathUtil.Clamp(s.BoostControlIntegral + 3.0 * error * dt, -1.0, 1.0);
+            double error = (boostGauge - target) / WastegateActuatorSpan;
+            // Anti-windup: stop integrating while the output is pinned in the direction the error pushes it
+            // (gate held shut during spool-up, or at the mechanical limit). Otherwise the integrator winds
+            // up during spool and the gate opens late: a 20+ kPa boost spike on every tip-in.
+            double unclamped = error + s.BoostControlIntegral;
+            bool pinnedShut = unclamped <= 0.0 && error < 0.0;
+            bool pinnedOpen = unclamped >= mechanical && error > 0.0;
+            if (!pinnedShut && !pinnedOpen) s.BoostControlIntegral += BoostControlIntegralGain * error * dt;
             command = Math.Min(mechanical, MathUtil.Clamp01(error + s.BoostControlIntegral));
         }
         s.WastegateOpening += (command - s.WastegateOpening) * MathUtil.LagFactor(dt, 0.08);
 
         var (turbinePower, _) = TurbochargerModel.Turbine(t, s.TurboOmega, air.TurbineMassFlow,
-            air.TurbineInletPressure, air.TurbineOutletPressure, s.ExhaustGasTemperature);
+            air.TurbineInletPressure, air.TurbineOutletPressure, turbineInlet);
         double compressorPower = air.Compressor.Power;
-        double friction = TurbochargerModel.FrictionPower(t, s.TurboOmega);
+        double friction = TurbochargerModel.FrictionPower(t, s.TurboOmega, c.Part(PartCategory.Turbocharger).Wear);
         double energy = 0.5 * t.RotorInertia * s.TurboOmega * s.TurboOmega;
         // Kinetic energy cannot go below zero (the shaft stops); there is no upper clamp: the compressor
         // absorbs work in proportion to tip speed squared, so the shaft settles where the powers balance.
@@ -140,12 +152,12 @@ public sealed class EngineSimulation
         // Exhaust temperature after the turbine, mixed with the wastegate bypass flow.
         if (air.ExhaustMassFlow > 0)
         {
-            double tTurbineOut = s.ExhaustGasTemperature - (air.TurbineMassFlow > 0 ? turbinePower / (air.TurbineMassFlow * PhysicalConstants.ExhaustCp) : 0.0);
+            double tTurbineOut = turbineInlet - (air.TurbineMassFlow > 0 ? turbinePower / (air.TurbineMassFlow * PhysicalConstants.ExhaustCp) : 0.0);
             double bypass = air.ExhaustMassFlow - air.TurbineMassFlow;
-            s.TurbineOutletTemperature = (tTurbineOut * air.TurbineMassFlow + s.ExhaustGasTemperature * bypass) / air.ExhaustMassFlow;
+            s.TurbineOutletTemperature = (tTurbineOut * air.TurbineMassFlow + turbineInlet * bypass) / air.ExhaustMassFlow;
         }
-        else s.TurbineOutletTemperature = s.ExhaustGasTemperature;
-        return new TurboStep(turbinePower, compressorPower, target);
+        else s.TurbineOutletTemperature = turbineInlet;
+        return new TurboStep(turbinePower, compressorPower, target, turbineInlet);
     }
 
     /// <summary>Minimum oil pressure the bearings need at <paramref name="rpm"/>, Pa.</summary>
@@ -307,7 +319,7 @@ public sealed class EngineSimulation
         s.LastFuelAirRatio = firing ? fuelPerCycle / air.AirPerCycle : 0.0;
 
         // ---- Turbocharger ----
-        var turbo = UpdateTurbo(dt, rpm, air, input.AmbientPressure);
+        var turbo = UpdateTurbo(dt, rpm, air, input.AmbientPressure, input.AmbientTemperature);
 
         // ---- ECU post-step ----
         Ecu.UpdateKnockControl(knock, dt);
@@ -393,7 +405,9 @@ public sealed class EngineSimulation
             CompressorPower = turbo.CompressorPower,
             TurbinePower = turbo.TurbinePower,
             TurbineInletPressure = air.TurbineInletPressure,
-            TurbineInletTemperature = s.ExhaustGasTemperature,
+            PortGasTemperature = s.ExhaustGasTemperature,
+            TurbineInletTemperature = turbo.TurbineInletTemperature,
+            CompressorSurgeDepth = air.Compressor.SurgeDepth,
             WastegateOpening = s.WastegateOpening,
             BoostTarget = turbo.BoostTarget,
             TurboOverspeed = c.Turbo != null && s.TurboOmega > c.Turbo.MaxShaftSpeed,
