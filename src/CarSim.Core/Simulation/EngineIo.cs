@@ -223,6 +223,9 @@ public sealed record EngineTelemetry
     /// <summary>Gas temperature at the turbine inlet, after the manifold's heat loss (= port gas temperature without a turbo), K.</summary>
     public double TurbineInletTemperature { get; init; }
 
+    /// <summary>Turbine blade-speed ratio U/c_s (debug: 0.7 is the efficiency peak; see <see cref="TurbochargerModel.TurbineEfficiencyFloor"/>).</summary>
+    public double TurbineBladeSpeedRatio { get; init; }
+
     /// <summary>How deep into surge the compressor is (0 = not surging, 1 = no through-flow).</summary>
     public double CompressorSurgeDepth { get; init; }
     public double WastegateOpening { get; init; }

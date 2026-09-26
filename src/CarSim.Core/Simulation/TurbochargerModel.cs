@@ -53,7 +53,8 @@ public readonly record struct CompressorPoint(
 /// </list>
 ///
 /// Turbine: a nozzle of the authored effective area (in parallel with the wastegate) sets the exhaust
-/// backpressure; power = ṁ_t·η_t·c_p·T₃·(1 − (p₄/p₃)^((γ−1)/γ)) with η_t a function of blade-speed ratio.
+/// backpressure; power = ṁ_t·η_t·c_p·T₃·(1 − (p₄/p₃)^((γ−1)/γ)) with η_t a function of blade-speed ratio (negative
+/// past BSR 1.2: a windmilling wheel does work on the gas).
 /// </summary>
 public static class TurbochargerModel
 {
@@ -186,18 +187,37 @@ public static class TurbochargerModel
         return Math.Pow(1.0 + spec.CompressorPeakEfficiency * w / (PhysicalConstants.AirCp * inletTemperature), AirExponent);
     }
 
-    /// <summary>Turbine power (W) and efficiency for the flow passing through the turbine wheel.</summary>
-    public static (double Power, double Efficiency) Turbine(TurbochargerSpec spec, double shaftOmega, double turbineFlow,
+    /// <summary>
+    /// Floor of the turbine efficiency parabola below its optimum, as a share of the peak. The parabola
+    /// 1 − ((BSR − 0.7)/0.5)² reaches zero at blade-speed ratio 0.2; a real radial turbine still extracts work from a
+    /// slow wheel (the stalled wheel turns the flow), and the energy form of the shaft equation needs power at zero
+    /// speed to spool from rest. Reached spooling up from standstill and at idle, never on boost (tested). Above the
+    /// optimum there is no floor: past BSR 1.2 the efficiency goes negative and a wheel spinning faster than its gas
+    /// windmills — it does work on the gas instead (bounded: ≈ 2·η_peak·ṁ·U² as BSR → ∞), which is what slows a turbo
+    /// on overrun, when a few g/s trickle through it.
+    /// </summary>
+    public const double TurbineEfficiencyFloor = 0.25;
+
+    /// <summary>Turbine power (W), efficiency and blade-speed ratio for the flow passing through the turbine wheel.</summary>
+    public static (double Power, double Efficiency, double BladeSpeedRatio) Turbine(TurbochargerSpec spec, double shaftOmega, double turbineFlow,
         double inletPressure, double outletPressure, double inletTemperature)
     {
-        if (turbineFlow <= 0 || inletPressure <= outletPressure) return (0.0, 0.0);
+        if (turbineFlow <= 0 || inletPressure <= outletPressure) return (0.0, 0.0, 0.0);
         const double g = PhysicalConstants.ExhaustGamma;
         double dhs = PhysicalConstants.ExhaustCp * inletTemperature * (1.0 - Math.Pow(outletPressure / inletPressure, (g - 1.0) / g));
         double cs = Math.Sqrt(2.0 * dhs);
         double bsr = cs > 1e-6 ? Math.Max(0.0, shaftOmega) * spec.TurbineTipRadius / cs : 0.0;
         double d = (bsr - OptimumBladeSpeedRatio) / 0.5;
-        double eff = spec.TurbinePeakEfficiency * Math.Max(0.25, 1.0 - d * d);
-        return (turbineFlow * eff * dhs, eff);
+        double shape = 1.0 - d * d;
+        double eff = spec.TurbinePeakEfficiency * (bsr < OptimumBladeSpeedRatio ? Math.Max(TurbineEfficiencyFloor, shape) : shape);
+        return (turbineFlow * eff * dhs, eff, bsr);
+    }
+
+    /// <summary>Whether the turbine efficiency is held up by <see cref="TurbineEfficiencyFloor"/> at this blade-speed ratio.</summary>
+    public static bool TurbineOnEfficiencyFloor(double bladeSpeedRatio)
+    {
+        double d = (bladeSpeedRatio - OptimumBladeSpeedRatio) / 0.5;
+        return bladeSpeedRatio < OptimumBladeSpeedRatio && 1.0 - d * d < TurbineEfficiencyFloor;
     }
 
     /// <summary>Extra bearing drag of a fully worn bearing (shaft play lets the wheels rub): drag × (1 + 3·wear).</summary>

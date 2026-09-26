@@ -271,7 +271,12 @@ Flows are corrected: `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; `n` = corre
   `T₃ = T_amb + (T_port − T_amb)·exp(−UA/(ṁ·c_p))` — the exact solution for a uniform pipe. Longer
   primaries lose more heat (a small spool penalty for the better-flowing tubular manifold).
 - Power `P_t = ṁ_t · η_t · c_p,exh · T₃ · (1 − (p₄/p₃)^((γ−1)/γ))`, with
-  `η_t = η_peak · max(0.25, 1 − ((BSR − 0.7)/0.5)²)`, BSR = turbine tip speed / √(2·Δh_s).
+  `η_t = η_peak · (1 − ((BSR − 0.7)/0.5)²)`, BSR = turbine tip speed / √(2·Δh_s), held at ≥ 0.25·η_peak
+  below the optimum only (a slow wheel still turns the flow, and the energy form of the shaft equation needs power
+  at zero speed to spool from rest — reached spooling from standstill and at idle, never on boost; tested). Past
+  BSR 1.2 η_t goes negative: a wheel spinning faster than its gas windmills and does work on the gas (bounded,
+  ≈ 2·η_peak·ṁ·U²) — what slows a turbo on overrun. Until the validation pass the 0.25 floor applied on both
+  sides and credited a coasting T35 ≈ 50 W, more than its bearing drag. Debug telemetry: `TurbineBladeSpeedRatio`.
 - Turbine outlet temperature drops by `P_t/(ṁ_t·c_p)`; mixed with the (hot) wastegate flow it sets the
   exhaust-system gas temperature on the next step.
 - Drive pressure (turbine inlet / boost) is an emergent result of the power balance: ≈ 0.87–0.99 for the

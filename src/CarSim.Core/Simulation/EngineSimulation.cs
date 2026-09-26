@@ -90,7 +90,8 @@ public sealed class EngineSimulation
         return p;
     }
 
-    private readonly record struct TurboStep(double TurbinePower, double CompressorPower, double BoostTarget, double TurbineInletTemperature);
+    private readonly record struct TurboStep(double TurbinePower, double CompressorPower, double BoostTarget, double TurbineInletTemperature,
+        double TurbineBladeSpeedRatio = 0.0);
 
     /// <summary>Wastegate actuator span: boost above the spring over which the gate goes from shut to fully open, Pa.</summary>
     public const double WastegateActuatorSpan = 20_000.0;
@@ -149,7 +150,7 @@ public sealed class EngineSimulation
         else s.BoostControlIntegral = 0.0;
         s.WastegateOpening += (command - s.WastegateOpening) * MathUtil.LagFactor(dt, 0.08);
 
-        var (turbinePower, _) = TurbochargerModel.Turbine(t, s.TurboOmega, air.TurbineMassFlow,
+        var (turbinePower, _, bladeSpeedRatio) = TurbochargerModel.Turbine(t, s.TurboOmega, air.TurbineMassFlow,
             air.TurbineInletPressure, air.TurbineOutletPressure, turbineInlet);
         double compressorPower = air.Compressor.Power;
         double friction = TurbochargerModel.FrictionPower(t, s.TurboOmega, c.Part(PartCategory.Turbocharger).Wear);
@@ -167,7 +168,7 @@ public sealed class EngineSimulation
             s.TurbineOutletTemperature = (tTurbineOut * air.TurbineMassFlow + turbineInlet * bypass) / air.ExhaustMassFlow;
         }
         else s.TurbineOutletTemperature = turbineInlet;
-        return new TurboStep(turbinePower, compressorPower, target, turbineInlet);
+        return new TurboStep(turbinePower, compressorPower, target, turbineInlet, bladeSpeedRatio);
     }
 
     /// <summary>Minimum oil pressure the bearings need at <paramref name="rpm"/>, Pa.</summary>
@@ -429,6 +430,7 @@ public sealed class EngineSimulation
             TurbineInletPressure = air.TurbineInletPressure,
             PortGasTemperature = s.ExhaustGasTemperature,
             TurbineInletTemperature = turbo.TurbineInletTemperature,
+            TurbineBladeSpeedRatio = turbo.TurbineBladeSpeedRatio,
             CompressorSurgeDepth = air.Compressor.SurgeDepth,
             WastegateOpening = s.WastegateOpening,
             BoostTarget = turbo.BoostTarget,
