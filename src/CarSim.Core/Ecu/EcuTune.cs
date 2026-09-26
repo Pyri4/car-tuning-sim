@@ -51,6 +51,9 @@ public sealed class EcuTune
     public double AdvanceAt(double rpm, double mapKpa) => IgnitionAdvance.Evaluate(rpm, mapKpa);
     public double? BoostTargetKpaAt(double rpm) => BoostTarget?.Evaluate(rpm, 0.0);
 
+    /// <summary>Highest boost target in the table (absolute kPa), or null without a boost table.</summary>
+    public double? MaxBoostTargetKpa => BoostTarget == null ? null : Enumerable.Range(0, BoostTarget.Columns).Max(c => BoostTarget[0, c]);
+
     public static EcuTune FromDocument(TuneDocument d)
     {
         var lambda = new Table2D(d.RpmAxis, d.LoadAxisKpa, d.TargetLambda);

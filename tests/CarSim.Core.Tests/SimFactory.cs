@@ -21,7 +21,7 @@ public static class SimFactory
     public static EngineSimulation Create(EngineAssembly assembly, string fuel = "gasoline_95", EcuTune? tune = null, EngineState? state = null)
     {
         tune ??= StockTune();
-        var config = EngineConfiguration.Build(assembly, TestContent.Database.GetFuel(fuel), new ValidationContext(tune.RevLimitRpm)).GetOrThrow();
+        var config = EngineConfiguration.Build(assembly, TestContent.Database.GetFuel(fuel), new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa)).GetOrThrow();
         return new EngineSimulation(config, tune, state ?? EngineState.Warm());
     }
 

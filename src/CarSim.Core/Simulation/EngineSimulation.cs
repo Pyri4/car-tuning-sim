@@ -70,6 +70,55 @@ public sealed class EngineSimulation
         return p;
     }
 
+    private readonly record struct TurboStep(double TurbinePower, double CompressorPower, double BoostTarget);
+
+    /// <summary>
+    /// Wastegate control and shaft-energy integration: dE/dt = P_turbine − P_compressor − P_friction,
+    /// E = ½·I·ω². The wastegate actuator opens proportionally once compressor-outlet boost exceeds its
+    /// spring; with ECU boost control the solenoid can hold it shut longer (never open it earlier).
+    /// </summary>
+    private TurboStep UpdateTurbo(double dt, double rpm, in AirPathResult air, double ambientPressure)
+    {
+        var c = Config;
+        var s = State;
+        var t = c.Turbo;
+        if (t == null) return default;
+
+        const double actuatorSpan = 20_000.0;
+        double spring = t.WastegateSpring;
+        double boostGauge = air.CompressorOutletPressure - ambientPressure;
+        double mechanical = MathUtil.Clamp01((boostGauge - spring) / actuatorSpan);
+        double target = spring;
+        double command = mechanical;
+        double? ecuTarget = c.Ecu.BoostControl ? Ecu.Tune.BoostTargetKpaAt(rpm) : null;
+        if (ecuTarget is double absKpa)
+        {
+            target = Math.Max(spring, Units.KpaToPa(absKpa) - ambientPressure);
+            double error = (boostGauge - target) / actuatorSpan;
+            s.BoostControlIntegral = MathUtil.Clamp(s.BoostControlIntegral + 3.0 * error * dt, -1.0, 1.0);
+            command = Math.Min(mechanical, MathUtil.Clamp01(error + s.BoostControlIntegral));
+        }
+        s.WastegateOpening += (command - s.WastegateOpening) * MathUtil.LagFactor(dt, 0.08);
+
+        var (turbinePower, _) = TurbochargerModel.Turbine(t, s.TurboOmega, air.TurbineMassFlow,
+            air.TurbineInletPressure, air.TurbineOutletPressure, s.ExhaustGasTemperature);
+        double compressorPower = air.Compressor.Power;
+        double friction = TurbochargerModel.FrictionPower(t, s.TurboOmega);
+        double energy = 0.5 * t.RotorInertia * s.TurboOmega * s.TurboOmega;
+        energy = Math.Max(0.0, energy + (turbinePower - compressorPower - friction) * dt);
+        s.TurboOmega = Math.Min(Math.Sqrt(2.0 * energy / t.RotorInertia), 2.0 * t.MaxShaftSpeed);
+
+        // Exhaust temperature after the turbine, mixed with the wastegate bypass flow.
+        if (air.ExhaustMassFlow > 0)
+        {
+            double tTurbineOut = s.ExhaustGasTemperature - (air.TurbineMassFlow > 0 ? turbinePower / (air.TurbineMassFlow * PhysicalConstants.ExhaustCp) : 0.0);
+            double bypass = air.ExhaustMassFlow - air.TurbineMassFlow;
+            s.TurbineOutletTemperature = (tTurbineOut * air.TurbineMassFlow + s.ExhaustGasTemperature * bypass) / air.ExhaustMassFlow;
+        }
+        else s.TurbineOutletTemperature = s.ExhaustGasTemperature;
+        return new TurboStep(turbinePower, compressorPower, target);
+    }
+
     /// <summary>Minimum oil pressure the bearings need at <paramref name="rpm"/>, Pa.</summary>
     public static double RequiredOilPressure(double rpm) => 30_000.0 + 25_000.0 * rpm / 1000.0;
 
@@ -96,7 +145,8 @@ public sealed class EngineSimulation
         double floatRpm = ValveFloatRpm();
         double evapCooling = 5.0 * fuel.ChargeCoolingFactor * s.LastFuelAirRatio * fuel.StoichiometricAfr;
         var air = _airPath.Solve(new AirPathConditions(rpm, throttleArea, input.AmbientPressure, input.AmbientTemperature,
-            s.ExhaustGasTemperature, s.CoolantTemperature, s.LastFuelAirRatio, evapCooling, floatRpm));
+            s.ExhaustGasTemperature, s.CoolantTemperature, s.LastFuelAirRatio, evapCooling, floatRpm,
+            s.TurboOmega, s.WastegateOpening, input.CoolingAirSpeed, s.TurbineOutletTemperature));
 
         // ---- ECU fuel and spark ----
         double mapReading = Ecu.ReadMap(air.ManifoldPressure);
@@ -201,6 +251,9 @@ public sealed class EngineSimulation
         s.PistonCrownTemperature += (crownTarget - s.PistonCrownTemperature) * MathUtil.LagFactor(dt, 3.0);
         s.LastFuelAirRatio = firing ? fuelPerCycle / air.AirPerCycle : 0.0;
 
+        // ---- Turbocharger ----
+        var turbo = UpdateTurbo(dt, rpm, air, input.AmbientPressure);
+
         // ---- ECU post-step ----
         Ecu.UpdateKnockControl(knock, dt);
 
@@ -262,6 +315,21 @@ public sealed class EngineSimulation
             PistonCrownTemperature = s.PistonCrownTemperature,
             HeatToCoolant = heatToCoolant,
             RadiatorHeatRejection = radiatorHeat,
+            TurboRpm = Units.RadPerSecToRpm(s.TurboOmega),
+            CompressorPressureRatio = c.Turbo != null ? air.Compressor.PressureRatio : 1.0,
+            CompressorEfficiency = air.Compressor.Efficiency,
+            CompressorCorrectedFlow = air.Compressor.CorrectedFlow,
+            CompressorChokeRatio = air.Compressor.ChokeRatio,
+            CompressorSurge = air.Compressor.Surge,
+            CompressorOutletTemperature = air.CompressorOutletTemperature,
+            CompressorOutletPressure = air.CompressorOutletPressure,
+            CompressorPower = turbo.CompressorPower,
+            TurbinePower = turbo.TurbinePower,
+            TurbineInletPressure = air.TurbineInletPressure,
+            TurbineInletTemperature = s.ExhaustGasTemperature,
+            WastegateOpening = s.WastegateOpening,
+            BoostTarget = turbo.BoostTarget,
+            TurboOverspeed = c.Turbo != null && s.TurboOmega > c.Turbo.MaxShaftSpeed,
             RodTensileLoad = inertiaLoad,
             RodCompressiveLoad = compressive,
             BearingLoad = bearingLoad,

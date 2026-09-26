@@ -62,6 +62,18 @@ public sealed class EngineState
     public double LastFuelAirRatio = 1.0 / 14.7;
     public bool Running;
 
+    /// <summary>Turbocharger shaft speed, rad/s.</summary>
+    public double TurboOmega;
+
+    /// <summary>Wastegate valve opening 0–1.</summary>
+    public double WastegateOpening;
+
+    /// <summary>Integrator of the ECU's closed-loop boost controller.</summary>
+    public double BoostControlIntegral;
+
+    /// <summary>Exhaust temperature after the turbine (mixed with wastegate flow), K.</summary>
+    public double TurbineOutletTemperature;
+
     /// <summary>Starts the state warm (fully warmed-up engine), as after a warm-up drive.</summary>
     public static EngineState Warm(double coolantK = 363.15, double oilK = 368.15) => new()
     {
@@ -144,6 +156,25 @@ public sealed record EngineTelemetry
     public double PistonCrownTemperature { get; init; }
     public double HeatToCoolant { get; init; }
     public double RadiatorHeatRejection { get; init; }
+
+    // Forced induction (zero for naturally aspirated builds).
+    public double TurboRpm { get; init; }
+    public double CompressorPressureRatio { get; init; }
+    public double CompressorEfficiency { get; init; }
+    public double CompressorCorrectedFlow { get; init; }
+    public double CompressorChokeRatio { get; init; }
+    public bool CompressorSurge { get; init; }
+    public double CompressorOutletTemperature { get; init; }
+    public double CompressorOutletPressure { get; init; }
+    public double CompressorPower { get; init; }
+    public double TurbinePower { get; init; }
+    public double TurbineInletPressure { get; init; }
+    public double TurbineInletTemperature { get; init; }
+    public double WastegateOpening { get; init; }
+
+    /// <summary>Boost target in force (gauge, Pa): the wastegate spring, or the ECU target if it controls boost.</summary>
+    public double BoostTarget { get; init; }
+    public bool TurboOverspeed { get; init; }
 
     public double RodTensileLoad { get; init; }
     public double RodCompressiveLoad { get; init; }

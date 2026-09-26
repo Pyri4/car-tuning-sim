@@ -14,7 +14,15 @@ public readonly record struct AirPathResult(
     double ExhaustManifoldPressure,
     double VeDynamic,
     double ResidualFactor,
-    double AirPerCycle);
+    double AirPerCycle,
+    double CompressorInletPressure,
+    double CompressorOutletPressure,
+    double CompressorOutletTemperature,
+    CompressorPoint Compressor,
+    double TurbineInletPressure,
+    double TurbineOutletPressure,
+    double ExhaustMassFlow,
+    double TurbineMassFlow);
 
 /// <summary>Conditions the air path is solved for.</summary>
 public readonly record struct AirPathConditions(
@@ -26,14 +34,18 @@ public readonly record struct AirPathConditions(
     double CoolantTemperature,
     double FuelAirRatio,
     double EvaporativeCooling,
-    double ValveFloatRpm);
+    double ValveFloatRpm,
+    double TurboOmega = 0.0,
+    double WastegateOpening = 0.0,
+    double CoolingAirSpeed = 10.0,
+    double TurbineOutletTemperature = 0.0);
 
 /// <summary>
-/// Intake: ambient → intake/filter → throttle → manifold → intake ports → cylinder.
-/// Exhaust: cylinder → exhaust ports → manifold → exhaust system → ambient.
-/// Every element is a compressible orifice. The engine acts as a pump whose demand is
-/// VE · ρ_port · V_d · rpm/120. The through-flow is the root of f(ṁ) = demand(ṁ) − ṁ, found by
-/// bisection (f is monotonic because every restriction's pressure drop grows with ṁ).
+/// Intake: ambient → intake/filter → [compressor → intercooler] → throttle → manifold → intake ports → cylinder.
+/// Exhaust: cylinder → exhaust ports → manifold → [turbine ∥ wastegate] → exhaust system → ambient.
+/// Every restriction is a compressible orifice; the compressor adds pressure and heat. The engine acts
+/// as a pump whose demand is VE · ρ_port · V_d · rpm/120. The through-flow is the root of
+/// f(ṁ) = demand(ṁ) − ṁ (Brent's method).
 /// </summary>
 public sealed class AirPath
 {
@@ -49,6 +61,9 @@ public sealed class AirPath
     /// exhaust stroke.
     /// </summary>
     public const double BlowdownFraction = 0.5;
+
+    /// <summary>Charge-pipe heat loss for a turbo without intercooler (fraction of the compressor's temperature rise).</summary>
+    public const double ChargePipeCooling = 0.10;
 
     private readonly EngineConfiguration _c;
 
@@ -104,13 +119,15 @@ public sealed class AirPath
         if (k.Rpm <= 1.0)
         {
             return new AirPathResult(0, k.AmbientPressure, k.AmbientTemperature, k.AmbientPressure, k.AmbientTemperature,
-                k.AmbientPressure, k.AmbientPressure, 0, 1, 0);
+                k.AmbientPressure, k.AmbientPressure, 0, 1, 0, k.AmbientPressure, k.AmbientPressure, k.AmbientTemperature,
+                default, k.AmbientPressure, k.AmbientPressure, 0, 0);
         }
         double veDyn = VeDynamic(k.Rpm, k.ValveFloatRpm);
         double cyclesPerSecond = k.Rpm / 120.0;
+        double prBound = _c.Turbo == null ? 1.0 : TurbochargerModel.MaxPressureRatio(_c.Turbo, k.TurboOmega, k.AmbientTemperature);
 
-        // Upper bound: engine demand at ambient conditions with generous VE.
-        double hi = 1.3 * k.AmbientPressure / (PhysicalConstants.AirGasConstant * k.AmbientTemperature)
+        // Upper bound: engine demand at the highest pressure the intake could reach, with generous VE.
+        double hi = 1.3 * prBound * k.AmbientPressure / (PhysicalConstants.AirGasConstant * k.AmbientTemperature)
                     * g.Displacement * cyclesPerSecond;
         var conditions = k;
         double flow = RootFinder.Brent(m => Evaluate(m, veDyn, in conditions).MassFlow - m, 0.0, hi, 1e-9 * hi);
@@ -131,8 +148,27 @@ public sealed class AirPath
         // Intake side.
         double tIn = k.AmbientTemperature;
         double p1 = CompressibleFlow.DownstreamPressure(_c.IntakeCdA, k.AmbientPressure, tIn, massFlow, gamma, rAir, out _);
-        double pMan = CompressibleFlow.DownstreamPressure(k.ThrottleArea, p1, tIn, massFlow, gamma, rAir, out _);
-        double tMan = tIn;
+        double pBoost = p1, tBoost = tIn;
+        CompressorPoint comp = default;
+        if (_c.Turbo != null)
+        {
+            comp = TurbochargerModel.Compressor(_c.Turbo, k.TurboOmega, massFlow, p1, tIn);
+            double p2 = p1 * comp.PressureRatio;
+            double t2 = comp.OutletTemperature;
+            if (_c.Intercooler != null)
+            {
+                pBoost = CompressibleFlow.DownstreamPressure(_c.IntercoolerCdA, p2, t2, massFlow, gamma, rAir, out _);
+                double eff = TurbochargerModel.IntercoolerEffectiveness(_c.Intercooler, massFlow, k.CoolingAirSpeed);
+                tBoost = t2 - eff * (t2 - k.AmbientTemperature);
+            }
+            else
+            {
+                pBoost = p2;
+                tBoost = t2 - ChargePipeCooling * (t2 - tIn);
+            }
+        }
+        double pMan = CompressibleFlow.DownstreamPressure(k.ThrottleArea, pBoost, tBoost, massFlow, gamma, rAir, out _);
+        double tMan = tBoost;
         double portEventFlow = massFlow / n / _c.IntakeEventFraction;
         double pPort = CompressibleFlow.DownstreamPressure(_c.IntakePortCdA, pMan, tMan, portEventFlow, gamma, rAir, out _);
 
@@ -142,17 +178,34 @@ public sealed class AirPath
         // Exhaust side, solved backwards from ambient.
         double exhaustFlow = massFlow * (1.0 + k.FuelAirRatio);
         double tExh = Math.Max(k.AmbientTemperature, k.ExhaustGasTemperature);
-        double tPipe = Math.Max(k.AmbientTemperature, tExh - ExhaustPipeCooling);
         const double gE = PhysicalConstants.ExhaustGamma;
         const double rE = PhysicalConstants.ExhaustGasConstant;
-        double pSystemIn = CompressibleFlow.UpstreamPressure(_c.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
-        double pExhManifold = CompressibleFlow.UpstreamPressure(_c.ExhaustManifoldCdA, pSystemIn, tExh, exhaustFlow, gE, rE);
+        double pSystemIn, pTurbineIn, turbineFlow = 0.0;
+        if (_c.Turbo != null)
+        {
+            double tAfterTurbine = k.TurbineOutletTemperature > 0 ? k.TurbineOutletTemperature : tExh;
+            double tPipe = Math.Max(k.AmbientTemperature, tAfterTurbine - ExhaustPipeCooling);
+            pSystemIn = CompressibleFlow.UpstreamPressure(_c.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
+            double turbineArea = _c.Turbo.TurbineFlowArea;
+            double totalArea = turbineArea + _c.Turbo.WastegateFlowArea * MathUtil.Clamp01(k.WastegateOpening);
+            pTurbineIn = CompressibleFlow.UpstreamPressure(totalArea, pSystemIn, tExh, exhaustFlow, gE, rE);
+            turbineFlow = exhaustFlow * turbineArea / totalArea;
+        }
+        else
+        {
+            double tPipe = Math.Max(k.AmbientTemperature, tExh - ExhaustPipeCooling);
+            pSystemIn = CompressibleFlow.UpstreamPressure(_c.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
+            pTurbineIn = pSystemIn;
+        }
+        double pExhManifold = CompressibleFlow.UpstreamPressure(_c.ExhaustManifoldCdA, pTurbineIn, tExh, exhaustFlow, gE, rE);
         double exhaustEventFlow = exhaustFlow * (1.0 - BlowdownFraction) / n / _c.ExhaustEventFraction;
         double pExhPort = CompressibleFlow.UpstreamPressure(_c.ExhaustPortCdA, pExhManifold, tExh, exhaustEventFlow, gE, rE);
 
         double residual = ResidualFactor(pExhPort, pPort);
         double airPerCycle = veDyn * residual * pPort * g.SweptVolumePerCylinder / (rAir * tCharge);
         double demand = airPerCycle * n * k.Rpm / 120.0;
-        return new AirPathResult(demand, pMan, tMan, pPort, tCharge, pExhPort, pExhManifold, veDyn, residual, airPerCycle);
+        return new AirPathResult(demand, pMan, tMan, pPort, tCharge, pExhPort, pExhManifold, veDyn, residual, airPerCycle,
+            p1, _c.Turbo != null ? p1 * comp.PressureRatio : p1, _c.Turbo != null ? comp.OutletTemperature : tIn, comp,
+            pTurbineIn, pSystemIn, exhaustFlow, turbineFlow);
     }
 }

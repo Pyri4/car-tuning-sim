@@ -20,7 +20,9 @@ public sealed record CompatibilityIssue(IssueSeverity Severity, string Code, str
 }
 
 /// <summary>Optional operating intent that some checks compare against (e.g. the tune's rev limit).</summary>
-public sealed record ValidationContext(double? RevLimitRpm = null);
+/// <param name="RevLimitRpm">The tune's rev limit.</param>
+/// <param name="MaxBoostTargetKpa">Highest absolute boost target in the tune (null if the tune has no boost table).</param>
+public sealed record ValidationContext(double? RevLimitRpm = null, double? MaxBoostTargetKpa = null);
 
 public sealed class ValidationReport
 {
@@ -82,6 +84,8 @@ public static class AssemblyValidator
         var springs = a.SpecOf<ValveSpringSpec>(PartCategory.ValveSprings);
         var injectors = a.SpecOf<InjectorSpec>(PartCategory.Injectors);
         var flywheel = a.SpecOf<FlywheelSpec>(PartCategory.Flywheel);
+        var turbo = a.SpecOf<TurbochargerSpec>(PartCategory.Turbocharger);
+        var ecu = a.SpecOf<EcuSpec>(PartCategory.Ecu);
 
         int cylinders = a.Definition.Cylinders;
         if (block != null && block.Cylinders != cylinders)
@@ -187,6 +191,24 @@ public static class AssemblyValidator
             if (flywheel != null && flywheel.MaxRpm < rev)
                 Add(IssueSeverity.Warning, "flywheel_overspeed",
                     $"Flywheel is rated to {flywheel.MaxRpm:F0} rpm; the rev limit is {rev:F0} rpm.", SlotOf(a, PartCategory.Flywheel));
+        }
+
+        // Forced induction vs ECU.
+        if (turbo != null && ecu != null)
+        {
+            double springAbsKpa = Units.PaToKpa(PhysicalConstants.StandardPressure) + turbo.WastegateSpringKpa;
+            if (ecu.MapSensorMaxKpa < springAbsKpa - 5)
+                Add(IssueSeverity.Warning, "map_sensor_range",
+                    $"The ECU's MAP sensor reads only up to {ecu.MapSensorMaxKpa:F0} kPa, but the wastegate spring alone makes about {springAbsKpa:F0} kPa. " +
+                    "The ECU cannot see boost: it will fuel and time the engine as if it were at its sensor limit (lean and over-advanced).",
+                    SlotOf(a, PartCategory.Ecu), SlotOf(a, PartCategory.Turbocharger));
+            if (!ecu.BoostControl)
+                Add(IssueSeverity.Info, "boost_by_spring",
+                    $"No electronic boost control: boost is set by the wastegate spring (about {turbo.WastegateSpringKpa:F0} kPa gauge, creeping higher with flow).");
+            if (ecu.BoostControl && context.MaxBoostTargetKpa is double target && target < springAbsKpa - 5)
+                Add(IssueSeverity.Warning, "boost_target_below_spring",
+                    $"The boost target ({target:F0} kPa) is below what the wastegate spring allows ({springAbsKpa:F0} kPa); the ECU can only hold the wastegate shut, not open it early.",
+                    SlotOf(a, PartCategory.Turbocharger));
         }
 
         return new ValidationReport(issues);

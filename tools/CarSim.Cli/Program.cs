@@ -17,7 +17,7 @@ public static class Program
           carsim validate [--content <dir>]            Load and validate all content.
           carsim inspect [<engine-id>] [--content <dir>]
                                                         Show the stock build, derived geometry and compatibility report.
-          carsim sweep [<engine-id>] [--swap slot=part,...] [--fuel <id>] [--from 1000] [--to 8000] [--step 500]
+          carsim sweep [<engine-id>] [--swap slot=part,...] [--fuel <id>] [--tune <id>] [--from 1000] [--to 8000] [--step 500]
                                                         Steady-state full-throttle dyno sweep of the stock build (with swaps).
         """;
 
@@ -82,18 +82,28 @@ public static class Program
                 SwapPart(assembly, kv[0], db.GetPart(kv[1]), factory);
             }
         }
+        if (o.Named.TryGetValue("add", out var adds))
+        {
+            foreach (var pair in adds.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = pair.Split('=', 2);
+                if (kv.Length != 2) throw new ArgumentException($"Bad --add entry '{pair}', expected slot=part.");
+                var r = assembly.Install(kv[0], factory.Create(db.GetPart(kv[1])));
+                if (!r.Ok) throw new ArgumentException(r.Message);
+            }
+        }
         var fuel = db.GetFuel(o.Named.GetValueOrDefault("fuel", "gasoline_95"));
-        var tune = EcuTune.FromDocument(db.GetTune(engine.StockTune));
-        var config = EngineConfiguration.Build(assembly, fuel, new ValidationContext(tune.RevLimitRpm));
+        var tune = EcuTune.FromDocument(db.GetTune(o.Named.GetValueOrDefault("tune", engine.StockTune)));
+        var config = EngineConfiguration.Build(assembly, fuel, new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa));
         foreach (var issue in config.Report.Issues.Where(i => i.Severity != IssueSeverity.Info)) Console.WriteLine(issue);
         var sim = new EngineSimulation(config.GetOrThrow(), tune, EngineState.Warm());
         double from = double.Parse(o.Named.GetValueOrDefault("from", "1000"), System.Globalization.CultureInfo.InvariantCulture);
         double to = double.Parse(o.Named.GetValueOrDefault("to", "8000"), System.Globalization.CultureInfo.InvariantCulture);
         double step = double.Parse(o.Named.GetValueOrDefault("step", "500"), System.Globalization.CultureInfo.InvariantCulture);
-        Console.WriteLine($"{"rpm",6} {"Nm",6} {"kW",6} {"hp",6} {"MAPkPa",7} {"VE",5} {"λ",5} {"duty",5} {"adv",5} {"MBT",5} {"KLSA",5} {"knk",4} {"PCPbar",6} {"EGT°C",6} {"oil bar",7} {"FMEPbar",7} {"limit",6} {"port",6} {"exhBP",6} {"VEdyn",5} {"resid",5} {"PMEP",5}");
+        Console.WriteLine($"{"rpm",6} {"Nm",6} {"kW",6} {"hp",6} {"MAPkPa",7} {"VE",5} {"λ",5} {"duty",5} {"adv",5} {"MBT",5} {"KLSA",5} {"knk",4} {"PCPbar",6} {"EGT°C",6} {"oil bar",7} {"FMEPbar",7} {"limit",6} {"port",6} {"exhBP",6} {"VEdyn",5} {"resid",5} {"PMEP",5} {"turbo krpm",10} {"PR",5} {"cEff",5} {"choke",5} {"WG",4} {"IAT°C",6}");
         foreach (var t in SteadyStateSweep.Run(sim, from, to, step))
         {
-            Console.WriteLine($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2}");
+            Console.WriteLine($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2} {t.TurboRpm / 1000,10:F1} {t.CompressorPressureRatio,5:F2} {t.CompressorEfficiency,5:F2} {t.CompressorChokeRatio,5:F2} {t.WastegateOpening,4:F2} {Units.KToC(t.ChargeTemperature),6:F0}");
         }
         return 0;
     }

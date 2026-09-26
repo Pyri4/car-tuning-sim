@@ -49,6 +49,7 @@ public class EngineAssemblyTests
     public void FullTeardownAndRebuildRestoresCompleteEngine()
     {
         var a = TestContent.StockK20();
+        int installedAtStart = a.Installed.Count;
         var removed = new List<(string slot, PartInstance part)>();
         // Tear down: keep removing whatever is removable until empty.
         while (a.Installed.Count > 0)
@@ -57,7 +58,7 @@ public class EngineAssemblyTests
             Assert.True(a.Remove(slot, out var p).Ok);
             removed.Add((slot, p!));
         }
-        Assert.Equal(TestContent.Database.GetEngine(TestContent.K20).Slots.Count, removed.Count);
+        Assert.Equal(installedAtStart, removed.Count);
         // Rebuild in reverse removal order.
         for (int i = removed.Count - 1; i >= 0; i--)
         {

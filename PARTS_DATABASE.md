@@ -133,8 +133,19 @@ tuning, 0–0.15).
 `map_sensor_max_kpa` (absolute; above this the ECU cannot see load), `boost_control`,
 `knock_control`, `max_rev_limit_rpm`, `tables_editable`.
 
-### Not yet implemented
-`turbocharger`, `intercooler` (category ids reserved; schema will be added with the turbo model).
+### `turbocharger`
+`compressor_wheel_diameter_mm` (exducer; tip speed → pressure ratio), `compressor_choke_flow_kg_s`
+(corrected), `compressor_peak_efficiency`, `compressor_peak_efficiency_flow_kg_s`,
+`compressor_peak_efficiency_pressure_ratio` (island centre), `compressor_surge_flow_at_pr2_kg_s`,
+`turbine_flow_area_cm2` (effective nozzle area — the A/R trade-off), `turbine_wheel_diameter_mm`,
+`turbine_peak_efficiency`, `rotor_inertia_kg_cm2`, `max_shaft_rpm`, `wastegate_spring_kpa` (gauge),
+`wastegate_flow_area_cm2`, `max_turbine_inlet_temperature_c` (default 950), `ball_bearing`.
+Turbos `require` a flange interface (`turbo_flange.t25`, `turbo_flange.t3`) and `provide`
+`turbo.fitted` and `boost.source`.
+
+### `intercooler`
+`effectiveness` (at `reference_flow_kg_s`), `reference_flow_kg_s`, `flow_cfm` (pressure drop).
+Requires `boost.source`.
 
 ## Engine families (`engines`)
 

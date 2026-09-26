@@ -149,11 +149,54 @@ Harmonic lift profile over the advertised event (duration@1mm + 50°):
 - Starter: 60 N·m at 0 rpm falling to 0 at 300 rpm. Combustion from 150 rpm; running above 400 rpm;
   stalls below 250 rpm without the starter.
 
-## Forced induction
-Not yet implemented. Planned: compressor (tip-speed/flow map approximation), turbine as a nozzle in
-parallel with the wastegate, shaft energy integration for spool lag, intercooler effectiveness and
-pressure drop, ECU boost control. The air-path solver is structured so the compressor and turbine
-slot into the existing restriction chain.
+## Forced induction (`Simulation/TurbochargerModel.cs`)
+The turbo is optional (a `turbocharger` slot, `intercooler` slot after it). The compressor sits
+between the intake/filter and the intercooler/throttle; the turbine and wastegate sit between the
+exhaust manifold and the exhaust system.
+
+### Compressor
+- Corrected flow `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; choke ratio `x = ṁ_c / choke_flow`.
+- Tip speed `U = ω · D/2`; actual specific work `w = 0.75 · U² · ψ(x)`, `ψ = max(0.02, 1 − 0.95·x⁸)`
+  (speed lines droop toward choke and collapse past it).
+- Efficiency island: `η = η_peak·(1 − 0.25·Δm² − 0.15·Δp²)`, `Δm = (ṁ_c − ṁ_peak)/(0.5·choke)`,
+  `Δp = (PR − PR_peak)/1.5`, halved over x ∈ [0.9, 1.1], clamped to [0.40, η_peak].
+  Surge when `ṁ_c < surge_flow_at_pr2 · (PR − 1)`: efficiency × 0.85 and a telemetry flag.
+- `PR = (1 + η·w/(c_p·T₁))^(γ/(γ−1))`, `T₂ = T₁ + w/c_p`, absorbed power `ṁ·w`.
+
+### Charge cooling
+- Intercooler: `T = T₂ − ε·(T₂ − T_ambient)`, `ε = min(0.95, ε_ref·(ṁ_ref/ṁ)^0.15·clamp((v_air/15)^0.25, 0.5, 1.1))`;
+  pressure drop through its `flow_cfm` restriction.
+- Without an intercooler the charge pipes shed 10 % of the compressor's temperature rise.
+
+### Turbine and wastegate
+- Turbine and open wastegate are parallel nozzles: turbine inlet pressure is the upstream pressure
+  that passes the exhaust flow through `A_turbine + A_wastegate·opening`; the turbine receives the
+  `A_turbine / A_total` share of the flow.
+- Power `P_t = ṁ_t · η_t · c_p,exh · T₃ · (1 − (p₄/p₃)^((γ−1)/γ))`, with
+  `η_t = η_peak · max(0.25, 1 − ((BSR − 0.7)/0.5)²)`, BSR = turbine tip speed / √(2·Δh_s).
+- Turbine outlet temperature drops by `P_t/(ṁ_t·c_p)`; mixed with the (hot) wastegate flow it sets the
+  exhaust-system gas temperature on the next step.
+- Drive pressure (turbine inlet / boost) is an emergent result of the power balance. For the mid-size
+  turbo at 0.75 bar it is ≈ 1:1; a small turbine at high rpm drives it well above boost, which is when
+  valve overlap causes reversion.
+
+### Shaft
+- Energy `E = ½·I·ω²`, `dE/dt = P_t − P_c − k·ω²` (k = 2e−6 journal, 1e−6 ball bearing).
+- Overspeed (ω above `max_shaft_rpm`) is flagged in telemetry for the damage model.
+
+### Boost control
+- Mechanical: wastegate opening = clamp((boost_gauge − spring)/20 kPa, 0, 1) at the compressor outlet,
+  first-order lag 0.08 s. Proportional → boost creeps above the spring as flow rises; an undersized
+  wastegate cannot hold boost at all (boost creep).
+- ECU (only with `boost_control` hardware and a `boost_target_kpa` table): PI loop on compressor
+  outlet boost; the solenoid can only keep the gate shut longer (`opening = min(mechanical, PI)`), so
+  targets below the spring are unreachable (validator warning).
+- A stock ECU with a 105 kPa MAP sensor cannot see boost: it meters fuel and picks spark as if at
+  105 kPa → lean and over-advanced under boost (validator warning `map_sensor_range`).
+
+### Calibration reference (forged K20, 550 cc, standalone ECU, RON 98, 175 kPa target)
+Steady-state full boost ≈ 3500 rpm (small), ≈ 4500 rpm (mid), ≈ 7000 rpm (big); peak ≈ 220 hp
+(small, choking and over-speeding at 7000 rpm), ≈ 235 hp (mid), ≈ 240 hp and still climbing (big).
 
 ## Failure model
 Not yet implemented. Planned: stress ratios for every rated component (above), fatigue
@@ -171,4 +214,6 @@ Deterministic xUnit tests cover: unit conversions, compressible flow, root findi
 compression ratio, valvetrain, combustion functions, torque/power identity (P = T·ω), BMEP
 identity, throttle/vacuum, exhaust restriction, cams/runners/heads, fueling limits (injectors,
 pump, calibration errors), knock and timing, rev limiter, valve float, rod loads, oil pressure,
-thermal behaviour, starting/idle/revving, determinism.
+thermal behaviour, starting/idle/revving, determinism, compressor speed lines/choke/surge, compressor
+energy consistency, turbine power, spool order by turbo size, transient lag vs steady state, boost
+control, boost creep, intercooling, stock-ECU MAP saturation, overlap reversion under drive pressure.

@@ -1,0 +1,72 @@
+{
+  // Turbo kit parts. Turbos bolt to a manifold providing the matching flange and provide
+  // "turbo.fitted" (which turbo manifolds require: an open flange would dump exhaust into the bay)
+  // and "boost.source" (which intercoolers require).
+  "parts": [
+    {
+      "id": "k20.exhaust_manifold.turbo_log", "name": "Cast log turbo manifold (T25 flange)", "category": "exhaust_manifold",
+      "manufacturer": "Boostline", "price": 420, "mass_kg": 7.5,
+      "requires": ["k20.exhaust_flange", "turbo.fitted"], "provides": ["turbo_flange.t25"],
+      "description": "Compact and cheap. Short, unequal runners: no scavenging to speak of.",
+      "spec": { "flow_cfm": 600, "primary_length_mm": 250, "scavenging_gain": 0.0 }
+    },
+    {
+      "id": "k20.exhaust_manifold.turbo_t3_tubular", "name": "Tubular equal-length turbo manifold (T3 flange)", "category": "exhaust_manifold",
+      "manufacturer": "Boostline", "price": 980, "mass_kg": 6.0,
+      "requires": ["k20.exhaust_flange", "turbo.fitted"], "provides": ["turbo_flange.t3"],
+      "spec": { "flow_cfm": 780, "primary_length_mm": 450, "scavenging_gain": 0.01 }
+    },
+    {
+      "id": "turbo.t25_small", "name": "T25-flange small journal-bearing turbo", "category": "turbocharger",
+      "manufacturer": "Boostline", "price": 900, "mass_kg": 6.5,
+      "requires": ["turbo_flange.t25"], "provides": ["turbo.fitted", "boost.source"],
+      "description": "Spools almost off idle; runs out of compressor above ~200 hp.",
+      "spec": {
+        "compressor_wheel_diameter_mm": 54, "compressor_choke_flow_kg_s": 0.20, "compressor_peak_efficiency": 0.73,
+        "compressor_peak_efficiency_flow_kg_s": 0.11, "compressor_peak_efficiency_pressure_ratio": 1.9,
+        "compressor_surge_flow_at_pr2_kg_s": 0.045,
+        "turbine_flow_area_cm2": 6.0, "turbine_wheel_diameter_mm": 47, "turbine_peak_efficiency": 0.68,
+        "rotor_inertia_kg_cm2": 0.20, "max_shaft_rpm": 190000,
+        "wastegate_spring_kpa": 50, "wastegate_flow_area_cm2": 5.0, "max_turbine_inlet_temperature_c": 950, "ball_bearing": false
+      }
+    },
+    {
+      "id": "turbo.t28_ball", "name": "T25-flange ball-bearing turbo (60 mm)", "category": "turbocharger",
+      "manufacturer": "Boostline", "price": 1650, "mass_kg": 7.0,
+      "requires": ["turbo_flange.t25"], "provides": ["turbo.fitted", "boost.source"],
+      "description": "The sweet spot for a 2.0 L street build: good response, supports ~300 hp.",
+      "spec": {
+        "compressor_wheel_diameter_mm": 60, "compressor_choke_flow_kg_s": 0.28, "compressor_peak_efficiency": 0.76,
+        "compressor_peak_efficiency_flow_kg_s": 0.15, "compressor_peak_efficiency_pressure_ratio": 2.1,
+        "compressor_surge_flow_at_pr2_kg_s": 0.06,
+        "turbine_flow_area_cm2": 8.0, "turbine_wheel_diameter_mm": 53, "turbine_peak_efficiency": 0.70,
+        "rotor_inertia_kg_cm2": 0.30, "max_shaft_rpm": 175000,
+        "wastegate_spring_kpa": 50, "wastegate_flow_area_cm2": 6.0, "max_turbine_inlet_temperature_c": 980, "ball_bearing": true
+      }
+    },
+    {
+      "id": "turbo.t35_big", "name": "T3-flange large ball-bearing turbo (82 mm)", "category": "turbocharger",
+      "manufacturer": "Boostline", "price": 2200, "mass_kg": 11.0,
+      "requires": ["turbo_flange.t3"], "provides": ["turbo.fitted", "boost.source"],
+      "description": "Big top-end potential. On a 2.0 L it will not wake up until well past 5,000 rpm.",
+      "spec": {
+        "compressor_wheel_diameter_mm": 82, "compressor_choke_flow_kg_s": 0.50, "compressor_peak_efficiency": 0.77,
+        "compressor_peak_efficiency_flow_kg_s": 0.28, "compressor_peak_efficiency_pressure_ratio": 2.4,
+        "compressor_surge_flow_at_pr2_kg_s": 0.12,
+        "turbine_flow_area_cm2": 11.5, "turbine_wheel_diameter_mm": 68, "turbine_peak_efficiency": 0.72,
+        "rotor_inertia_kg_cm2": 0.90, "max_shaft_rpm": 130000,
+        "wastegate_spring_kpa": 70, "wastegate_flow_area_cm2": 9.0, "max_turbine_inlet_temperature_c": 1000, "ball_bearing": true
+      }
+    },
+    {
+      "id": "intercooler.fmic_street", "name": "Front-mount intercooler (street)", "category": "intercooler",
+      "manufacturer": "Coolrun", "price": 450, "mass_kg": 7.0, "requires": ["boost.source"],
+      "spec": { "effectiveness": 0.72, "reference_flow_kg_s": 0.15, "flow_cfm": 550 }
+    },
+    {
+      "id": "intercooler.fmic_race", "name": "Large bar-and-plate intercooler", "category": "intercooler",
+      "manufacturer": "Coolrun", "price": 850, "mass_kg": 11.0, "requires": ["boost.source"],
+      "spec": { "effectiveness": 0.82, "reference_flow_kg_s": 0.25, "flow_cfm": 800 }
+    }
+  ]
+}

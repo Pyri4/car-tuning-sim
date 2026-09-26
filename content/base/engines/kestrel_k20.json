@@ -27,6 +27,8 @@
         { "id": "injectors",       "category": "injectors",       "display_name": "Fuel injectors",  "install_after": ["intake_manifold"], "accessible_in_vehicle": true },
         { "id": "fuel_pump",       "category": "fuel_pump",       "display_name": "Fuel pump",                                              "accessible_in_vehicle": true },
         { "id": "exhaust_manifold","category": "exhaust_manifold","display_name": "Exhaust manifold","install_after": ["cylinder_head"],   "accessible_in_vehicle": true },
+        { "id": "turbocharger",    "category": "turbocharger",    "display_name": "Turbocharger",    "install_after": ["exhaust_manifold"],"accessible_in_vehicle": true, "required": false },
+        { "id": "intercooler",     "category": "intercooler",     "display_name": "Intercooler",     "install_after": ["turbocharger"],    "accessible_in_vehicle": true, "required": false },
         { "id": "exhaust",         "category": "exhaust",         "display_name": "Exhaust system",  "install_after": ["exhaust_manifold"],"accessible_in_vehicle": true },
         { "id": "radiator",        "category": "radiator",        "display_name": "Radiator",                                               "accessible_in_vehicle": true },
         { "id": "ecu",             "category": "ecu",             "display_name": "ECU",                                                    "accessible_in_vehicle": true }

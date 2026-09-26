@@ -59,6 +59,9 @@ public sealed class EngineConfiguration
         Radiator = Spec<RadiatorSpec>(PartCategory.Radiator);
         Flywheel = Spec<FlywheelSpec>(PartCategory.Flywheel);
         Ecu = Spec<EcuSpec>(PartCategory.Ecu);
+        Turbo = assembly.SpecOf<TurbochargerSpec>(PartCategory.Turbocharger);
+        Intercooler = assembly.SpecOf<IntercoolerSpec>(PartCategory.Intercooler);
+        IntercoolerCdA = Intercooler == null ? 0.0 : CompressibleFlow.EffectiveAreaFromCfm(Intercooler.FlowCfm);
 
         // Air path restrictions (effective flow areas).
         IntakeCdA = CompressibleFlow.EffectiveAreaFromCfm(Intake.FlowCfm);
@@ -118,6 +121,14 @@ public sealed class EngineConfiguration
     public RadiatorSpec Radiator { get; }
     public FlywheelSpec Flywheel { get; }
     public EcuSpec Ecu { get; }
+
+    /// <summary>Installed turbocharger, or null for a naturally aspirated build.</summary>
+    public TurbochargerSpec? Turbo { get; }
+
+    /// <summary>Installed intercooler, or null.</summary>
+    public IntercoolerSpec? Intercooler { get; }
+
+    public double IntercoolerCdA { get; }
 
     /// <summary>Effective flow areas, m².</summary>
     public double IntakeCdA { get; }

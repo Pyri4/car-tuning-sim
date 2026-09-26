@@ -28,6 +28,8 @@ public static class PartSpecRegistry
         [PartCategory.Radiator] = typeof(RadiatorSpec),
         [PartCategory.Flywheel] = typeof(FlywheelSpec),
         [PartCategory.Ecu] = typeof(EcuSpec),
+        [PartCategory.Turbocharger] = typeof(TurbochargerSpec),
+        [PartCategory.Intercooler] = typeof(IntercoolerSpec),
     };
 
     public static bool TryGetSpecType(string category, out Type specType) =>
