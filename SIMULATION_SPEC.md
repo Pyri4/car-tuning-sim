@@ -623,3 +623,13 @@ combined slip, load sensitivity, acceleration, top speed, gearing, threshold vs 
 compound grip, roll dynamics, LSD vs open differential, mass from parts, missed downshift over-rev,
 oil surge in sustained corners, driving determinism, track closure and surfaces, clean autopilot
 lap, lap time vs tyres and power, lap timer.
+
+Added in the validation pass (see ROADMAP.md, "Validation pass", and ARCHITECTURE.md §7): the first law over a
+warm-up with stored heat, brake efficiency under the Otto limit, no failure raising torque, exhaust-port heat
+bounds and lift/re-apply without turbine damage; ECU observability (delivered fuel reconstructed from the ECU's own
+inputs, coolant/regulator/density/dead-time errors, no hidden closed loop, MAP-fed boost control, the knock
+level, measurable-only dyno logs); turbo invariants to 350 kPa (first/second law at every compressor point,
+closed-loop matrix, square waves, target steps, overspeed failure, windmilling turbine); spec fuzzing of every
+fitted part; clamp activation; tyre-width and suspension trade-offs; knock factors over an envelope grid and
+the knock-limited range vs compression and octane; fatigue additivity across a save/load; save v3 → v4
+migration. New regression tests were mutation-checked against the bugs they guard.
