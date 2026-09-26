@@ -19,6 +19,10 @@ jobs:
         run: dotnet build CarTuningSim.sln --no-restore -c Release
       - name: Test
         run: dotnet test CarTuningSim.sln --no-build -c Release --logger "console;verbosity=normal"
+      - name: CLI smoke (content validation and a dyno sweep)
+        run: |
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep --from 2000 --to 7000 --step 1000
 
   godot-smoke:
     name: Godot headless smoke test

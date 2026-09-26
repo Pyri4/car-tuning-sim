@@ -226,6 +226,36 @@ public class GarageTests
     }
 
     [Fact]
+    public void DrivingALoadedGarageReplaysTheOriginalExactly()
+    {
+        // Save → load → drive must be bit-identical to driving the original: wear, fatigue, damage ledger,
+        // settings and tune all survive the round trip, and the simulation is deterministic.
+        var g = NewGame();
+        Assert.True(g.Adjust("tires_rear", "cold_pressure_kpa", 190).Ok);
+        g.Engine.PartIn("connecting_rods")!.Damage.RecordExposure(FailureMode.RodTensileOverload, 1.05, 3.0);
+        var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(g), TestContent.Database);
+
+        List<string> Drive(Garage garage)
+        {
+            var (sim, problem) = garage.CreateVehicleSimulation();
+            Assert.True(sim != null, problem);
+            var trace = new List<string>();
+            var input = new CarSim.Core.Vehicles.VehicleInputs { ShiftUp = true };
+            for (int i = 0; i < 2500; i++)
+            {
+                var t = sim!.Step(0.002, input);
+                input.ShiftUp = false;
+                input.Throttle = 1;
+                input.Steer = i > 1500 ? 0.1 : 0.0;
+                if (i % 100 == 0) trace.Add($"{t.Speed:R} {t.EngineRpm:R} {t.LateralG:R} {t.Engine.Torque:R}");
+            }
+            return trace;
+        }
+        Assert.Equal(Drive(g), Drive(loaded));
+        Assert.Equal(SaveSystem.Serialize(g), SaveSystem.Serialize(loaded));
+    }
+
+    [Fact]
     public void UnknownFailureModesAreRejectedNotSilentlyHealed()
     {
         // Loading used to drop failure modes it did not recognise, turning a failed part healthy.

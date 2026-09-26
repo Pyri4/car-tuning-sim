@@ -25,8 +25,10 @@ Each `Step(dt, inputs)`:
 
 Outputs are an `EngineTelemetry` record (≈60 channels).
 
-Performance: ≈30 µs per step on one core (Release), so the engine can run at hundreds of Hz
-alongside vehicle physics.
+Performance (measured, Release, one core of this project's CI-class container): ≈ 100 µs per turbo
+engine step, of which the air path's nested root finders take most and the knock integral ≈ 12 µs;
+≈ 14 KB allocated per step (closures in the root finders — a known cost, guarded by an allocation-budget
+test). At 500 Hz that is ≈ 5 % of a core.
 
 ## Geometry (`Engines/EngineGeometry.cs`)
 - Swept volume per cylinder `V_d = π/4 · B² · S`; displacement `V = n · V_d`.
@@ -506,7 +508,7 @@ instances (persists in the garage and saves).
 ### Calibration reference (stock Kestrel S2, street tyres)
 0–100 km/h ≈ 8.5 s, top speed ≈ 220 km/h (drag-limited), 100–0 ≈ 48 m threshold braking (with a
 0.3 s pedal ramp) vs ≈ 54 m locked, skidpad ≈ 0.9 g (≈ 1.15 g on semi-slicks), mild understeer at the
-limit. ≈ 40 µs per 2 ms step including the engine.
+limit. ≈ 90 µs per 2 ms step including the engine (8 chassis substeps, ride model, tyre thermal).
 
 ## Calibration reference (stock Kestrel K20, RON 95, 90 °C coolant)
 Pinned loosely by tests (`EngineOutputTests.StockEngineCalibration`):

@@ -9,13 +9,15 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 246 automated tests (simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves,
-  mods). CI runs them plus two headless Godot smoke tests (dyno pull; autopilot drive) on the official
-  Godot 4.7.2 .NET build.
+- 348 automated tests (simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves,
+  mods, physical invariants and property sweeps). CI runs them, a CLI content check and dyno sweep, and
+  two headless Godot smoke tests (dyno pull; autopilot drive) on the official Godot 4.7.2 .NET build.
+- A simulation-correction phase (below) fixed the foundational issues found by the review of PR #1
+  before any new systems were added.
 - Content: 77 parts, 1 engine family, 1 vehicle, 5 fuels, 2 base tunes, 1 scenario; mods load as extra
   content layers.
 - Reference numbers: stock K20 ≈ 148 hp / 189 N·m (the worn project car ≈ 137 hp); T28 turbo build ≈ 230
-  hp / 300 N·m; stock car 0–100 km/h ≈ 8.5 s, ≈ 0.9 g skidpad, ≈ 51.7 s autopilot lap.
+  hp / 300 N·m; stock car 0–100 km/h ≈ 8.8 s, ≈ 0.9 g skidpad (≈ 0.85 g on kerb-grade roughness).
 
 ## Completed work
 ### Phase 0 — Architecture ✅
@@ -36,9 +38,11 @@ tune the ECU → dyno pull → drive the test track → break something through 
 
 ### Phase 2 — Engine simulation ✅
 - [x] Mean-value engine: compressible-orifice air path, VE from cams/runners/headers, residuals and
-      reversion, speed-density ECU, fuel pump/regulator/injectors, combustion with MBT, knock-limited
-      advance (now knock-free at light load), FMEP/PMEP, peak cylinder pressure
-- [x] Turbocharger: compressor map (surge, choke, efficiency island), turbine and wastegate, shaft
+      reversion, speed-density ECU (VE table since the correction phase), fuel pump/regulator/injectors,
+      combustion with MBT, knock (end-gas autoignition since the correction phase), FMEP/PMEP, peak
+      cylinder pressure
+- [x] Turbocharger: parametric compressor model (speed lines, surge, choke, efficiency island — not a
+      tabulated map), turbine and wastegate, shaft
       inertia (lag), ECU boost control, intercooler
 - [x] Thermal (coolant with boiling/loss, oil, piston crowns, EGT) and lubrication (bearing clearance,
       oil surge/aeration)
@@ -72,6 +76,27 @@ tune the ECU → dyno pull → drive the test track → break something through 
 - [x] Tyre temperature: sliding and flexing heat, airflow cooling, a grip window per compound, cold
       pressure set in the garage rising with temperature, out laps on cold tyres, HUD temperatures
 
+### Simulation-correction phase ✅ (after the review of PR #1)
+- [x] Compressor: closed-form speed lines, choke flow ∝ √speed, work retained through choke, continuous
+      surge; no shaft-speed clamp; stable above the shipped boost (was divergent)
+- [x] One closed engine energy balance (fuel = brake + coolant + oil + exhaust) tested every step; rich
+      mixtures cool the exhaust through partial oxidation, not an offset
+- [x] Boost PI anti-windup, turbine inlet temperature from manifold heat loss, surge wears the turbo
+- [x] Speed-density ECU (VE table × MAP × displacement / (R·IAT)); VE calibrator dev tool; save format
+      v2 with migration; MBT and the knock limit off the player's screens
+- [x] Engine topology stated in code (`EngineTopology`): families the model cannot represent are
+      rejected at load, `Build` never throws; chassis roles by category and axle
+- [x] Damage laws: per-cycle Miner/Basquin fatigue, speed² stress for rpm-rated parts, Arrhenius (kelvin)
+      for hot parts, stress rupture for turbo wheels, persisted damage ledger (save v3), unknown failure
+      modes rejected on load
+- [x] Tyre width through the contact patch (nominal load ∝ width, slip angle ∝ width^−0.5)
+- [x] Ride over road roughness (frequency-domain quarter car per axle), bump travel and bump stops:
+      suspension settings have trade-offs and interior optima on rough surfaces
+- [x] Knock from an end-gas autoignition integral with residual gas and an octane index; the NA engine is
+      knock-limited at low-mid rpm on pump fuel; factory spark table re-limited
+- [x] Invariant tests: load transfer statics, coast-down energy, timestep convergence, save → load →
+      drive replay, every part in every slot, allocation budget
+
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
@@ -90,8 +115,18 @@ tune the ECU → dyno pull → drive the test track → break something through 
 7. **Exported builds.** Godot export templates in CI and downloadable artifacts.
 
 ## Known issues
-- The vehicle model is planar: no vertical dynamics, bumps, kerb height, walls or collisions. Grass
-  only lowers grip; leaving the track is punished by time, not damage.
+- The vehicle model is planar. Road roughness acts through a frequency-domain ride model (grip and
+  bottoming), but there is no time-domain wheel hop, kerb strike, roll-centre (geometric) load
+  transfer, wall or collision. Leaving the track is punished by time, not damage.
+- The air path is quasi-static (no plenum, intercooler or exhaust-manifold filling; no blow-off
+  valve; no intercooler heat soak). Turbine drive pressure is slightly optimistic in the mid range.
+- The ECU is open-loop speed-density only: no injector dead time, warm-up/transient enrichment or
+  closed-loop λ trim. A VE table calibrated on gasoline runs a few percent lean on E85 (charge cooling
+  after the IAT sensor) — realistic, but the player has no autotune helper.
+- Knock uses a mean-value cycle: no cycle-to-cycle or per-cylinder variation. Octane is worth
+  ≈ 0.5° per RON at the limit (Douaud–Eyzat), on the low side of engine data.
+- Tyres have no relaxation length, aligning torque or toe; the load-sensitivity law is still clamped
+  to [0.3, 1.3]·µ₀ (only matters for nearly unloaded wheels).
 - Driving uses an automated clutch: there is no clutch pedal or manual rev-matching, and no ABS,
   traction control or stability control.
 - Launch shock through shafts (wind-up, wheel hop) is not modelled, so wheelspin always protects the
@@ -109,15 +144,23 @@ tune the ECU → dyno pull → drive the test track → break something through 
   4.7.2 .NET binaries, and both agree.
 
 ## Technical debt
-- Chassis slot ids (`clutch`, `tires_front`, ...) are hard-coded in `VehicleConfiguration` and
-  `ChassisWearModel`; slot roles should come from data like the engine's categories.
-- `FailureMode` mixes engine and chassis modes; the fatigue fields of `FailureModeInfo` are unused by
-  the wear-driven chassis modes. Chassis warnings reuse the `EngineWarning` type.
+- The engine model supports one part (or set) per modelled category: twin turbos, per-bank air paths,
+  dry sumps and superchargers are rejected at load, not supported (`EngineTopology`).
+- Calibration constants are normalised to the K20 (runner and header tuning constants, crown heat-flux
+  reference, friction's valvetrain term, coolant heat fraction on rpm/7000). A second engine family
+  needs them made dimensionless or moved into engine data.
+- The engine step allocates ≈ 14 KB (closures in the air path's nested root finders) and costs
+  ≈ 100 µs; an allocation-budget test guards regressions. Allocation-free root finders would roughly
+  halve the cost.
+- A few hidden clamps remain (tyre µ range, front weight fraction, VE floor); none is reached in the
+  shipped content, but they are not flagged in telemetry.
+- `FailureMode` mixes engine and chassis modes; chassis warnings reuse the `EngineWarning` type.
 - `VehicleSimulation.Step` is long (driveline, wheels and body in one loop) and should be split.
 - `TrackLayout.TestFacility()` is code, not content.
 - The CLI `Program.cs` has grown; split commands into classes.
 - UI views rebuild their subtrees on every change event (fine at this scale; revisit with more data).
-- The full test suite takes ≈ 40 s, mostly lap and wear tests; tag them if it grows.
+- The full test suite takes ≈ 80 s (lap, wear, VE-calibration and big-turbo gearbox tests); tag the
+  slow ones if it grows.
 
 ## Rule
 Each phase should produce a demonstrable playable/testable increment before proceeding.

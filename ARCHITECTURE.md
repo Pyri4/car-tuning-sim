@@ -218,9 +218,16 @@ older saves start empty. Saves newer than the game are rejected, and so are unkn
 - **Behavioral tests** assert directional physics ("more boost → more airflow", "restrictive exhaust
   → less top-end power") rather than brittle exact numbers, plus a small set of pinned reference
   values for regression.
+- **Invariant and property tests** check the model against independent physics rather than its own
+  formulas: a per-step energy balance of the engine, turbo shaft power balance, steady-state load
+  transfer against `m·a·h`, a coast-down against drag and rolling work, the friction circle, a
+  time-domain Monte Carlo quarter car against the ride model's frequency response, timestep
+  convergence (engine and vehicle), bit-identical save → load → drive replays, every part in every
+  slot (builds and runs to finite numbers, or is refused with reasons), and a per-step allocation
+  budget.
 - **Content tests** load every file under `content/` and validate references, ranges and that the
   stock engine assembles and runs.
-- **CLI** runs a full dyno sweep as a smoke test.
+- **CLI**: CI runs `carsim validate` and a short `carsim sweep` after the tests.
 - **Godot**: the game project is part of the solution, so every `dotnet build` compiles it
   (Godot.NET.Sdk from NuGet). CI also downloads Godot 4.7.2 .NET and runs
   `godot --headless --path game -- --smoke-test`, which loads content, builds the garage and runs a
