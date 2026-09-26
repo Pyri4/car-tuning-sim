@@ -93,8 +93,10 @@ public class EngineTopologyTests
             Assert.Empty(EngineTopology.CheckFamily(engine));
     }
 
-    [Fact]
-    public void EveryPartInEverySlotBuildsOrExplainsWhyNot()
+    [Theory]
+    [InlineData(TestContent.K20, 40)]
+    [InlineData(TestContent.M54, 30)] // most parts in the database are K20-mounted, which the M54 refuses
+    public void EveryPartInEverySlotBuildsOrExplainsWhyNot(string engineId, int minBuilt)
     {
         // Property test: any assembly the workshop allows either builds and runs to finite numbers, or is
         // refused with reasons — never an exception.
@@ -105,7 +107,7 @@ public class EngineTopologyTests
         int built = 0, refused = 0;
         void Check(EngineAssembly a, string what)
         {
-            var tune = SimFactory.StockTune();
+            var tune = SimFactory.StockTuneOf(engineId);
             var result = EngineConfiguration.Build(a, fuel, new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa));
             if (!result.Success)
             {
@@ -120,12 +122,12 @@ public class EngineTopologyTests
             Assert.True(double.IsFinite(t.Torque) && double.IsFinite(t.AirMassFlow) && double.IsFinite(t.ExhaustGasTemperature), what);
         }
 
-        var stock = TestContent.StockK20();
+        var stock = TestContent.Stock(engineId);
         foreach (var slot in stock.Definition.Slots)
         {
             foreach (var part in db.Parts.Values.Where(p => p.Category == slot.Category))
             {
-                var a = TestContent.StockK20();
+                var a = TestContent.Stock(engineId);
                 var removed = new Stack<(string, PartInstance)>();
                 foreach (var s in a.RemovalSequenceFor(slot.Id)) { Assert.True(a.Remove(s, out var p).Ok); removed.Push((s, p!)); }
                 if (a.Installed.ContainsKey(slot.Id)) Assert.True(a.Remove(slot.Id, out _).Ok);
@@ -134,11 +136,11 @@ public class EngineTopologyTests
                 Check(a, $"{part.Id} in {slot.Id}");
             }
             // And with the slot empty.
-            var without = TestContent.StockK20();
+            var without = TestContent.Stock(engineId);
             foreach (var s in without.RemovalSequenceFor(slot.Id).Append(slot.Id).Where(without.Installed.ContainsKey))
                 Assert.True(without.Remove(s, out _).Ok);
             Check(without, $"without {slot.Id}");
         }
-        Assert.True(built > 40 && refused > 20, $"built {built}, refused {refused}");
+        Assert.True(built > minBuilt && refused > 20, $"built {built}, refused {refused}");
     }
 }

@@ -27,11 +27,12 @@ public class SpecFuzzTests
     private static IEnumerable<(PartDefinition Part, string What)> Variants(PartDefinition part)
     {
         var props = part.Spec.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanWrite && (p.PropertyType == typeof(double) || p.PropertyType == typeof(int)));
+            .Where(p => p.CanWrite && (p.PropertyType == typeof(double) || p.PropertyType == typeof(int) || p.PropertyType == typeof(double?)));
         foreach (var prop in props)
             foreach (double f in Factors)
             {
                 var spec = Clone(part.Spec);
+                if (prop.GetValue(spec) is null) continue; // an optional field the part does not author
                 double v0 = Convert.ToDouble(prop.GetValue(spec));
                 double v = v0 == 0 ? f : v0 * f;
                 if (prop.PropertyType == typeof(int)) prop.SetValue(spec, (int)Math.Round(Math.Clamp(v, -1e6, 1e6)));
@@ -46,22 +47,23 @@ public class SpecFuzzTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void AnyEngineSpecTheValidatorAcceptsBuildsAndRunsOrIsRefused(bool turbo)
+    [InlineData(TestContent.K20, false)]
+    [InlineData(TestContent.K20, true)]
+    [InlineData(TestContent.M54, false)]
+    public void AnyEngineSpecTheValidatorAcceptsBuildsAndRunsOrIsRefused(string engineId, bool turbo)
     {
         var db = TestContent.Database;
         var fuel = db.GetFuel("gasoline_98");
-        var tune = turbo ? CarSim.Core.Ecu.EcuTune.FromDocument(db.GetTune("k20.turbo_base")) : SimFactory.StockTune();
+        var tune = turbo ? CarSim.Core.Ecu.EcuTune.FromDocument(db.GetTune("k20.turbo_base")) : SimFactory.StockTuneOf(engineId);
         var factory = new PartInstanceFactory(9_000_000);
-        var reference = turbo ? TurboTests.TurboBuild() : TestContent.StockK20();
+        var reference = turbo ? TurboTests.TurboBuild() : TestContent.Stock(engineId);
         int built = 0, refused = 0;
         foreach (var slot in reference.Definition.Slots)
         {
             if (reference.PartIn(slot.Id) is not { } original) continue;
             foreach (var (part, what) in Variants(original.Definition))
             {
-                var a = turbo ? TurboTests.TurboBuild() : TestContent.StockK20();
+                var a = turbo ? TurboTests.TurboBuild() : TestContent.Stock(engineId);
                 var removed = new Stack<(string, PartInstance)>();
                 foreach (var s in a.RemovalSequenceFor(slot.Id)) { Assert.True(a.Remove(s, out var p).Ok); removed.Push((s, p!)); }
                 Assert.True(a.Remove(slot.Id, out _).Ok);
