@@ -117,9 +117,21 @@ public sealed class TireSpec : PartSpec
     /// <summary>Friction work (sliding energy) the pair's tread absorbs before it is worn out.</summary>
     public double TreadLifeMj { get; init; } = 80;
 
-    /// <summary>Running (hot) pressure, and the pressure where this tyre grips best.</summary>
-    public double PressureKpa { get; init; } = 220;
+    /// <summary>Pressure set in the garage (cold, at 25 °C); it rises as the tyre heats up.</summary>
+    public double ColdPressureKpa { get; init; } = 175;
+
+    /// <summary>Hot running pressure at which this tyre grips best.</summary>
     public double OptimalPressureKpa { get; init; } = 220;
+
+    /// <summary>Tread temperature where the compound grips best, and the width of its window.</summary>
+    public double OptimalTemperatureC { get; init; } = 75;
+    public double TemperatureWindowC { get; init; } = 40;
+
+    /// <summary>Grip lost far outside the temperature window (cold or overheated).</summary>
+    public double TemperatureGripLoss { get; init; } = 0.10;
+
+    /// <summary>Heat capacity of one tyre's tread and carcass.</summary>
+    public double ThermalMassJPerK { get; init; } = 3500;
 
     [JsonIgnore] public double Radius => Units.MmToM(RimDiameterIn * 25.4 / 2.0 + WidthMm * AspectRatio / 100.0);
     [JsonIgnore] public double PeakSlipAngle => Units.DegToRad(PeakSlipAngleDeg);
@@ -136,8 +148,12 @@ public sealed class TireSpec : PartSpec
         check.Range("rolling_resistance", RollingResistance, 0.003, 0.05);
         check.Range("inertia_kg_m2", InertiaKgM2, 0.2, 5);
         check.Range("tread_life_mj", TreadLifeMj, 1, 10000);
-        check.Range("pressure_kpa", PressureKpa, 100, 400);
-        check.Range("optimal_pressure_kpa", OptimalPressureKpa, 100, 400);
+        check.Range("cold_pressure_kpa", ColdPressureKpa, 80, 400);
+        check.Range("optimal_pressure_kpa", OptimalPressureKpa, 100, 450);
+        check.Range("optimal_temperature_c", OptimalTemperatureC, 20, 150);
+        check.Range("temperature_window_c", TemperatureWindowC, 5, 100);
+        check.Range("temperature_grip_loss", TemperatureGripLoss, 0, 0.6);
+        check.Range("thermal_mass_j_per_k", ThermalMassJPerK, 500, 20000);
     }
 }
 

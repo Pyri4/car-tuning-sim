@@ -52,6 +52,7 @@ public partial class DriveScene : Node3D
         }
         var track = TrackLayout.TestFacility();
         _session = new DrivingSession(sim, track) { AutopilotEnabled = args.Contains("--autodrive") || _smoke };
+        _session.StartOnColdTyres(); // straight out of the garage: an out lap brings them up to temperature
         _keys.Update(0, false, false, 0, 0, sim.Config);
 
         BuildEnvironment();

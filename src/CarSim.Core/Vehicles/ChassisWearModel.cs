@@ -15,6 +15,9 @@ public sealed class ChassisLoads
     public double Clutch;
     public readonly double[] BrakeAxle = new double[2];
     public readonly double[] Tyre = new double[4];
+
+    /// <summary>Rolling-resistance work per tyre (J): hysteresis that heats the tyre.</summary>
+    public readonly double[] TyreRolling = new double[4];
     public double GearboxTorque;
     public double DifferentialTorque;
 
@@ -22,7 +25,7 @@ public sealed class ChassisLoads
     {
         Clutch = GearboxTorque = DifferentialTorque = 0;
         BrakeAxle[0] = BrakeAxle[1] = 0;
-        for (int w = 0; w < 4; w++) Tyre[w] = 0;
+        for (int w = 0; w < 4; w++) Tyre[w] = TyreRolling[w] = 0;
     }
 }
 
@@ -284,7 +287,7 @@ public sealed class ChassisWearModel
     /// </summary>
     public static double TyreWearFactor(TireSpec tyre, double staticCamberDeg)
     {
-        double dp = (tyre.PressureKpa - tyre.OptimalPressureKpa) / tyre.OptimalPressureKpa;
+        double dp = (TireModel.OperatingPressureKpa(tyre) - tyre.OptimalPressureKpa) / tyre.OptimalPressureKpa;
         return (1.0 + 3.0 * dp * dp) * (1.0 + 0.08 * Math.Max(0.0, Math.Abs(staticCamberDeg) - 1.0));
     }
 

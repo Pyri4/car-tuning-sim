@@ -9,7 +9,7 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 241 automated tests (simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves,
+- 246 automated tests (simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves,
   mods). CI runs them plus two headless Godot smoke tests (dyno pull; autopilot drive) on the official
   Godot 4.7.2 .NET build.
 - Content: 77 parts, 1 engine family, 1 vehicle, 5 fuels, 2 base tunes, 1 scenario; mods load as extra
@@ -69,26 +69,25 @@ tune the ECU → dyno pull → drive the test track → break something through 
       geometry gain, brake balance bar; ride height, damping, anti-roll bars and LSD preload through the
       same mechanism
 - [x] Setup tab with balance figures and a chassis bench (skidpad, threshold braking) that wears nothing
+- [x] Tyre temperature: sliding and flexing heat, airflow cooling, a grip window per compound, cold
+      pressure set in the garage rising with temperature, out laps on cold tyres, HUD temperatures
 
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
 ## Next recommended tasks
-1. **Tyre temperature.** A grip window per compound, overheating from sliding, cold tyres on the out
-   lap, pressure rising with temperature (so hot pressure becomes an outcome, not a setting); shows in
-   the HUD's tyre boxes.
-2. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
+1. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
    spring-rate swaps, aero parts; engine-side adjustments (cam gears, wastegate spring preload).
-3. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
+2. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
    boost) using `VehicleSimulation`.
-4. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
+3. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
    record lap telemetry (speed/throttle/brake vs distance) and compare laps.
-5. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
+4. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
    market with seeded random condition, reputation and money loop.
-6. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
+5. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
    skim), per-cylinder state for the key failure modes.
-7. **Audio.** Engine sound from rpm/load/boost (presentation only).
-8. **Exported builds.** Godot export templates in CI and downloadable artifacts.
+6. **Audio.** Engine sound from rpm/load/boost (presentation only).
+7. **Exported builds.** Godot export templates in CI and downloadable artifacts.
 
 ## Known issues
 - The vehicle model is planar: no vertical dynamics, bumps, kerb height, walls or collisions. Grass
@@ -102,8 +101,9 @@ tune the ECU → dyno pull → drive the test track → break something through 
   tyres it can still spin; it recovers after 2 s.
 - Engine state resets to warm each time you drive or run the dyno; dyno runs and failure reports are
   not saved.
-- Tyres have no temperature model: pressure is set directly as a running pressure; there is no toe.
-  Camber and pressure effects are calibrated to be plausible, not fitted to measured tyre data.
+- Tyres have one lumped temperature each (no surface/core split, no per-edge temperatures) and no
+  toe. Camber, pressure and temperature effects are calibrated to be plausible, not fitted to measured
+  tyre data.
 - Visuals are stand-ins (primitive car, flat circuit, no audio).
 - This environment builds Godot from source (release downloads were blocked); CI uses the official
   4.7.2 .NET binaries, and both agree.

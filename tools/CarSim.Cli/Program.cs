@@ -23,7 +23,7 @@ public static class Program
           carsim hold [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
                                                         Hold an operating point; print warnings, failure reports and inspection.
                                                         (--air-speed uses the radiator instead of test-cell coolant control.)
-          carsim drive [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--trace <s>] [build options]
+          carsim drive [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--cold 1] [--trace <s>] [build options]
                                                         Autopilot laps of the test facility in the engine's car: lap times,
                                                         clutch/brake temperatures, wear, warnings and failure reports.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
@@ -214,12 +214,13 @@ public static class Program
         var sim = new CarSim.Core.Vehicles.VehicleSimulation(car, engineSim);
         sim.StartIdling();
         var session = new CarSim.Gameplay.DrivingSession(sim, CarSim.Core.Vehicles.TrackLayout.TestFacility()) { AutopilotEnabled = true };
+        if (o.Named.GetValueOrDefault("cold") == "1") session.StartOnColdTyres();
         int laps = (int)Num(o, "laps", 3);
         Console.WriteLine($"{vehicle.Name}, {car.Mass:F0} kg — {laps} autopilot lap(s) after an out lap");
-        Console.WriteLine($"{"lap",4} {"time s",7} {"clutch°C",8} {"brakeF°C",8} {"brakeR°C",8} {"clutch%",7} {"pads%",6} {"tyreF%",6} {"tyreR%",6} {"gbxNm",6} {"diffNm",6}  warnings");
+        Console.WriteLine($"{"lap",4} {"time s",7} {"clutch°C",8} {"brakeF°C",8} {"brakeR°C",8} {"clutch%",7} {"pads%",6} {"tyreF%",6} {"tyreR%",6} {"gbxNm",6} {"diffNm",6} {"tyreF°C",7} {"tyreR°C",7} {"hot kPa",9}  warnings");
         var warnings = new SortedSet<string>();
         double trace = Num(o, "trace", 0), nextTrace = 0;
-        double maxClutch = 0, maxFront = 0, maxRear = 0, maxGearbox = 0, maxDiff = 0;
+        double maxClutch = 0, maxFront = 0, maxRear = 0, maxGearbox = 0, maxDiff = 0, tyreF = 0, tyreR = 0;
         string W(string slot) => $"{chassis.PartIn(slot)!.Wear * 100,6:F1}";
         while (session.Timer.Laps < laps && sim.State.Time < 200.0 * (laps + 1))
         {
@@ -230,6 +231,8 @@ public static class Program
             maxRear = Math.Max(maxRear, t.BrakeTemperatureRearC);
             maxGearbox = Math.Max(maxGearbox, sim.Wear.GearboxLoadNm);
             maxDiff = Math.Max(maxDiff, sim.Wear.DifferentialLoadNm);
+            tyreF = Math.Max(tyreF, Math.Max(t.TyreTemperatureC[0], t.TyreTemperatureC[1]));
+            tyreR = Math.Max(tyreR, Math.Max(t.TyreTemperatureC[2], t.TyreTemperatureC[3]));
             foreach (var w in sim.Engine.Damage.Warnings.Concat(sim.Wear.Warnings)) warnings.Add(w.Code);
             if (trace > 0 && sim.State.Time >= nextTrace)
             {
@@ -238,9 +241,9 @@ public static class Program
             }
             if (step.LapCompleted)
             {
-                Console.WriteLine($"{session.Timer.Laps,4} {session.Timer.LastLap,7:F2} {maxClutch,8:F0} {maxFront,8:F0} {maxRear,8:F0} {W("clutch"),7} {W("brakes")} {W("tires_front")} {W("tires_rear")} {maxGearbox,6:F0} {maxDiff,6:F0}  {string.Join(",", warnings)}");
+                Console.WriteLine($"{session.Timer.Laps,4} {session.Timer.LastLap,7:F2} {maxClutch,8:F0} {maxFront,8:F0} {maxRear,8:F0} {W("clutch"),7} {W("brakes")} {W("tires_front")} {W("tires_rear")} {maxGearbox,6:F0} {maxDiff,6:F0} {tyreF,7:F0} {tyreR,7:F0} {t.TyrePressureKpa[0],4:F0}/{t.TyrePressureKpa[2],4:F0}  {string.Join(",", warnings)}");
                 warnings.Clear();
-                maxClutch = maxFront = maxRear = maxGearbox = maxDiff = 0;
+                maxClutch = maxFront = maxRear = maxGearbox = maxDiff = tyreF = tyreR = 0;
             }
             foreach (var f in step.NewFailures) { Console.WriteLine(); Console.WriteLine(f.ToText()); }
             if (sim.Engine.Damage.Seized) break;

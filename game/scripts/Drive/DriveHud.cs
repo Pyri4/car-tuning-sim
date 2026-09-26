@@ -14,7 +14,8 @@ public partial class DriveHud : Control
     private Label _speed = null!, _gear = null!, _rpm = null!, _laps = null!, _gauges = null!, _status = null!, _help = null!;
     private ProgressBar _revBar = null!;
     private VBoxContainer _warnings = null!;
-    private readonly ColorRect[] _tyres = new ColorRect[4];
+    private readonly StyleBoxFlat[] _tyreBoxes = new StyleBoxFlat[4];
+    private readonly Label[] _tyreLabels = new Label[4];
     private PanelContainer _failurePanel = null!;
     private Label _failureText = null!;
     private double _redline;
@@ -45,14 +46,22 @@ public partial class DriveHud : Control
 
         // Top right: tyres.
         var tyreBox = Ui.VBox(4);
-        tyreBox.AddChild(Ui.Label("Tyres", 14, Ui.Muted));
+        tyreBox.AddChild(Ui.Label("Tyres  °C / kPa", 14, Ui.Muted));
         var grid = new GridContainer { Columns = 2 };
-        grid.AddThemeConstantOverride("h_separation", 22);
-        grid.AddThemeConstantOverride("v_separation", 30);
+        grid.AddThemeConstantOverride("h_separation", 14);
+        grid.AddThemeConstantOverride("v_separation", 18);
         for (int w = 0; w < 4; w++)
         {
-            _tyres[w] = new ColorRect { CustomMinimumSize = new Vector2(20, 34), Color = Ui.Good };
-            grid.AddChild(_tyres[w]);
+            // Box colour = how hard the tyre is working; text = tread temperature and hot pressure.
+            _tyreBoxes[w] = new StyleBoxFlat { BgColor = Ui.Good };
+            _tyreBoxes[w].SetCornerRadiusAll(3);
+            _tyreBoxes[w].SetContentMarginAll(4);
+            var panel = new PanelContainer { CustomMinimumSize = new Vector2(58, 44) };
+            panel.AddThemeStyleboxOverride("panel", _tyreBoxes[w]);
+            _tyreLabels[w] = Ui.Label("", 13, Colors.Black);
+            _tyreLabels[w].HorizontalAlignment = HorizontalAlignment.Center;
+            panel.AddChild(_tyreLabels[w]);
+            grid.AddChild(panel);
         }
         tyreBox.AddChild(grid);
         AddChild(Place(Panel(tyreBox), 1, 0, new Vector2(-16, 16), GrowDirection.Begin, GrowDirection.End));
@@ -162,7 +171,13 @@ public partial class DriveHud : Control
             double usage = t.TyreUsage[w];
             var c = usage < 0.8 ? Ui.Good : usage < 0.98 ? Ui.Caution : Ui.Danger;
             if (sim.WheelSurface[w] == Surface.Grass) c = c.Lerp(new Color(0.3f, 0.6f, 0.2f), 0.6f);
-            _tyres[w].Color = c;
+            var tyre = sim.Config.TireOf(w);
+            double temp = t.TyreTemperatureC[w];
+            // Cold tyres show blue, overheated ones deep red, whatever the load.
+            if (temp < tyre.OptimalTemperatureC - tyre.TemperatureWindowC * 0.6) c = c.Lerp(new Color(0.35f, 0.6f, 1f), 0.7f);
+            else if (temp > tyre.OptimalTemperatureC + tyre.TemperatureWindowC * 0.8) c = c.Lerp(new Color(0.7f, 0.1f, 0.1f), 0.7f);
+            _tyreBoxes[w].BgColor = c;
+            _tyreLabels[w].Text = $"{temp:F0}°\n{t.TyrePressureKpa[w]:F0}";
         }
 
         string status = session.AutopilotEnabled ? "AUTOPILOT" : "";

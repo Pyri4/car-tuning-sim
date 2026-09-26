@@ -136,8 +136,9 @@ public partial class SetupView : HSplitContainer
         Line("Centre of gravity height", $"{c.CgHeight * 1000:F0} mm");
         Line("Brake torque at the front", $"{front / (front + rear) * 100:F0} %", "Too much rear brake and the rears lock first: the car spins under braking.");
         Line("Static camber F / R", $"{c.Suspension.FrontCamberDeg:0.0}° / {c.Suspension.RearCamberDeg:0.0}°", "Some negative camber keeps the loaded outside tyre flat in corners; it costs a little braking and wears the inner edge.");
-        Line("Tyre pressure F / R", $"{c.TiresFront.PressureKpa:F0} / {c.TiresRear.PressureKpa:F0} kPa",
-            $"Best grip at {c.TiresFront.OptimalPressureKpa:F0} / {c.TiresRear.OptimalPressureKpa:F0} kPa. Softer: lazier and hotter; harder: nervous, smaller contact patch.");
+        Line("Tyre pressure F / R (cold → hot)",
+            $"{c.TiresFront.ColdPressureKpa:F0} / {c.TiresRear.ColdPressureKpa:F0} → {TireModel.OperatingPressureKpa(c.TiresFront):F0} / {TireModel.OperatingPressureKpa(c.TiresRear):F0} kPa",
+            $"Hot pressures at operating temperature ({c.TiresFront.OptimalTemperatureC:F0} / {c.TiresRear.OptimalTemperatureC:F0} °C); best grip at {c.TiresFront.OptimalPressureKpa:F0} / {c.TiresRear.OptimalPressureKpa:F0} kPa hot. Softer: lazier and hotter; harder: nervous, smaller contact patch.");
         if (c.Differential.Type == "clutch_lsd") Line("LSD preload", $"{c.Differential.PreloadNm:F0} N·m");
     }
 

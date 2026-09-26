@@ -28,18 +28,18 @@ public class SetupTests
     {
         var db = TestContent.Database;
         var def = db.GetPart("tires.street_225_50r16");
-        var adj = def.FindAdjustment("pressure_kpa")!;
-        Assert.Equal(220, adj.Default);
+        var adj = def.FindAdjustment("cold_pressure_kpa")!;
+        Assert.Equal(175, adj.Default);
         var a = new PartInstance("a", def);
         var b = new PartInstance("b", def);
-        Assert.True(a.Adjust("pressure_kpa", 187.4));
-        Assert.Equal(185, a.SettingOf("pressure_kpa"));
-        Assert.Equal(185, a.Spec<TireSpec>().PressureKpa);
-        Assert.Equal(220, b.Spec<TireSpec>().PressureKpa);
-        Assert.Equal(220, ((TireSpec)def.Spec).PressureKpa);
-        a.Adjust("pressure_kpa", 999);
-        Assert.Equal(adj.Max, a.SettingOf("pressure_kpa"));
-        a.Adjust("pressure_kpa", adj.Default);
+        Assert.True(a.Adjust("cold_pressure_kpa", 187.4));
+        Assert.Equal(185, a.SettingOf("cold_pressure_kpa"));
+        Assert.Equal(185, a.Spec<TireSpec>().ColdPressureKpa);
+        Assert.Equal(175, b.Spec<TireSpec>().ColdPressureKpa);
+        Assert.Equal(175, ((TireSpec)def.Spec).ColdPressureKpa);
+        a.Adjust("cold_pressure_kpa", 999);
+        Assert.Equal(adj.Max, a.SettingOf("cold_pressure_kpa"));
+        a.Adjust("cold_pressure_kpa", adj.Default);
         Assert.Empty(a.Settings);
         Assert.Same(def.Spec, a.EffectiveSpec);
         Assert.False(a.Adjust("width_mm", 255), "only declared fields are adjustable");
@@ -79,11 +79,11 @@ public class SetupTests
     {
         var g = Garage.NewGame(TestContent.Database, "project_car");
         Assert.True(g.Adjust("suspension", "front_camber_deg", -1.2).Ok);
-        Assert.True(g.Adjust("tires_rear", "pressure_kpa", 205).Ok);
+        Assert.True(g.Adjust("tires_rear", "cold_pressure_kpa", 160).Ok);
         Assert.False(g.Adjust("suspension", "rear_camber_deg", -2).Ok, "OEM rear camber is fixed");
         var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(g), TestContent.Database);
         Assert.Equal(-1.2, loaded.PartIn("suspension")!.Spec<SuspensionSpec>().FrontCamberDeg, 9);
-        Assert.Equal(205, loaded.PartIn("tires_rear")!.Spec<TireSpec>().PressureKpa);
+        Assert.Equal(160, loaded.PartIn("tires_rear")!.Spec<TireSpec>().ColdPressureKpa);
         Assert.Contains(loaded.Log, l => l.Contains("Front camber"));
     }
 
@@ -93,8 +93,8 @@ public class SetupTests
     public void TyresGripBestAtTheirOptimalPressure()
     {
         (string, string)[] none = Array.Empty<(string, string)>();
-        double G(double kpa) => Car.MaxLateralG(CarWith(none, ("tires_front", "pressure_kpa", kpa), ("tires_rear", "pressure_kpa", kpa)));
-        double optimal = G(220), soft = G(160), hard = G(290);
+        double G(double kpa) => Car.MaxLateralG(CarWith(none, ("tires_front", "cold_pressure_kpa", kpa), ("tires_rear", "cold_pressure_kpa", kpa)));
+        double optimal = G(175), soft = G(125), hard = G(240);
         Assert.True(optimal > soft + 0.01, $"optimal {optimal:F3} g, soft {soft:F3} g");
         Assert.True(optimal > hard + 0.01, $"optimal {optimal:F3} g, hard {hard:F3} g");
     }
@@ -103,9 +103,10 @@ public class SetupTests
     public void ASofterTyreNeedsMoreSlipAngleAndRollsHarder()
     {
         var tyre = (TireSpec)TestContent.Database.GetPart("tires.street_225_50r16").Spec;
-        var soft = (TireSpec)SpecAdjuster.With(tyre, new Dictionary<string, double> { ["pressure_kpa"] = 170 });
-        Assert.True(TireModel.PeakSlipAngle(soft) > TireModel.PeakSlipAngle(tyre));
-        Assert.True(TireModel.RollingResistance(soft) > TireModel.RollingResistance(tyre));
+        var soft = (TireSpec)SpecAdjuster.With(tyre, new Dictionary<string, double> { ["cold_pressure_kpa"] = 130 });
+        double pSoft = TireModel.OperatingPressureKpa(soft), pStock = TireModel.OperatingPressureKpa(tyre);
+        Assert.True(TireModel.PeakSlipAngle(soft, pSoft) > TireModel.PeakSlipAngle(tyre, pStock));
+        Assert.True(TireModel.RollingResistance(soft, pSoft) > TireModel.RollingResistance(tyre, pStock));
         Assert.True(ChassisWearModel.TyreWearFactor(soft, -0.5) > ChassisWearModel.TyreWearFactor(tyre, -0.5));
     }
 

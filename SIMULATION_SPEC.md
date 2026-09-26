@@ -265,8 +265,19 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
 - Slip: `κ = (ω·r − u_w)/max(|u_w|, 2 m/s)`, `α = atan2(v_w, max(|u_w|, 2 m/s))` (low-speed guard).
 - Rolling radius from the size (`rim/2 + width·aspect`).
 
+### Tyre temperature and pressure (`TyreThermalModel`, `TireModel`)
+- One lumped temperature per tyre (tread + carcass, `thermal_mass_j_per_k`):
+  `C·dT/dt = 0.7·P_sliding + P_rolling − (8 + 1.5·v)(T − T_amb)`, with `P_rolling = C_rr(p)·F_z·v` (so a
+  soft tyre flexes and heats more). Street tyres settle around 75 °C at the test driver's pace.
+- Pressure is set cold (at 25 °C) and follows the ideal gas law: `p_abs = p_cold,abs · T / 298.15 K`.
+  Cold 175 kPa → ≈ 221 kPa at 75 °C.
+- Grip × `1 − loss·(1 − exp(−((T − T_opt)/window)²))`: street (75 °C, ±40, 10 %), sport (80 °C, ±30,
+  15 %), semi-slick (90 °C, ±22, 25 %) — cold semi-slicks are poor until warm; overheated tyres fade.
+- The authored friction is the tyre at its optimum temperature and pressure; simulations start with
+  warm tyres, a drive from the garage starts at ambient (an out lap).
+
 ### Inflation and camber (`TireModel`, set-up)
-- Pressure error `e = (p − p_opt)/p_opt`: grip × `(1 − 0.8e²)`; peak slip angle × `(p_opt/p)^0.5` and
+- Pressure error `e = (p − p_opt)/p_opt` (hot pressure): grip × `(1 − 0.8e²)`; peak slip angle × `(p_opt/p)^0.5` and
   peak slip ratio × `(p_opt/p)^0.3` (a soft carcass needs more slip: lazier response); rolling resistance
   × `(p_opt/p)^0.6`; tread wear × `(1 + 3e²)`.
 - Camber relative to the road for each wheel = static camber − side × roll × (1 − camber gain), roll =

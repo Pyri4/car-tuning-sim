@@ -64,6 +64,9 @@ public sealed class DrivingSession
     /// <summary>All four wheels on the grass.</summary>
     public bool OffTrack => Sim.WheelSurface.All(s => s == Surface.Grass);
 
+    /// <summary>Tyres straight out of the garage: at ambient temperature and cold pressure (an out lap to warm them).</summary>
+    public void StartOnColdTyres() => Sim.Tyres.SetAll(TyreThermalModel.AmbientK);
+
     /// <summary>Queue a gear change; it is applied as soon as no shift is in progress.</summary>
     public void RequestShift(int direction) => _queuedShift = Math.Sign(direction);
 

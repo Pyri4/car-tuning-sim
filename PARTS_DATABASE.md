@@ -192,7 +192,9 @@ Requires `boost.source`.
 - `tires` (a pair, one axle): `width_mm`, `aspect_ratio`, `rim_diameter_in`, `peak_friction`,
   `load_sensitivity`, `peak_slip_ratio`, `peak_slip_angle_deg`, `rolling_resistance`, `inertia_kg_m2`
   (per wheel), `compound`, `tread_life_mj` (sliding energy the pair absorbs before it is worn out;
-  softer compounds wear faster), `pressure_kpa` (running pressure), `optimal_pressure_kpa`.
+  softer compounds wear faster), `cold_pressure_kpa` (set in the garage; rises with temperature),
+  `optimal_pressure_kpa` (hot), `optimal_temperature_c`, `temperature_window_c`,
+  `temperature_grip_loss` (grip lost far outside the window), `thermal_mass_j_per_k` (per tyre).
 - `suspension`: `front_spring_n_mm`, `rear_spring_n_mm` (wheel rates), `front_damper_ns_m`,
   `rear_damper_ns_m` (per wheel), `front_arb_nm_deg`, `rear_arb_nm_deg`, `ride_height_offset_mm`,
   `front_camber_deg`, `rear_camber_deg` (static; negative = top in), `front_camber_gain`,

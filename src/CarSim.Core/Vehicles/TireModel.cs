@@ -1,3 +1,4 @@
+using CarSim.Core.Common;
 using CarSim.Core.Parts.Specs;
 
 namespace CarSim.Core.Vehicles;
@@ -25,7 +26,13 @@ public static class TireModel
     /// <summary>Normalised force for normalised slip s ≥ 0 (1 at s = 1).</summary>
     public static double Shape(double s) => Math.Sin(ShapeC * Math.Atan(ShapeB * s));
 
-    // ---- Inflation pressure -------------------------------------------------------------------
+    // ---- Inflation pressure and temperature --------------------------------------------------
+
+    /// <summary>Temperature at which the cold pressure is set (the garage), K.</summary>
+    public const double ColdReferenceK = 298.15;
+
+    /// <summary>Atmospheric pressure, kPa (gauge ↔ absolute).</summary>
+    public const double AtmosphereKpa = 101.325;
 
     /// <summary>Grip lost per unit of squared relative pressure error ((p − p_opt)/p_opt)².</summary>
     public const double PressureGripLoss = 0.8;
@@ -36,17 +43,36 @@ public static class TireModel
     /// <summary>Exponent of (p_opt/p) on rolling resistance.</summary>
     public const double PressureRollingExponent = 0.6;
 
-    private static double PressureError(TireSpec t) => (t.PressureKpa - t.OptimalPressureKpa) / t.OptimalPressureKpa;
+    /// <summary>Gauge pressure of the tyre at tread temperature <paramref name="temperatureK"/> (ideal gas, fixed volume).</summary>
+    public static double HotPressureKpa(TireSpec t, double temperatureK) =>
+        (t.ColdPressureKpa + AtmosphereKpa) * temperatureK / ColdReferenceK - AtmosphereKpa;
+
+    /// <summary>Pressure at the compound's optimal temperature: what the cold setting becomes on track.</summary>
+    public static double OperatingPressureKpa(TireSpec t) => HotPressureKpa(t, Units.CToK(t.OptimalTemperatureC));
 
     /// <summary>Grip multiplier from inflation: 1 at the optimal pressure, lower either side.</summary>
-    public static double PressureGripFactor(TireSpec t) => Math.Max(0.5, 1.0 - PressureGripLoss * PressureError(t) * PressureError(t));
+    public static double PressureGripFactor(TireSpec t, double pressureKpa)
+    {
+        double e = (pressureKpa - t.OptimalPressureKpa) / t.OptimalPressureKpa;
+        return Math.Max(0.5, 1.0 - PressureGripLoss * e * e);
+    }
 
-    /// <summary>Peak slip angle (rad) at the fitted pressure.</summary>
-    public static double PeakSlipAngle(TireSpec t) => t.PeakSlipAngle * Math.Pow(t.OptimalPressureKpa / t.PressureKpa, PressureSlipAngleExponent);
+    /// <summary>Grip multiplier from tread temperature: 1 in the middle of the compound's window.</summary>
+    public static double ThermalGripFactor(TireSpec t, double temperatureK)
+    {
+        double x = (Units.KToC(temperatureK) - t.OptimalTemperatureC) / t.TemperatureWindowC;
+        return 1.0 - t.TemperatureGripLoss * (1.0 - Math.Exp(-x * x));
+    }
 
-    public static double PeakSlipRatio(TireSpec t) => t.PeakSlipRatio * Math.Pow(t.OptimalPressureKpa / t.PressureKpa, PressureSlipRatioExponent);
+    /// <summary>Peak slip angle (rad) at <paramref name="pressureKpa"/>.</summary>
+    public static double PeakSlipAngle(TireSpec t, double pressureKpa) =>
+        t.PeakSlipAngle * Math.Pow(t.OptimalPressureKpa / Math.Max(20, pressureKpa), PressureSlipAngleExponent);
 
-    public static double RollingResistance(TireSpec t) => t.RollingResistance * Math.Pow(t.OptimalPressureKpa / t.PressureKpa, PressureRollingExponent);
+    public static double PeakSlipRatio(TireSpec t, double pressureKpa) =>
+        t.PeakSlipRatio * Math.Pow(t.OptimalPressureKpa / Math.Max(20, pressureKpa), PressureSlipRatioExponent);
+
+    public static double RollingResistance(TireSpec t, double pressureKpa) =>
+        t.RollingResistance * Math.Pow(t.OptimalPressureKpa / Math.Max(20, pressureKpa), PressureRollingExponent);
 
     // ---- Camber -------------------------------------------------------------------------------
 
@@ -82,28 +108,33 @@ public static class TireModel
     public static double CamberLongitudinalFactor(double camberDeg) =>
         (1.0 - CamberLongitudinalLossPerDeg * Math.Abs(camberDeg)) / (1.0 - CamberLongitudinalLossPerDeg * 0.5);
 
-    /// <summary>Peak friction coefficient at vertical load <paramref name="fz"/> (and the fitted pressure).</summary>
-    public static double Friction(TireSpec t, double fz)
+    /// <summary>Peak friction coefficient at vertical load <paramref name="fz"/> (at the tyre's operating pressure and temperature).</summary>
+    public static double Friction(TireSpec t, double fz) => Friction(t, fz, TyreState.Operating(t));
+
+    /// <summary>Peak friction coefficient at vertical load <paramref name="fz"/> in a given pressure/temperature state.</summary>
+    public static double Friction(TireSpec t, double fz, TyreState state)
     {
         double ratio = Math.Max(0.05, fz / ReferenceLoad);
         double mu = t.PeakFriction * (1.0 - t.LoadSensitivity * Math.Log2(ratio));
-        return Math.Clamp(mu, 0.3 * t.PeakFriction, 1.3 * t.PeakFriction) * PressureGripFactor(t);
+        return Math.Clamp(mu, 0.3 * t.PeakFriction, 1.3 * t.PeakFriction) * PressureGripFactor(t, state.PressureKpa) * ThermalGripFactor(t, state.TemperatureK);
     }
 
     /// <summary>
     /// Tyre forces in the wheel frame. Positive slip ratio (wheel faster than the ground) pushes
     /// forward; positive slip angle (wheel moving to its left) produces a force to the right.
     /// <paramref name="leanLeftDeg"/> is the tyre's camber relative to the road, as a lean of its top
-    /// towards the wheel's left (0 = upright).
+    /// towards the wheel's left (0 = upright). <paramref name="state"/> is its pressure and tread
+    /// temperature (default: warmed up to the compound's optimum).
     /// </summary>
-    public static (double Fx, double Fy) Forces(TireSpec t, double fz, double slipRatio, double slipAngle, double leanLeftDeg = 0.0)
+    public static (double Fx, double Fy) Forces(TireSpec t, double fz, double slipRatio, double slipAngle, double leanLeftDeg = 0.0, TyreState? state = null)
     {
         if (fz <= 0) return (0.0, 0.0);
-        double sx = slipRatio / PeakSlipRatio(t);
-        double sy = Math.Tan(Math.Clamp(slipAngle, -1.5, 1.5)) / Math.Tan(PeakSlipAngle(t));
+        var st = state ?? TyreState.Operating(t);
+        double sx = slipRatio / PeakSlipRatio(t, st.PressureKpa);
+        double sy = Math.Tan(Math.Clamp(slipAngle, -1.5, 1.5)) / Math.Tan(PeakSlipAngle(t, st.PressureKpa));
         double s = Math.Sqrt(sx * sx + sy * sy);
         if (s < 1e-12) return (0.0, 0.0);
-        double f = Friction(t, fz) * fz * Shape(s);
+        double f = Friction(t, fz, st) * fz * Shape(s);
         double fx = f * sx / s, fy = -f * sy / s;
         if (leanLeftDeg != 0.0 || fy != 0.0)
         {
@@ -114,4 +145,17 @@ public static class TireModel
         }
         return (fx, fy);
     }
+}
+
+/// <summary>A tyre's running state: gauge pressure (kPa) and tread temperature (K).</summary>
+public readonly record struct TyreState(double PressureKpa, double TemperatureK)
+{
+    /// <summary>Warmed up to the compound's optimal temperature, at the pressure the cold setting gives there.</summary>
+    public static TyreState Operating(TireSpec t)
+    {
+        double k = Units.CToK(t.OptimalTemperatureC);
+        return new TyreState(TireModel.HotPressureKpa(t, k), k);
+    }
+
+    public static TyreState At(TireSpec t, double temperatureK) => new(TireModel.HotPressureKpa(t, temperatureK), temperatureK);
 }

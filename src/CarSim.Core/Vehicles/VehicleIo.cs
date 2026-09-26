@@ -67,6 +67,8 @@ public sealed class VehicleTelemetry
     public double[] SlipAngle = new double[4];
     public double[] WheelSpeed = new double[4];
     public double[] TyreUsage = new double[4];
+    public double[] TyreTemperatureC = new double[4];
+    public double[] TyrePressureKpa = new double[4];
     public double ClutchTemperatureC;
     public double ClutchCapacityNm;
     public double BrakeTemperatureFrontC, BrakeTemperatureRearC;

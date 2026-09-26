@@ -173,8 +173,8 @@ public class GarageTests
         Assert.Equal(tyreWear, g.PartIn("tires_rear")!.Wear);
         Assert.Empty(g.FailedParts);
 
-        Assert.True(g.Adjust("tires_front", "pressure_kpa", 150).Ok);
-        Assert.True(g.Adjust("tires_rear", "pressure_kpa", 150).Ok);
+        Assert.True(g.Adjust("tires_front", "cold_pressure_kpa", 120).Ok);
+        Assert.True(g.Adjust("tires_rear", "cold_pressure_kpa", 120).Ok);
         var soft = ChassisBench.Run(g);
         Assert.True(soft.SkidpadG < stock.SkidpadG);
 

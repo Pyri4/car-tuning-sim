@@ -45,6 +45,7 @@ public sealed class VehicleSimulation
         _wheelY[Wheel.FL] = c.TrackFront / 2; _wheelY[Wheel.FR] = -c.TrackFront / 2;
         _wheelY[Wheel.RL] = c.TrackRear / 2; _wheelY[Wheel.RR] = -c.TrackRear / 2;
         Wear = new ChassisWearModel(config);
+        Tyres = new TyreThermalModel(config);
     }
 
     public VehicleConfiguration Config { get; }
@@ -52,6 +53,11 @@ public sealed class VehicleSimulation
 
     /// <summary>Heat and wear of the clutch, brakes and tyres (and their failures).</summary>
     public ChassisWearModel Wear { get; }
+
+    /// <summary>Tyre tread temperatures and the pressures and grip that follow from them.</summary>
+    public TyreThermalModel Tyres { get; }
+
+    private readonly TyreState[] _tyreState = new TyreState[4];
 
     private readonly ChassisLoads _energy = new();
 
@@ -115,6 +121,7 @@ public sealed class VehicleSimulation
         double brakeFront = c.Brakes.FrontMaxTorqueNm * Wear.BrakeFactor(0);
         double brakeRear = c.Brakes.RearMaxTorqueNm * c.Brakes.RearPressureFactor * Wear.BrakeFactor(1);
         double rollStiffness = c.RollStiffnessFront + c.RollStiffnessRear;
+        for (int w = 0; w < 4; w++) _tyreState[w] = Tyres.StateOf(w);
         _energy.Clear();
         double lastGearboxOmega = 0;
 
@@ -136,7 +143,7 @@ public sealed class VehicleSimulation
                 double denom = Math.Max(Math.Abs(ul), LowSpeedSlipReference);
                 _slipRatio[w] = (s.WheelOmega[w] * tire.Radius - ul) / denom;
                 _slipAngle[w] = Math.Atan2(vl, denom);
-                var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w], WheelLeanLeftDeg(w, rollDeg));
+                var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w], WheelLeanLeftDeg(w, rollDeg), _tyreState[w]);
                 double grip = _surfaceGrip[w] * Wear.GripFactor(w);
                 fx *= grip;
                 fy *= grip;
@@ -184,7 +191,7 @@ public sealed class VehicleSimulation
                 double footBrake = input.Brake * (w < 2 ? brakeFront : brakeRear);
                 double brakeTorque = footBrake
                                      + (w >= 2 ? input.Handbrake * HandbrakeTorqueNm : 0.0)
-                                     + _fz[w] * TireModel.RollingResistance(tire) * tire.Radius;
+                                     + _fz[w] * TireModel.RollingResistance(tire, _tyreState[w].PressureKpa) * tire.Radius;
                 double net = _driveTorque[w] - _fx[w] * tire.Radius;
                 double omega = s.WheelOmega[w];
                 double predicted = omega + net / inertia * h;
@@ -229,6 +236,9 @@ public sealed class VehicleSimulation
             }
         }
         s.Time += dt;
+        for (int w = 0; w < 4; w++)
+            _energy.TyreRolling[w] = _fz[w] * TireModel.RollingResistance(c.TireOf(w), _tyreState[w].PressureKpa) * Math.Abs(s.WheelOmega[w] * c.TireOf(w).Radius) * dt;
+        Tyres.Update(dt, _energy.Tyre, _energy.TyreRolling, speed);
         if (_syncingAfterShift && (ratio == 0.0 || (s.Clutch > 0.99 && Math.Abs(s.EngineOmega - lastGearboxOmega) < Units.RpmToRadPerSec(50))))
             _syncingAfterShift = false;
         bool clutchCommanded = s.Clutch >= 0.999 && s.ShiftTimer <= 0 && s.Gear != 0;
@@ -388,7 +398,9 @@ public sealed class VehicleSimulation
             t.SlipRatio[w] = _slipRatio[w];
             t.SlipAngle[w] = _slipAngle[w];
             t.WheelSpeed[w] = s.WheelOmega[w] * Config.TireOf(w).Radius;
-            double available = TireModel.Friction(Config.TireOf(w), _fz[w]) * _fz[w] * _surfaceGrip[w];
+            double available = TireModel.Friction(Config.TireOf(w), _fz[w], _tyreState[w]) * _fz[w] * _surfaceGrip[w];
+            t.TyreTemperatureC[w] = Units.KToC(Tyres.TemperatureK[w]);
+            t.TyrePressureKpa[w] = _tyreState[w].PressureKpa;
             t.TyreUsage[w] = available > 0 ? Math.Sqrt(_fx[w] * _fx[w] + _fy[w] * _fy[w]) / available : 0.0;
         }
         return t;
