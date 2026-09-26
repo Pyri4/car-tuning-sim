@@ -35,12 +35,31 @@ Godot 4.7 (.NET) for presentation; the mechanical simulation is a pure C# (.NET 
 engine dependency. See ARCHITECTURE.md for the decision record.
 
 ## Building and testing
-Requirements: .NET SDK 8.0.
+Requirements: .NET SDK 8.0 (and Godot 4.7.2 .NET to run the game).
 
 ```
-dotnet build CarTuningSim.sln
-dotnet test CarTuningSim.sln
+dotnet build CarTuningSim.sln      # core, gameplay, tests, CLI and the Godot C# project
+dotnet test CarTuningSim.sln       # simulation, content, damage, dyno and gameplay tests
 ```
+
+## Running
+Game (Godot 4.7.2 .NET): open `game/project.godot` in the editor and press Play, or
+
+```
+godot --path game
+```
+
+Command-line tools (no Godot needed):
+
+```
+dotnet run --project tools/CarSim.Cli -- validate                      # check all content
+dotnet run --project tools/CarSim.Cli -- inspect                       # stock engine build, geometry, compatibility
+dotnet run --project tools/CarSim.Cli -- sweep --swap exhaust=exhaust.race_76mm
+dotnet run --project tools/CarSim.Cli -- hold --rpm 6500 --sump-g 1.3  # abuse test: warnings, failure report, inspection
+```
+
+Development aids for the game (arguments after `--`): `--tab=dyno`, `--autorun`, `--select=pistons`,
+`--screenshot=out.png --frames=30`, `--smoke-test` (headless CI check).
 
 ## Current status
 Early implementation. See ROADMAP.md for what exists and what is next.

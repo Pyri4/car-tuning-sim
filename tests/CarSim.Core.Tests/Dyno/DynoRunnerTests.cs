@@ -1,4 +1,5 @@
 using CarSim.Core.Dyno;
+using CarSim.Core.Simulation;
 using CarSim.Core.Tests.Simulation;
 
 namespace CarSim.Core.Tests.Dyno;
@@ -39,9 +40,30 @@ public class DynoRunnerTests
     }
 
     [Fact]
+    public void PullEndsAtTheRevLimiter()
+    {
+        var run = new DynoRunner(SimFactory.Create(), new DynoSettings { StartRpm = 6000, EndRpm = 9800 }).RunToCompletion();
+        Assert.True(run.Completed);
+        Assert.Contains("rev limiter", run.Note);
+        Assert.InRange(run.Samples[^1].Rpm, 7400, 7600);
+        Assert.Empty(run.Failures);
+    }
+
+    /// <summary>Standalone ECU (no 8,200 rpm hardware cap) with the limiter set to 9,000 rpm.</summary>
+    private static EngineSimulation HighLimit()
+    {
+        var tune = SimFactory.StockTune();
+        tune.RevLimitRpm = 9000;
+        return SimFactory.Create(SimFactory.Assembly(("flywheel", "k20.flywheel.light"), ("ecu", "ecu.standalone")), tune: tune);
+    }
+
+    [Fact]
     public void RunAbortsWhenTheEngineFails()
     {
-        var run = new DynoRunner(SimFactory.Create(), new DynoSettings { StartRpm = 7000, EndRpm = 9800, RampRpmPerSecond = 800 }).RunToCompletion();
+        // Worn springs float early; with the limiter raised the engine revs itself into its valves.
+        var sim = HighLimit();
+        sim.Config.Part("valve_springs").Wear = 1.0;
+        var run = new DynoRunner(sim, new DynoSettings { StartRpm = 7000, EndRpm = 9800, RampRpmPerSecond = 300 }).RunToCompletion();
         Assert.False(run.Completed);
         Assert.NotEmpty(run.Failures);
         Assert.Contains("rpm", run.AbortReason);
@@ -52,8 +74,9 @@ public class DynoRunnerTests
     [Fact]
     public void SeizedEngineCannotBeTested()
     {
-        var sim = SimFactory.Create();
-        new DynoRunner(sim, new DynoSettings { StartRpm = 7000, EndRpm = 9800, RampRpmPerSecond = 800 }).RunToCompletion();
+        var sim = HighLimit();
+        sim.Config.Part("valve_springs").Wear = 1.0;
+        new DynoRunner(sim, new DynoSettings { StartRpm = 7000, EndRpm = 9800, RampRpmPerSecond = 300 }).RunToCompletion();
         var second = new DynoRunner(sim, new DynoSettings()).RunToCompletion();
         Assert.False(second.Completed);
         Assert.Contains("seized", second.AbortReason);

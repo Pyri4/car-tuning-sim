@@ -67,6 +67,9 @@ public sealed class DynoRunner
     public IReadOnlyList<EngineTelemetry> Samples => _samples;
     public EngineTelemetry? Current { get; private set; }
     public string AbortReason { get; private set; } = "";
+
+    /// <summary>Why a completed run ended early (e.g. the rev limiter), empty if it reached the end speed.</summary>
+    public string Note { get; private set; } = "";
     public double SimulatedSeconds { get; private set; }
 
     public bool IsDone => Phase is DynoPhase.Finished or DynoPhase.Aborted;
@@ -133,6 +136,13 @@ public sealed class DynoRunner
                     if (_phaseTime >= s.PreSettleSeconds) { Phase = DynoPhase.Pulling; _phaseTime = 0; _sinceSample = s.SampleIntervalSeconds; }
                     return;
                 }
+                if (t.RevLimiterActive)
+                {
+                    // An absorption dyno can only load the engine: the pull ends where the engine stops accelerating.
+                    Note = $"Reached the rev limiter at {t.Rpm:F0} rpm.";
+                    Phase = DynoPhase.Finished;
+                    return;
+                }
                 _sinceSample += dt;
                 if (_sinceSample >= s.SampleIntervalSeconds - 1e-9)
                 {
@@ -146,6 +156,12 @@ public sealed class DynoRunner
             case DynoMode.SteadyState:
                 if (Phase == DynoPhase.Stabilising) Phase = DynoPhase.Pulling;
                 _stepLast = t;
+                if (t.RevLimiterActive)
+                {
+                    Note = $"Reached the rev limiter at {t.Rpm:F0} rpm.";
+                    Phase = DynoPhase.Finished;
+                    return;
+                }
                 if (_phaseTime >= s.SettleSeconds)
                 {
                     _samples.Add(_stepLast);
@@ -174,7 +190,8 @@ public sealed class DynoRunner
         Sim.Ecu.Tune.Name,
         Sim.Config.Fuel.Name,
         Phase == DynoPhase.Finished,
-        AbortReason);
+        AbortReason,
+        Note);
 }
 
 /// <summary>A finished (or aborted) dyno test.</summary>
@@ -187,7 +204,8 @@ public sealed record DynoRun(
     string TuneName,
     string FuelName,
     bool Completed,
-    string AbortReason)
+    string AbortReason,
+    string Note = "")
 {
     public EngineTelemetry? PeakPower => Samples.Where(s => s.Firing).MaxBy(s => s.Power);
     public EngineTelemetry? PeakTorque => Samples.Where(s => s.Firing).MaxBy(s => s.Torque);

@@ -146,3 +146,23 @@ public class ContentLoaderTests
         Assert.Contains(r.Errors, e => e.ItemId == "f" && e.Message.Contains("octane"));
     }
 }
+
+public class SpecDescriberTests
+{
+    [Fact]
+    public void DescribesAuthoredFieldsWithUnits()
+    {
+        var rows = CarSim.Core.Parts.SpecDescriber.Describe(TestContent.Database.GetPart("k20.pistons.oem").Spec);
+        Assert.Contains(rows, r => r.Label == "Bore" && r.Value == "86 mm");
+        Assert.Contains(rows, r => r.Label == "Max crown temperature" && r.Value == "300°C");
+        Assert.Contains(rows, r => r.Label == "Dish volume" && r.Value == "-2 cc");
+        Assert.DoesNotContain(rows, r => r.Label.Contains("Mass each") && r.Value.Contains("kg"));
+    }
+
+    [Fact]
+    public void EveryPartCanBeDescribed()
+    {
+        foreach (var p in TestContent.Database.Parts.Values)
+            Assert.NotEmpty(CarSim.Core.Parts.SpecDescriber.Describe(p.Spec));
+    }
+}

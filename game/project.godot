@@ -1,0 +1,27 @@
+; Engine configuration file.
+; Car Tuning Simulator — Godot 4.7 (.NET)
+
+config_version=5
+
+[application]
+
+config/name="Car Tuning Simulator"
+config/description="Mechanically deep car building and tuning prototype."
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/stretch/mode="disabled"
+
+[dotnet]
+
+project/assembly_name="CarTuningSim"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

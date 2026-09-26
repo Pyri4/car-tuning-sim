@@ -120,6 +120,14 @@ through a thin adapter in `game/`. *(planned)*
 Godot scenes and C# scripts that display core state and send player intent to the core. Scripts
 must not contain mechanical formulas; if a UI needs a number, the core exposes it.
 
+The prototype UI is built in C# code (`game/scripts/UI/`) rather than in large `.tscn` files: views
+are reviewable in diffs and the scene file stays trivial (`scenes/Main.tscn`). `GameState` (plain C#)
+holds the session (content, garage, dyno runs, failure reports) and raises `Changed`; views rebuild
+from it. Tabs: Garage (car, fuel, shelf, save/load, log), Engine (component tree, inspection, specs,
+removal order, shelf/shop), Tuning (ECU limits, calibration, tables), Dyno (sweep/steady runs, live
+telemetry, warnings, graphs, comparisons, failure reports), Reports (failure history, inspection).
+The Godot project uses the Compatibility (OpenGL) renderer — the UI does not need Forward+.
+
 ### Tools
 - `tools/CarSim.Cli` – validate content, inspect assemblies, run a dyno sweep and print/CSV-export
   results. Used for development and as a regression harness.
@@ -178,8 +186,10 @@ reports all missing content at once (e.g. a removed mod).
 - **Content tests** load every file under `content/` and validate references, ranges and that the
   stock engine assembles and runs.
 - **CLI** runs a full dyno sweep as a smoke test.
-- **Godot**: the game project is compiled with `dotnet build` (Godot.NET.Sdk from NuGet) in CI; a
-  headless Godot run of a smoke-test scene is used where a Godot binary is available.
+- **Godot**: the game project is part of the solution, so every `dotnet build` compiles it
+  (Godot.NET.Sdk from NuGet). CI also downloads Godot 4.7.2 .NET and runs
+  `godot --headless --path game -- --smoke-test`, which loads content, builds the garage and runs a
+  dyno pull through the game layer. Screenshots for visual review: `-- --screenshot=file.png`.
 
 ---
 
