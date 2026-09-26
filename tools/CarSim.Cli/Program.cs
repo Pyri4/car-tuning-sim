@@ -19,6 +19,10 @@ public static class Program
                                                         Show the stock build, derived geometry and compatibility report.
           carsim sweep [<engine-id>] [--swap slot=part,...] [--fuel <id>] [--tune <id>] [--from 1000] [--to 8000] [--step 500]
                                                         Steady-state full-throttle dyno sweep of the stock build (with swaps).
+          carsim hold [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
+                                                        Hold an operating point; print warnings, failure reports and inspection.
+                                                        (--air-speed uses the radiator instead of test-cell coolant control.)
+        Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
         """;
 
     public static int Main(string[] args)
@@ -36,6 +40,7 @@ public static class Program
                 "validate" => Validate(options),
                 "inspect" => Inspect(options),
                 "sweep" => Sweep(options),
+                "hold" => Hold(options),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -67,7 +72,10 @@ public static class Program
         return 2;
     }
 
-    private static int Sweep(CliOptions o)
+    private sealed record Built(EngineSimulation Sim, EcuTune Tune);
+
+    /// <summary>Builds the stock engine with --swap/--add parts, --fuel and --tune applied.</summary>
+    private static Built BuildEngine(CliOptions o)
     {
         var db = ContentLoader.LoadDirectory(o.ContentDir).GetOrThrow();
         var engine = db.GetEngine(o.Positional.FirstOrDefault() ?? db.Engines.Keys.First());
@@ -96,7 +104,52 @@ public static class Program
         var tune = EcuTune.FromDocument(db.GetTune(o.Named.GetValueOrDefault("tune", engine.StockTune)));
         var config = EngineConfiguration.Build(assembly, fuel, new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa));
         foreach (var issue in config.Report.Issues.Where(i => i.Severity != IssueSeverity.Info)) Console.WriteLine(issue);
-        var sim = new EngineSimulation(config.GetOrThrow(), tune, EngineState.Warm());
+        return new Built(new EngineSimulation(config.GetOrThrow(), tune, EngineState.Warm()), tune);
+    }
+
+    private static double Num(CliOptions o, string key, double fallback) =>
+        o.Named.TryGetValue(key, out var v) ? double.Parse(v, System.Globalization.CultureInfo.InvariantCulture) : fallback;
+
+    private static int Hold(CliOptions o)
+    {
+        var (sim, _) = BuildEngine(o);
+        double rpm = Num(o, "rpm", 6000), seconds = Num(o, "seconds", 30), throttle = Num(o, "throttle", 1.0);
+        var input = new EngineInputs
+        {
+            Throttle = throttle, SpeedMode = SpeedMode.Held, HeldRpm = rpm, SumpAccelerationG = Num(o, "sump-g", 0),
+            CoolingAirSpeed = Num(o, "air-speed", 10),
+            CoolantTemperatureOverride = o.Named.ContainsKey("air-speed") ? null : 363.15,
+        };
+        const double dt = 0.005;
+        int perSecond = (int)(1 / dt);
+        Console.WriteLine($"Holding {rpm:F0} rpm at {throttle:P0} throttle for up to {seconds:F0} s ...");
+        for (int i = 0; i < seconds * perSecond; i++)
+        {
+            var t = sim.Step(dt, input);
+            if (i % perSecond == perSecond - 1 || sim.Damage.Failures.Count > 0)
+            {
+                Console.WriteLine($"t={t.Time,5:F1}s {t.Torque,6:F1} N·m {t.PowerHp,6:F1} hp λ {t.Lambda:F2} knock {t.KnockIntensity:F1}° PCP {t.PeakCylinderPressureBar:F0} bar coolant {t.CoolantC:F0} °C oil {t.OilC:F0} °C {t.OilPressureBar:F2} bar");
+                foreach (var w in sim.Damage.Warnings) Console.WriteLine($"   [{w.Level}] {w.Message}");
+            }
+            if (sim.Damage.Failures.Count > 0) break;
+        }
+        foreach (var f in sim.Damage.Failures) { Console.WriteLine(); Console.WriteLine(f.ToText()); }
+        Console.WriteLine("Inspection:");
+        foreach (var slot in sim.Config.Assembly.Definition.Slots)
+        {
+            var part = sim.Config.Assembly.PartIn(slot.Id);
+            if (part == null) continue;
+            var findings = CarSim.Core.Damage.PartInspector.Inspect(part);
+            if (findings.All(x => x.Severity == CarSim.Core.Damage.FindingSeverity.Good)) continue;
+            Console.WriteLine($"  {slot.Label}: {string.Join(" ", findings.Select(x => x.Text))}");
+        }
+        Console.WriteLine($"Compression test: {CarSim.Core.Damage.EngineDiagnostics.CompressionTestBar(sim.Config.Assembly):F1} bar");
+        return sim.Damage.Failures.Count > 0 ? 3 : 0;
+    }
+
+    private static int Sweep(CliOptions o)
+    {
+        var (sim, _) = BuildEngine(o);
         double from = double.Parse(o.Named.GetValueOrDefault("from", "1000"), System.Globalization.CultureInfo.InvariantCulture);
         double to = double.Parse(o.Named.GetValueOrDefault("to", "8000"), System.Globalization.CultureInfo.InvariantCulture);
         double step = double.Parse(o.Named.GetValueOrDefault("step", "500"), System.Globalization.CultureInfo.InvariantCulture);

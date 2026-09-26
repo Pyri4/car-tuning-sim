@@ -1,3 +1,5 @@
+using CarSim.Core.Damage;
+
 namespace CarSim.Core.Parts;
 
 /// <summary>
@@ -28,9 +30,17 @@ public sealed class PartInstance
         set => _wear = double.IsNaN(value) ? 0.0 : Math.Clamp(value, 0.0, 1.0);
     }
 
+    /// <summary>Fatigue and failure state.</summary>
+    public PartDamage Damage { get; } = new();
+
+    /// <summary>Overall condition 0–1 (1 = new): limited by the worse of wear and fatigue; 0 if failed.</summary>
+    public double Condition => Damage.IsFailed ? 0.0 : 1.0 - Math.Max(Wear, Damage.MaxFatigue);
+
+    public bool IsFailed => Damage.IsFailed;
+
     public T Spec<T>() where T : PartSpec => Definition.GetSpec<T>();
 
-    public override string ToString() => $"{Definition.Name} #{InstanceId} (wear {Wear:P0})";
+    public override string ToString() => $"{Definition.Name} #{InstanceId} (condition {Condition:P0})";
 }
 
 /// <summary>Creates part instances with deterministic, sequential ids (stable across save/load).</summary>

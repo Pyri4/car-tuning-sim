@@ -47,6 +47,7 @@ public class ThermalOilTests
     public void SustainedFullPowerWithWeakAirflowOverheats()
     {
         var sim = SimFactory.Create();
+        sim.DamageEnabled = false;
         var input = new EngineInputs { Throttle = 1, SpeedMode = SpeedMode.Held, HeldRpm = 6500, CoolingAirSpeed = 2.0 };
         EngineTelemetry t = sim.Step(0.01, input);
         for (int i = 0; i < 12_000; i++) t = sim.Step(0.01, input);

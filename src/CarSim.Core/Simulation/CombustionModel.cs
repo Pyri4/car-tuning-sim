@@ -128,5 +128,8 @@ public static class CombustionModel
         0.28 - 0.06 * MathUtil.Clamp(rpm / 7000.0, 0.0, 1.4) + 0.01 * Math.Min(knockIntensity, 10.0);
 
     /// <summary>Fraction of burned-fuel energy rejected to oil (piston underside, rings).</summary>
-    public const double OilHeatFraction = 0.04;
+    public const double OilHeatFraction = 0.03;
+
+    /// <summary>Share of friction heat that goes into the oil (the rest into the coolant).</summary>
+    public const double FrictionHeatToOil = 0.35;
 }

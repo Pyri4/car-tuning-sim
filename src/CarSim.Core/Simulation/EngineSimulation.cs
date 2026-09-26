@@ -1,4 +1,5 @@
 using CarSim.Core.Common;
+using CarSim.Core.Damage;
 using CarSim.Core.Ecu;
 using CarSim.Core.Engines;
 using CarSim.Core.Parts;
@@ -26,6 +27,15 @@ public sealed class EngineSimulation
     public const double ReferenceBearingClearance = 0.040e-3;
     public const double OilPumpVolumetricEfficiency = 0.9;
 
+    /// <summary>Heat exchange between oil and coolant through the block, head and oil/water cooler, W/K.</summary>
+    public const double OilToCoolantConductance = 400.0;
+
+    /// <summary>Boiling point of 50/50 coolant under a ~1.1 bar pressure cap, K (128 °C).</summary>
+    public const double CoolantBoilingPoint = 401.15;
+
+    /// <summary>Latent heat of vaporisation used for boiling coolant off, J/kg.</summary>
+    public const double CoolantLatentHeat = 2.0e6;
+
     private readonly AirPath _airPath;
     private readonly double _referenceDensity =
         PhysicalConstants.StandardPressure / (PhysicalConstants.AirGasConstant * PhysicalConstants.StandardTemperature);
@@ -36,7 +46,14 @@ public sealed class EngineSimulation
         Ecu = new EcuController(config.Ecu, tune ?? throw new ArgumentNullException(nameof(tune)));
         State = state ?? new EngineState();
         _airPath = new AirPath(config);
+        Damage = new DamageModel(config);
     }
+
+    /// <summary>Fatigue, failures, warnings and operating history for this engine.</summary>
+    public DamageModel Damage { get; }
+
+    /// <summary>When false, loads are still evaluated for warnings but no damage accumulates (sandbox/testing).</summary>
+    public bool DamageEnabled { get; set; } = true;
 
     public EngineConfiguration Config { get; }
     public EcuController Ecu { get; }
@@ -83,6 +100,13 @@ public sealed class EngineSimulation
         var s = State;
         var t = c.Turbo;
         if (t == null) return default;
+        if (Damage.HasFailure(FailureMode.TurboOverspeed) || Damage.HasFailure(FailureMode.TurbineOverTemperature))
+        {
+            // A failed turbo no longer compresses: the damaged wheel just freewheels as a restriction.
+            s.TurboOmega = 0.0;
+            s.TurbineOutletTemperature = s.ExhaustGasTemperature;
+            return new TurboStep(0.0, 0.0, t.WastegateSpring);
+        }
 
         const double actuatorSpan = 20_000.0;
         double spring = t.WastegateSpring;
@@ -130,7 +154,8 @@ public sealed class EngineSimulation
         var g = c.Geometry;
         var fuel = c.Fuel;
 
-        if (input.SpeedMode == SpeedMode.Held)
+        bool seized = Damage.Seized;
+        if (input.SpeedMode == SpeedMode.Held && !seized)
             s.Omega = Units.RpmToRadPerSec(Math.Max(0.0, input.HeldRpm));
         double rpm = Units.RadPerSecToRpm(s.Omega);
         double omega = s.Omega;
@@ -154,7 +179,7 @@ public sealed class EngineSimulation
         double targetLambda = Ecu.TargetLambda(rpm, mapReading);
         double advance = Ecu.SparkAdvance(rpm, mapReading);
 
-        bool wantsToFire = input.Ignition && rpm >= FiringMinRpm && (s.Running || input.Starter || rpm >= RunningRpm);
+        bool wantsToFire = !seized && input.Ignition && rpm >= FiringMinRpm && (s.Running || input.Starter || rpm >= RunningRpm);
         double cycleTime = rpm > 1 ? 120.0 / rpm : 0.0;
         FuelDelivery delivery = default;
         if (wantsToFire && !revCut && air.AirPerCycle > 0)
@@ -183,7 +208,7 @@ public sealed class EngineSimulation
         if (firing)
         {
             burnedFuel = Math.Min(fuelPerCycle, air.AirPerCycle / fuel.StoichiometricAfr);
-            double eta = CombustionModel.IndicatedEfficiency(cr) * (1.0 - 0.10 * ringWear);
+            double eta = CombustionModel.IndicatedEfficiency(cr) * (1.0 - 0.10 * ringWear) * DegradedEfficiency();
             grossWork = burnedFuel * fuel.LowerHeatingValue * eta
                         * CombustionModel.MixtureFactor.Evaluate(lambda)
                         * CombustionModel.SparkFactor(advance, mbt)
@@ -206,8 +231,9 @@ public sealed class EngineSimulation
         double indicatedPower = grossWork * cyclesPerSecond;
         double frictionPower = Math.Max(0.0, fmep * g.Displacement / (4.0 * Math.PI) * omega);
         double coolantFraction = CombustionModel.CoolantHeatFraction(rpm, knock);
-        double heatToCoolant = fuelPower * coolantFraction + 0.5 * frictionPower;
-        double heatToOil = fuelPower * CombustionModel.OilHeatFraction + 0.5 * frictionPower;
+        double heatToCoolant = fuelPower * coolantFraction * (Damage.HasFailure(FailureMode.HeadGasketBreach) ? 1.3 : 1.0)
+                               + (1.0 - CombustionModel.FrictionHeatToOil) * frictionPower;
+        double heatToOil = fuelPower * CombustionModel.OilHeatFraction + CombustionModel.FrictionHeatToOil * frictionPower;
         double exhaustFlow = air.MassFlow + (firing ? fuelPerCycle * cyclesPerSecond : 0.0);
         double exhaustEnergy = Math.Max(0.0, fuelPower - indicatedPower - fuelPower * (coolantFraction + CombustionModel.OilHeatFraction));
         double egtTarget = air.ChargeTemperature + 50.0;
@@ -220,7 +246,7 @@ public sealed class EngineSimulation
         // Piston crown temperature (quasi-steady target, lagged).
         double heatFlux = fuelPower / (g.Cylinders * g.PistonArea);
         double crownTarget = s.CoolantTemperature
-            + 170.0 * Math.Pow(Math.Max(0.0, heatFlux) / 14.2e6, 0.7) * (1.0 + 1.5 * Math.Max(0.0, (double.IsFinite(lambda) ? lambda : 1.0) - 0.9))
+            + 150.0 * Math.Pow(Math.Max(0.0, heatFlux) / 14.2e6, 0.7) * (1.0 + 1.5 * Math.Max(0.0, (double.IsFinite(lambda) ? lambda : 1.0) - 0.9))
             + 8.0 * knock;
 
         // ---- Mechanical loads ----
@@ -239,13 +265,21 @@ public sealed class EngineSimulation
         double coolingAir = Math.Max(0.0, input.CoolingAirSpeed);
         double airFactor = MathUtil.Clamp(Math.Pow(coolingAir / c.Radiator.ReferenceAirSpeedMs, 0.6), 0.1, 2.5);
         double thermostat = MathUtil.SmoothStep(c.Radiator.ThermostatOpen, c.Radiator.ThermostatOpen + 10.0, s.CoolantTemperature);
-        double radiatorHeat = c.Radiator.HeatRejectionWPerK * airFactor * thermostat * (s.CoolantTemperature - input.AmbientTemperature);
+        double radiatorHeat = c.Radiator.HeatRejectionWPerK * airFactor * thermostat * s.CoolantLevel * (s.CoolantTemperature - input.AmbientTemperature);
         double surfaceLoss = 15.0 * (s.CoolantTemperature - input.AmbientTemperature);
-        double oilToCoolant = 120.0 * (s.OilTemperature - s.CoolantTemperature);
+        double oilToCoolant = OilToCoolantConductance * (s.OilTemperature - s.CoolantTemperature);
         double sumpLoss = 12.0 * (1.0 + 0.1 * coolingAir) * (s.OilTemperature - input.AmbientTemperature);
         s.CoolantTemperature += (heatToCoolant - radiatorHeat - surfaceLoss + oilToCoolant) / c.CoolantHeatCapacity * dt;
         s.OilTemperature += (heatToOil - oilToCoolant - sumpLoss) / c.OilHeatCapacity * dt;
         if (input.CoolantTemperatureOverride is double heldCoolant) s.CoolantTemperature = heldCoolant;
+        else if (s.CoolantTemperature > CoolantBoilingPoint)
+        {
+            // Above the boiling point the surplus heat boils coolant off through the pressure cap.
+            double surplus = (s.CoolantTemperature - CoolantBoilingPoint) * c.CoolantHeatCapacity;
+            double coolantMass = (c.Block.CoolantCapacityL + c.Radiator.CoolantCapacityL) * 1.05;
+            s.CoolantLevel = Math.Max(0.0, s.CoolantLevel - surplus / (CoolantLatentHeat * coolantMass));
+            s.CoolantTemperature = CoolantBoilingPoint;
+        }
         s.ExhaustGasTemperature += (egtTarget - s.ExhaustGasTemperature) * MathUtil.LagFactor(dt, 0.2);
         s.EgtSensor += (s.ExhaustGasTemperature - s.EgtSensor) * MathUtil.LagFactor(dt, 1.5);
         s.PistonCrownTemperature += (crownTarget - s.PistonCrownTemperature) * MathUtil.LagFactor(dt, 3.0);
@@ -258,7 +292,14 @@ public sealed class EngineSimulation
         Ecu.UpdateKnockControl(knock, dt);
 
         // ---- Speed ----
-        if (input.SpeedMode == SpeedMode.Free)
+        if (seized)
+        {
+            // A seized engine locks up: whatever was turning it stops almost at once.
+            s.Omega = Math.Max(0.0, s.Omega - 3000.0 * dt);
+            torque = 0.0;
+            power = 0.0;
+        }
+        else if (input.SpeedMode == SpeedMode.Free)
         {
             double starter = input.Starter ? StarterTorqueNm * Math.Max(0.0, 1.0 - rpm / StarterFreeRpm) : 0.0;
             double inertia = c.RotatingInertia + Math.Max(0.0, input.LoadInertia);
@@ -271,6 +312,7 @@ public sealed class EngineSimulation
 
         var t = new EngineTelemetry
         {
+            Seized = seized,
             Time = s.Time,
             Rpm = rpm,
             Throttle = input.Throttle,
@@ -308,6 +350,7 @@ public sealed class EngineSimulation
             Bmep = bmep,
             PeakCylinderPressure = pcp,
             CoolantTemperature = s.CoolantTemperature,
+            CoolantLevel = s.CoolantLevel,
             OilTemperature = s.OilTemperature,
             OilPressure = oilPressure,
             OilPressureRequired = RequiredOilPressure(rpm),
@@ -337,7 +380,25 @@ public sealed class EngineSimulation
             ValveFloat = rpm > floatRpm,
             RevLimiterActive = revCut,
         };
+        if (DamageEnabled)
+        {
+            Damage.Update(t, dt, Ecu.EffectiveRevLimit, input.SumpAccelerationG);
+            if (Damage.Seized && !seized)
+            {
+                s.Running = false;
+                t = t with { Seized = true };
+            }
+        }
         Last = t;
         return t;
+    }
+
+    /// <summary>Efficiency penalty from degraded (non-catastrophic) failures: compression leaks.</summary>
+    private double DegradedEfficiency()
+    {
+        double f = 1.0;
+        if (Damage.HasFailure(FailureMode.HeadGasketBreach)) f *= 0.75;
+        if (Damage.HasFailure(FailureMode.CylinderHeadWarp)) f *= 0.9;
+        return f;
     }
 }

@@ -122,16 +122,18 @@ Harmonic lift profile over the advertised event (duration@1mm + 50°):
 
 ## Heat and temperatures
 - Coolant fraction of burned-fuel energy `0.28 − 0.06·clamp(rpm/7000, 0, 1.4) + 0.01·KI`;
-  oil fraction 0.04; friction heat split half/half between coolant and oil.
+  oil fraction 0.03; friction heat 35 % to oil, 65 % to coolant.
 - Exhaust gas temperature `= T_charge + E_exhaust/(ṁ_exh·c_p) − 300 K·max(0, 1 − λ)`, where
   `E_exhaust = fuel power − indicated power − coolant/oil shares`. Lag 0.2 s (gas), 1.5 s (sensor).
-- Piston crown temperature `= T_coolant + 170 K·(q/14.2 MW/m²)^0.7·(1 + 1.5·max(0, λ − 0.9)) + 8 K·KI`,
+- Piston crown temperature `= T_coolant + 150 K·(q/14.2 MW/m²)^0.7·(1 + 1.5·max(0, λ − 0.9)) + 8 K·KI`,
   q = burned-fuel power per piston area. Lag 3 s.
 - Coolant: capacity = coolant (1.05 kg/L, 3600 J/kgK) + half of block and head metal (900 J/kgK).
   Radiator `Q = UA · (v_air/v_ref)^0.6 · thermostat · (T_coolant − T_ambient)`,
   thermostat opening smoothstep over [T_open, T_open + 10 K]. Surface loss 15 W/K.
-- Oil: capacity = sump oil (0.88 kg/L, 1900 J/kgK) + 8 kJ/K metal. Oil↔coolant exchange 120 W/K;
+- Oil: capacity = sump oil (0.88 kg/L, 1900 J/kgK) + 8 kJ/K metal. Oil↔coolant exchange 400 W/K;
   sump convection 12 W/K·(1 + 0.1·v_air).
+- Boiling: coolant is capped at 128 °C (50/50 mix under a ~1.1 bar cap). Surplus heat boils coolant off
+  (latent heat 2.0 MJ/kg) and lowers the coolant level; radiator heat rejection scales with the level.
 - Dyno cells can hold coolant temperature (`CoolantTemperatureOverride`).
 
 ## Lubrication
@@ -198,10 +200,55 @@ exhaust manifold and the exhaust system.
 Steady-state full boost ≈ 3500 rpm (small), ≈ 4500 rpm (mid), ≈ 7000 rpm (big); peak ≈ 220 hp
 (small, choking and over-speeding at 7000 rpm), ≈ 235 hp (mid), ≈ 240 hp and still climbing (big).
 
-## Failure model
-Not yet implemented. Planned: stress ratios for every rated component (above), fatigue
-accumulation above an endurance threshold, immediate failure above the rating, and a structured
-failure report (cause, measured values, ratings, recommendations).
+## Damage and failure (`Damage/`)
+Every step, `StressEvaluator` turns the operating point into stress ratios `r = load / rating`:
+
+| Mode | Load | Rating (part) |
+|---|---|---|
+| Rod tensile | `m_recip·ω²·r·(1+r/l)` | `max_tensile_load_kn` (rods) |
+| Rod compressive | `PCP·A_piston − inertia` | `max_compressive_load_kn` (rods) |
+| Piston pressure | PCP | pistons `max_cylinder_pressure_bar` |
+| Piston crown | crown °C | `max_crown_temperature_c` |
+| Head gasket | PCP | gasket `max_cylinder_pressure_bar` |
+| Block deck | PCP | block `max_cylinder_pressure_bar` |
+| Crank overspeed / torsion | rpm, torque | crank `max_rpm`, `max_torque_nm` |
+| Flywheel | rpm | flywheel `max_rpm` |
+| Rod / main bearings | peak rod force (mains 60 %) | bearing `max_load_kn` |
+| Valve–piston contact | rpm | 110 % of the valve-float speed |
+| Turbo overspeed / turbine temperature | shaft rpm, inlet °C | turbo `max_shaft_rpm`, `max_turbine_inlet_temperature_c` |
+
+Fatigue per mode accumulates on the part instance (`PartDamage`), deterministically:
+`rate = 0` for `r ≤ endurance`; `(1/T)·((r − e)/(1 − e))³` up to the rating; `(1/T)·(1 + 50(r − 1))²`
+above it; instant failure at `r ≥ 1.3` (1.05 for valve contact). `T` is the life at exactly the
+rating (10–120 s depending on mode, see `FailureModeInfo`). Endurance ratios: 0.80 rods/pistons/
+bearings, 0.85 gasket/block/crank torque, 0.90 crown temperature, 0.95 crank speed/flywheel/turbine
+temperature, 0.97 turbo speed.
+
+Special processes:
+- **Detonation**: pistons `0.002·KI²·(120 bar / piston rating)^1.5` per s; gasket `0.0005·KI²`; rod
+  bearings `0.0003·KI²`; ring wear `0.0005·KI`.
+- **Lubrication**: bearing wear `0.05·deficit²·(0.3 + load ratio)` per s, deficit = `1 − p_oil/p_req`,
+  plus `0.0005` per 10 K of oil above 150 °C; bearing wear ≥ 1 → spun bearing (oil starvation).
+- **Overheating**: gasket `0.01·(T_coolant − 115 °C)/10 K + 0.05·coolant_lost` per s; cylinder head
+  warp `0.01` per 10 % of coolant lost beyond 20 %.
+- **Valve float**: spring wear `0.1·(rpm/float − 1)` per s.
+
+Failures:
+- **Catastrophic** (rods, pistons, block, crank, flywheel, bearings, bent valves): the engine seizes
+  and cannot run until the part is replaced. Collateral damage is applied (a broken rod destroys the
+  pistons and the block and gouges the crank; a spun bearing scores the crank journals; bent valves
+  mark the pistons; ...).
+- **Degraded** (head gasket, warped head, turbo): the engine runs with a penalty — blown gasket
+  ×0.75 efficiency and +30 % heat into the coolant; warped head ×0.9; failed turbo makes no boost.
+- Each failure produces a `FailureReport`: cause, measured values vs ratings, contributing factors
+  drawn from the operating history (`OperatingHistory`: extremes, knock seconds, time below required
+  oil pressure, coolant lost, ...), recommendations (e.g. safe rpm for the installed rods, rating to
+  buy, timing to remove), and collateral damage. Diagnosis uses the state *before* collateral damage.
+- Live `EngineWarning`s (knock, low oil pressure, oil surge, coolant/oil temperature, coolant loss,
+  lean under load, fuel limits, MAP saturation, valve float, surge, EGT, any stress above endurance).
+- `PartInspector` reports visible signs once fatigue passes 25 % (minor) / 60 % (major) and wear
+  findings (bearing clearance, ring wear, spring sag, ...); `EngineDiagnostics.CompressionTestBar`
+  gives a cranking compression figure that drops with ring wear, a blown gasket, bent valves.
 
 ## Calibration reference (stock Kestrel K20, RON 95, 90 °C coolant)
 Pinned loosely by tests (`EngineOutputTests.StockEngineCalibration`):
@@ -216,4 +263,8 @@ identity, throttle/vacuum, exhaust restriction, cams/runners/heads, fueling limi
 pump, calibration errors), knock and timing, rev limiter, valve float, rod loads, oil pressure,
 thermal behaviour, starting/idle/revving, determinism, compressor speed lines/choke/surge, compressor
 energy consistency, turbine power, spool order by turbo size, transient lag vs steady state, boost
-control, boost creep, intercooling, stock-ECU MAP saturation, overlap reversion under drive pressure.
+control, boost creep, intercooling, stock-ECU MAP saturation, overlap reversion under drive pressure,
+fatigue curve, survival within limits, over-rev → bent valves / flywheel / rods (weak-link order),
+detonation, knock control protection, inspection before failure, turbo on stock ECU, oil starvation
+and the baffled pan, overheating → blown gasket with power loss, turbo overspeed, repair restores
+the engine, report content, warnings, compression test, damage determinism.

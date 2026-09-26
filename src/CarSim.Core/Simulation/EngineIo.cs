@@ -62,6 +62,9 @@ public sealed class EngineState
     public double LastFuelAirRatio = 1.0 / 14.7;
     public bool Running;
 
+    /// <summary>Fraction of the coolant still in the system (boiling vents it through the cap).</summary>
+    public double CoolantLevel = 1.0;
+
     /// <summary>Turbocharger shaft speed, rad/s.</summary>
     public double TurboOmega;
 
@@ -106,6 +109,9 @@ public sealed record EngineTelemetry
     public bool Running { get; init; }
     public bool Firing { get; init; }
 
+    /// <summary>A catastrophic failure has locked the engine.</summary>
+    public bool Seized { get; init; }
+
     public double Torque { get; init; }
     public double Power { get; init; }
 
@@ -149,6 +155,7 @@ public sealed record EngineTelemetry
     public double PeakCylinderPressure { get; init; }
 
     public double CoolantTemperature { get; init; }
+    public double CoolantLevel { get; init; }
     public double OilTemperature { get; init; }
     public double OilPressure { get; init; }
     public double OilPressureRequired { get; init; }

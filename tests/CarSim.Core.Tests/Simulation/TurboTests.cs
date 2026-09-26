@@ -179,7 +179,9 @@ public class TurboTests
     [Fact]
     public void SmallTurboChokesAndOverspeedsAtHighRpm()
     {
-        var t = SimFactory.At(TurboSim(TurboBuild("turbo.t25_small")), 7000, 1.0, 3.0);
+        var sim = TurboSim(TurboBuild("turbo.t25_small"));
+        sim.DamageEnabled = false;
+        var t = SimFactory.At(sim, 7000, 1.0, 3.0);
         Assert.True(t.CompressorChokeRatio > 0.85);
         Assert.True(t.CompressorEfficiency < 0.65);
         Assert.True(t.TurboOverspeed);
