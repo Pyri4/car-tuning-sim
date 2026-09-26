@@ -245,7 +245,7 @@ public sealed class VehicleSimulation
         // A post-shift sync limited by the engagement controller (the clutch itself could hold more) is a deliberate,
         // brief slip, not a slipping clutch: it heats and wears the facings like any slip, but it is not a warning or a
         // failure cause. A clutch too weak to hold even the sync torque still counts. The sync lasts longer with a
-        // heavier flywheel and a wider ratio step (the M54's dual-mass flywheel and 4.21 → 2.49 first-to-second).
+        // heavier flywheel and a wider ratio step between the gears.
         bool controlledSync = _syncingAfterShift && clutchCapacity >= Math.Abs(engineTorque) + ShiftSyncTorqueMarginNm;
         if (_syncingAfterShift && (ratio == 0.0 || (s.Clutch > 0.99 && Math.Abs(s.EngineOmega - lastGearboxOmega) < Units.RpmToRadPerSec(50))))
             _syncingAfterShift = false;
