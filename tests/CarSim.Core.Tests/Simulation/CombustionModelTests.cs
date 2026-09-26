@@ -62,6 +62,19 @@ public class CombustionModelTests
     }
 
     [Fact]
+    public void ValvetrainFrictionScalesWithValvesAndCylinderSizeNotTheK20()
+    {
+        // Spring work per valve over the cylinder's volume: a 2-valve head has half the valvetrain FMEP, a cylinder of
+        // twice the volume half again. The 4-valve, 0.5 L reference (≈ the K20) is 12 kPa.
+        double hot = OilViscosity.At(Units.CToK(100));
+        double Valvetrain(int valves, double volume) =>
+            CombustionModel.FrictionMep(10, hot, 560, 6e6, valves, volume) - CombustionModel.FrictionMep(10, hot, 0, 6e6, valves, volume);
+        Assert.Equal(CombustionModel.ValvetrainFmepKpa * 1000, Valvetrain(4, 0.5e-3), 6);
+        Assert.Equal(0.5, Valvetrain(2, 0.5e-3) / Valvetrain(4, 0.5e-3), 9);
+        Assert.Equal(0.5, Valvetrain(4, 1.0e-3) / Valvetrain(4, 0.5e-3), 9);
+    }
+
+    [Fact]
     public void OilViscosityFallsWithTemperature()
     {
         Assert.Equal(0.010, OilViscosity.At(Units.CToK(100)), 6);

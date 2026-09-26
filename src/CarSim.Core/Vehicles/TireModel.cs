@@ -131,12 +131,31 @@ public static class TireModel
     /// <summary>Peak friction coefficient at vertical load <paramref name="fz"/> (at the tyre's operating pressure and temperature).</summary>
     public static double Friction(TireSpec t, double fz) => Friction(t, fz, TyreState.Operating(t));
 
+    /// <summary>
+    /// Bounds on the load-sensitivity law, as multiples of the nominal friction. The log law grows without limit as
+    /// the load goes to zero; real rubber on a nearly unloaded wheel does not (light-load friction is bounded), so μ is
+    /// capped at 1.3·μ₀. The stock car never reaches it on a lap; a semi-slick, track-coilover build touches it on the
+    /// unloaded inside front in fast corners (≈ 2 % of wheel-steps, ≈ 1 % of the tyre force, tested). The 0.3·μ₀
+    /// floor needs 50–100× the nominal load and is never reached.
+    /// </summary>
+    public const double MinFrictionFactor = 0.3, MaxFrictionFactor = 1.3;
+
+    /// <summary>Whether the load-sensitivity law is held by <see cref="MaxFrictionFactor"/>/<see cref="MinFrictionFactor"/> at this load.</summary>
+    public static bool FrictionCapped(TireSpec t, double fz)
+    {
+        if (fz <= 0) return false;
+        double ratio = fz / ReferenceLoad(t);
+        double factor = 1.0 - t.LoadSensitivity * Math.Log2(Math.Max(0.05, ratio));
+        return ratio < 0.05 || factor > MaxFrictionFactor || factor < MinFrictionFactor;
+    }
+
     /// <summary>Peak friction coefficient at vertical load <paramref name="fz"/> in a given pressure/temperature state.</summary>
     public static double Friction(TireSpec t, double fz, TyreState state)
     {
         double ratio = Math.Max(0.05, fz / ReferenceLoad(t));
         double mu = t.PeakFriction * (1.0 - t.LoadSensitivity * Math.Log2(ratio));
-        return Math.Clamp(mu, 0.3 * t.PeakFriction, 1.3 * t.PeakFriction) * PressureGripFactor(t, state.PressureKpa) * ThermalGripFactor(t, state.TemperatureK);
+        return Math.Clamp(mu, MinFrictionFactor * t.PeakFriction, MaxFrictionFactor * t.PeakFriction)
+               * PressureGripFactor(t, state.PressureKpa) * ThermalGripFactor(t, state.TemperatureK);
     }
 
     /// <summary>

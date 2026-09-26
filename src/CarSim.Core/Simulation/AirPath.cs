@@ -75,10 +75,7 @@ public sealed class AirPath
     /// </summary>
     public double VeDynamic(double rpm, double floatRpm)
     {
-        double x = rpm / _c.VePeakRpm;
-        double aLo = VeLowSideBase + VeLowSidePerOverlapDeg * _c.OverlapDeg;
-        double shape = x < 1.0 ? 1.0 - aLo * (1.0 - x) * (1.0 - x) : 1.0 - VeHighSideCoefficient * (x - 1.0) * (x - 1.0);
-        double ve = VeCeiling * Math.Max(0.25, shape);
+        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm));
         if (_c.ScavengingGain > 0)
         {
             double w = 0.25 * _c.ScavengingRpm;
@@ -88,6 +85,21 @@ public sealed class AirPath
         if (rpm > floatRpm)
             ve *= 1.0 - 0.6 * MathUtil.SmoothStep(floatRpm, floatRpm * 1.08, rpm);
         return ve;
+    }
+
+    /// <summary>
+    /// Lower bound of the cam/runner VE shape. The parabolas are fits around the tuned speed and would go negative
+    /// far from it; the floor keeps VE positive there. It lies outside every shipped cam's rev range (tested); a
+    /// very long-overlap modded cam can reach it at idle, where it reads as "breathes badly", not as zero air.
+    /// </summary>
+    public const double VeShapeFloor = 0.25;
+
+    /// <summary>Cam/runner VE shape before the floor: an inverted parabola around the tuned speed (steeper below it with more overlap).</summary>
+    public double VeShape(double rpm)
+    {
+        double x = rpm / _c.VePeakRpm;
+        double aLo = VeLowSideBase + VeLowSidePerOverlapDeg * _c.OverlapDeg;
+        return x < 1.0 ? 1.0 - aLo * (1.0 - x) * (1.0 - x) : 1.0 - VeHighSideCoefficient * (x - 1.0) * (x - 1.0);
     }
 
     /// <summary>

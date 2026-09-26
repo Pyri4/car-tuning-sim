@@ -223,6 +223,12 @@ public sealed record EngineTelemetry
     /// <summary>Gas temperature at the turbine inlet, after the manifold's heat loss (= port gas temperature without a turbo), K.</summary>
     public double TurbineInletTemperature { get; init; }
 
+    /// <summary>Debug: the wall heat shares were scaled down because indicated work left too little (never in normal running; tested).</summary>
+    public bool WallHeatLimited { get; init; }
+
+    /// <summary>Debug: the cam/runner VE shape sits on <see cref="AirPath.VeShapeFloor"/> at this speed.</summary>
+    public bool VeFloorActive { get; init; }
+
     /// <summary>Turbine blade-speed ratio U/c_s (debug: 0.7 is the efficiency peak; see <see cref="TurbochargerModel.TurbineEfficiencyFloor"/>).</summary>
     public double TurbineBladeSpeedRatio { get; init; }
 

@@ -30,8 +30,14 @@ public sealed class EngineSimulation
     /// <summary>Acceleration beyond the oil pan's rating over which oil pressure collapses completely, g.</summary>
     public const double OilSurgeWindowG = 0.15;
 
-    /// <summary>Heat exchange between oil and coolant through the block, head and oil/water cooler, W/K.</summary>
+    /// <summary>Heat exchange between oil and coolant through the block, head and oil/water cooler, W/K, for a 2.0 L engine.</summary>
     public const double OilToCoolantConductance = 400.0;
+
+    /// <summary>Block/hose surface loss (coolant) and sump convection (oil, still air) for a 2.0 L engine, W/K.</summary>
+    public const double CoolantSurfaceLoss = 15.0, SumpLoss = 12.0;
+
+    /// <summary>Surface areas scale with size: conductances above × (displacement / 2.0 L)^(2/3).</summary>
+    private double SurfaceScale => Math.Pow(Config.Geometry.Displacement / 0.002, 2.0 / 3.0);
 
     /// <summary>Boiling point of 50/50 coolant under a ~1.1 bar pressure cap, K (128 °C).</summary>
     public const double CoolantBoilingPoint = 401.15;
@@ -250,7 +256,9 @@ public sealed class EngineSimulation
             ? CombustionModel.PeakCylinderPressure(air.PortPressure, cr, imep, advance, mbt, knock)
             : air.PortPressure * Math.Pow(cr, PhysicalConstants.CompressionPolytropicExponent);
         double pistonSpeed = g.MeanPistonSpeed(rpm);
-        double fmep = rpm > 1 ? CombustionModel.FrictionMep(pistonSpeed, OilViscosity.At(s.OilTemperature), c.Springs.OpenForceN, pcp) : 0.0;
+        double fmep = rpm > 1
+            ? CombustionModel.FrictionMep(pistonSpeed, OilViscosity.At(s.OilTemperature), c.Springs.OpenForceN, pcp, c.Head.ValvesPerCylinder, g.SweptVolumePerCylinder)
+            : 0.0;
         double bmep = imep - pmep - fmep;
         double torque = rpm > 1 ? bmep * g.Displacement / (4.0 * Math.PI) : 0.0;
         double power = torque * omega;
@@ -317,9 +325,10 @@ public sealed class EngineSimulation
         double airFactor = MathUtil.Clamp(Math.Pow(coolingAir / c.Radiator.ReferenceAirSpeedMs, 0.6), 0.1, 2.5);
         double thermostat = MathUtil.SmoothStep(c.Radiator.ThermostatOpen, c.Radiator.ThermostatOpen + 10.0, s.CoolantTemperature);
         double radiatorHeat = c.Radiator.HeatRejectionWPerK * airFactor * thermostat * s.CoolantLevel * (s.CoolantTemperature - input.AmbientTemperature);
-        double surfaceLoss = 15.0 * (s.CoolantTemperature - input.AmbientTemperature);
-        double oilToCoolant = OilToCoolantConductance * (s.OilTemperature - s.CoolantTemperature);
-        double sumpLoss = 12.0 * (1.0 + 0.1 * coolingAir) * (s.OilTemperature - input.AmbientTemperature);
+        double surface = SurfaceScale;
+        double surfaceLoss = CoolantSurfaceLoss * surface * (s.CoolantTemperature - input.AmbientTemperature);
+        double oilToCoolant = OilToCoolantConductance * surface * (s.OilTemperature - s.CoolantTemperature);
+        double sumpLoss = SumpLoss * surface * (1.0 + 0.1 * coolingAir) * (s.OilTemperature - input.AmbientTemperature);
         s.CoolantTemperature += (heatToCoolant - radiatorHeat - surfaceLoss + oilToCoolant) / c.CoolantHeatCapacity * dt;
         s.OilTemperature += (heatToOil - oilToCoolant - sumpLoss) / c.OilHeatCapacity * dt;
         if (input.CoolantTemperatureOverride is double heldCoolant) s.CoolantTemperature = heldCoolant;
@@ -413,6 +422,8 @@ public sealed class EngineSimulation
             HeatToOil = heatToOil,
             ExhaustHeat = exhaustHeat,
             PortWallHeat = portWallHeat,
+            WallHeatLimited = heat.WallsLimited,
+            VeFloorActive = rpm > 1 && _airPath.VeShape(rpm) < AirPath.VeShapeFloor,
             RadiatorHeatRejection = radiatorHeat,
             CoolantSurfaceLoss = surfaceLoss,
             OilToCoolantHeat = oilToCoolant,

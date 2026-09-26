@@ -88,18 +88,24 @@ public static class CombustionModel
         return (compression + rise) * (1.0 + 0.04 * knockIntensity);
     }
 
+    /// <summary>Valvetrain FMEP of the reference valvetrain (4 valves, 560 N open force, 0.5 L per cylinder), kPa.</summary>
+    public const double ValvetrainFmepKpa = 12.0;
+
     /// <summary>
     /// Friction mean effective pressure, Pa. Rubbing friction grows with mean piston speed; the
-    /// hydrodynamic part scales with oil viscosity; valvetrain friction with spring force; a small term
-    /// with peak cylinder pressure (ring and bearing loading).
+    /// hydrodynamic part scales with oil viscosity; a small term with peak cylinder pressure (ring and bearing
+    /// loading). Valvetrain friction is work against the springs per valve, so as a mean effective pressure it scales
+    /// with spring force × valves per cylinder / cylinder volume (12 kPa for 4 valves at 560 N on 0.5 L).
     /// </summary>
-    public static double FrictionMep(double meanPistonSpeed, double oilViscosity, double springOpenForceN, double peakCylinderPressure)
+    public static double FrictionMep(double meanPistonSpeed, double oilViscosity, double springOpenForceN, double peakCylinderPressure,
+        int valvesPerCylinder = 4, double sweptVolumePerCylinder = 0.5e-3)
     {
         double viscosityFactor = Math.Sqrt(Math.Max(0.1, oilViscosity / OilViscosity.Reference));
+        double valvetrain = ValvetrainFmepKpa * springOpenForceN / 560.0 * valvesPerCylinder / 4.0 * (0.5e-3 / sweptVolumePerCylinder);
         double kpa = 45.0
             + 4.0 * meanPistonSpeed * viscosityFactor
             + 0.2 * meanPistonSpeed * meanPistonSpeed
-            + 12.0 * springOpenForceN / 560.0
+            + valvetrain
             + 0.004 * peakCylinderPressure / 1000.0;
         return kpa * 1000.0;
     }
@@ -157,7 +163,7 @@ public static class CombustionModel
         EvaporatedBeforeInletValveCloses * Math.Max(0.0, fuelAirRatio) * latentHeat / PhysicalConstants.AirCp;
 
     /// <summary>Where the energy released by the burned fuel goes (W). Sums exactly to the released power.</summary>
-    public readonly record struct HeatSplit(double Indicated, double ToCoolant, double ToOil, double ToExhaust);
+    public readonly record struct HeatSplit(double Indicated, double ToCoolant, double ToOil, double ToExhaust, bool WallsLimited = false);
 
     /// <summary>
     /// Splits the burned-fuel power into indicated work, wall heat (coolant, oil) and exhaust enthalpy.
@@ -170,12 +176,13 @@ public static class CombustionModel
         double coolant = fuelPower * coolantFraction;
         double oil = fuelPower * oilFraction;
         double wall = coolant + oil;
-        if (wall > available && wall > 0)
+        bool limited = wall > available && wall > 0;
+        if (limited)
         {
             double scale = Math.Max(0.0, available) / wall;
             coolant *= scale;
             oil *= scale;
         }
-        return new HeatSplit(indicatedPower, coolant, oil, available - coolant - oil);
+        return new HeatSplit(indicatedPower, coolant, oil, available - coolant - oil, limited);
     }
 }

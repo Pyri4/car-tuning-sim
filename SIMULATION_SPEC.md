@@ -173,7 +173,9 @@ The ECU only knows its sensors and its calibration; it never sees the engine's t
 
 ## Pumping and friction
 - `PMEP = p_exhaust_port − p_intake_port`.
-- `FMEP [kPa] = 45 + 4.0·v_p·√(μ/μ_100°C) + 0.2·v_p² + 12·F_spring_open/560 N + 0.004·PCP[kPa]`.
+- `FMEP [kPa] = 45 + 4.0·v_p·√(μ/μ_100°C) + 0.2·v_p² + 12·(F_spring_open/560 N)·(valves/4)·(0.5 L/V_cyl) + 0.004·PCP[kPa]`
+  (the valvetrain term is spring work per valve over the cylinder volume; it was a K20-only `12·F/560` until the
+  validation pass).
 - `BMEP = IMEP − PMEP − FMEP`, torque `T = BMEP · V / (4π)`, power `P = T · ω`.
 
 ## Heat and temperatures
@@ -545,6 +547,42 @@ instances (persists in the garage and saves).
 0–100 km/h ≈ 8.5 s, top speed ≈ 220 km/h (drag-limited), 100–0 ≈ 48 m threshold braking (with a
 0.3 s pedal ramp) vs ≈ 54 m locked, skidpad ≈ 0.9 g (≈ 1.15 g on semi-slicks), mild understeer at the
 limit. ≈ 90 µs per 2 ms step including the engine (8 chassis substeps, ride model, tyre thermal).
+
+## Clamps, guards and calibration constants
+Every `Clamp`/`Min`/`Max` in the simulation was reviewed in the validation pass. Three kinds remain:
+
+- **Physical limits (they are the model):** wheel load ≥ 0 (a wheel lifts), clutch and LSD torque ≤ capacity,
+  choked orifice flow at the critical pressure ratio, the oil relief valve, shaft kinetic energy ≥ 0, injector
+  duty ≤ 100 %, ECU actuator ranges (idle valve, wastegate solenoid, knock retard ≤ 10°), intercooler
+  effectiveness < 0.95, the turbo overspeed and turbine temperature failures (real limits reported as failures,
+  not clamps — the 2× shaft-speed clamp of PR #1 is gone).
+- **Numerical (class B):** the low-speed slip-ratio reference, the Brent brackets (the compressor's
+  `MaxPressureRatio` provably bounds every operating point — tested), exponential-lag factors.
+- **Guards on fitted laws** — tested not to act in normal running (`ClampActivationTests`); debug flags say when
+  they do:
+  | Guard | Reached when | Telemetry / helper |
+  |---|---|---|
+  | VE shape floor 0.25 | far outside every shipped cam's rev range | `VeFloorActive`, `AirPath.VeShape` |
+  | Wall-heat scaling in `SplitHeat` | never across NA/built/turbo envelopes | `WallHeatLimited` |
+  | Charge temperature ≥ 200 K | never (tested > 250 K across the envelopes) | — |
+  | Spark factor ≥ 0.1, knock torque ≥ 0.5, PCP timing ×[0.3, 2] | 55°/50°/28–40° off MBT (never on shipped tunes) | — |
+  | Tyre μ ∈ [0.3, 1.3]·μ₀ (load sensitivity) | stock car never; semi-slicks on track coilovers ≈ 2 % of wheel-steps, ≈ 1 % of tyre force (unloaded inside front) | `TireModel.FrictionCapped` |
+  | Turbine efficiency ≥ 0.25·η_peak below the optimum BSR | spooling from standstill and idle, never on boost | `TurbineBladeSpeedRatio`, `TurbineOnEfficiencyFloor` |
+  | Front weight share ∈ [25, 75] %, CG ≥ 15 cm | no shipped part combination | `VehicleConfiguration.WeightDistributionClamped`, `CgHeightFloored` |
+  | Knock mixture term λ ∈ [0.6, 1.3]; coolant wall heating only above 90 °C | outside the correlation's range / a cold engine (a colder wall does not *reduce* knock — known asymmetry) | — |
+
+**Calibration constants.** Classes: (A) physical constants (gas constants, c_p, γ, Stefan–Boltzmann, heating
+values, Thornton's 406 kJ/mol O₂, Douaud–Eyzat); (B) numerical (tolerances, step sizes); (C) empirical
+correlations with a physical form, scaled by geometry where the physics says so; (D) gameplay tuning. Class C
+constants that set overall levels and were fitted to the stock K20's published output: the Otto realisation
+factor 0.80 and the FMEP coefficients (together they set ≈ 148 hp) — they are the engine-family calibration and
+the first thing a second family would re-fit. Made size-aware in the validation pass (K20 unchanged within
+0.1 %): the valvetrain FMEP (valves, cylinder volume), block/sump/oil↔coolant conductances (∝ (V/2 L)^(2/3)), and
+the exhaust-port conductance (∝ bore² × cylinders). Still K20-sized and documented as debt: the piston-crown
+correlation's reference heat flux (14.2 MW/m² ↔ +150 K, dimensional, not size-specific but fitted on one engine),
+the header/runner tuning constants (in piston-speed and length terms, fitted on one family), the oil conductance
+reference (scaled by displacement). Class D (explicit gameplay): failure severities (a blown gasket × 0.75
+efficiency and × 1.3 coolant share, a warped head × 0.9), game-compressed fatigue lives, wear rates.
 
 ## Calibration reference (stock Kestrel K20, RON 95, 90 °C coolant)
 Pinned loosely by tests (`EngineOutputTests.StockEngineCalibration`):

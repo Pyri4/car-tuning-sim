@@ -43,12 +43,16 @@ public sealed class VehicleConfiguration
         Mass = def.CurbMassKg + engineDelta + chassisDelta;
         // The engine sits over the front axle; chassis parts are split evenly.
         double frontMass = def.CurbMassKg * def.FrontWeightFraction + engineDelta + 0.5 * chassisDelta;
+        // Guards (not physics): a front-axle share outside 25–75 % or a CG under 15 cm would need a different
+        // chassis model (and cannot come from the shipped parts; tested). The flags say when they act.
+        WeightDistributionClamped = frontMass / Mass is < 0.25 or > 0.75;
         FrontWeightFraction = Math.Clamp(frontMass / Mass, 0.25, 0.75);
         Wheelbase = def.WheelbaseM;
         CgToFront = Wheelbase * (1.0 - FrontWeightFraction);
         CgToRear = Wheelbase * FrontWeightFraction;
         TrackFront = def.TrackFrontM;
         TrackRear = def.TrackRearM;
+        CgHeightFloored = def.CgHeightM + 0.8 * Units.MmToM(Suspension.RideHeightOffsetMm) < 0.15;
         CgHeight = Math.Max(0.15, def.CgHeightM + 0.8 * Units.MmToM(Suspension.RideHeightOffsetMm));
         YawInertia = def.YawInertiaKgM2 * Mass / def.CurbMassKg;
         DragArea = def.DragCoefficient * def.FrontalAreaM2;
@@ -102,6 +106,12 @@ public sealed class VehicleConfiguration
     public RideModel Ride { get; }
 
     public double Mass { get; }
+    /// <summary>The front-axle share of the mass hit its 25–75 % guard (a part-mass combination the chassis model does not cover).</summary>
+    public bool WeightDistributionClamped { get; }
+
+    /// <summary>The CG height hit its 15 cm guard.</summary>
+    public bool CgHeightFloored { get; }
+
     public double FrontWeightFraction { get; }
     public double Wheelbase { get; }
     public double CgToFront { get; }
