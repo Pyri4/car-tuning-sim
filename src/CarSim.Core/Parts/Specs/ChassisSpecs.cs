@@ -95,16 +95,22 @@ public sealed class TireSpec : PartSpec
     public required double AspectRatio { get; init; }
     public required double RimDiameterIn { get; init; }
 
-    /// <summary>Peak friction coefficient at the reference load.</summary>
+    /// <summary>
+    /// Peak friction coefficient of the compound at the tyre's nominal load (3500 N for a 205 mm tread,
+    /// proportional to width; see <c>TireModel.ReferenceLoad</c>).
+    /// </summary>
     public required double PeakFriction { get; init; }
 
-    /// <summary>Loss of friction coefficient per doubling of load relative to the reference load (0–0.3).</summary>
+    /// <summary>
+    /// Loss of friction coefficient per doubling of load relative to the nominal load (0–0.3): a property
+    /// of the construction and compound. Width enters through the nominal load, not this number.
+    /// </summary>
     public double LoadSensitivity { get; init; } = 0.12;
 
     /// <summary>Slip ratio at peak longitudinal force.</summary>
     public double PeakSlipRatio { get; init; } = 0.10;
 
-    /// <summary>Slip angle at peak lateral force.</summary>
+    /// <summary>Slip angle at peak lateral force for this construction at a 205 mm tread; wider treads peak earlier (∝ width^−0.5).</summary>
     public double PeakSlipAngleDeg { get; init; } = 7.0;
 
     public double RollingResistance { get; init; } = 0.012;

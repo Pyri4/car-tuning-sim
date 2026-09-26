@@ -189,8 +189,11 @@ Requires `boost.source`.
   `shift_time_s`, `input_inertia_kg_m2`.
 - `differential`: `final_drive_ratio`, `type` (`open` | `clutch_lsd` | `locked`), `preload_nm`,
   `locking_accel`, `locking_decel` (0–1), `max_torque_nm` (pinion/input torque rating; default 1200).
-- `tires` (a pair, one axle): `width_mm`, `aspect_ratio`, `rim_diameter_in`, `peak_friction`,
-  `load_sensitivity`, `peak_slip_ratio`, `peak_slip_angle_deg`, `rolling_resistance`, `inertia_kg_m2`
+- `tires` (a pair, one axle): `width_mm`, `aspect_ratio`, `rim_diameter_in`, `peak_friction` (the
+  compound at the tyre's nominal load, 3500 N per 205 mm of width), `load_sensitivity` (friction lost
+  per doubling of load; construction/compound — width enters through the nominal load, so do not
+  fudge it per size), `peak_slip_ratio`, `peak_slip_angle_deg` (the construction at a 205 mm tread;
+  scaled by `(205/width)^0.5`), `rolling_resistance`, `inertia_kg_m2`
   (per wheel), `compound`, `tread_life_mj` (sliding energy the pair absorbs before it is worn out;
   softer compounds wear faster), `cold_pressure_kpa` (set in the garage; rises with temperature),
   `optimal_pressure_kpa` (hot), `optimal_temperature_c`, `temperature_window_c`,

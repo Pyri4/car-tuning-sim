@@ -18,8 +18,27 @@ public static class TireModel
     /// </summary>
     public const double ShapeC = 1.5;
 
-    /// <summary>Reference vertical load for the authored peak friction, N.</summary>
-    public const double ReferenceLoad = 3500.0;
+    // ---- Size: the contact patch ---------------------------------------------------------------
+
+    /// <summary>Tread width the authored friction and slip values are for, mm.</summary>
+    public const double ReferenceWidthMm = 205.0;
+
+    /// <summary>Nominal load of a reference-width tyre, N: its authored <c>peak_friction</c> applies at this load.</summary>
+    public const double ReferenceLoadAtReferenceWidth = 3500.0;
+
+    /// <summary>
+    /// Exponent of (reference width / width) on the peak slip angle: a wider, shorter contact patch on a
+    /// wider belt builds its side force at a smaller slip angle (higher cornering stiffness).
+    /// </summary>
+    public const double WidthSlipAngleExponent = 0.5;
+
+    /// <summary>
+    /// Nominal load of this tyre, N — proportional to tread width (load rating, and the width of the
+    /// contact patch that carries it). Friction falls with load relative to it, so at the same load a
+    /// wider tyre is further down its load-sensitivity curve: wider tyres grip more, and lose less when
+    /// load transfer piles weight onto them.
+    /// </summary>
+    public static double ReferenceLoad(TireSpec t) => ReferenceLoadAtReferenceWidth * t.WidthMm / ReferenceWidthMm;
 
     private static readonly double ShapeB = Math.Tan(Math.PI / (2.0 * ShapeC));
 
@@ -64,9 +83,10 @@ public static class TireModel
         return 1.0 - t.TemperatureGripLoss * (1.0 - Math.Exp(-x * x));
     }
 
-    /// <summary>Peak slip angle (rad) at <paramref name="pressureKpa"/>.</summary>
+    /// <summary>Peak slip angle (rad) at <paramref name="pressureKpa"/>, for this tyre's width.</summary>
     public static double PeakSlipAngle(TireSpec t, double pressureKpa) =>
-        t.PeakSlipAngle * Math.Pow(t.OptimalPressureKpa / Math.Max(20, pressureKpa), PressureSlipAngleExponent);
+        t.PeakSlipAngle * Math.Pow(ReferenceWidthMm / t.WidthMm, WidthSlipAngleExponent)
+        * Math.Pow(t.OptimalPressureKpa / Math.Max(20, pressureKpa), PressureSlipAngleExponent);
 
     public static double PeakSlipRatio(TireSpec t, double pressureKpa) =>
         t.PeakSlipRatio * Math.Pow(t.OptimalPressureKpa / Math.Max(20, pressureKpa), PressureSlipRatioExponent);
@@ -114,7 +134,7 @@ public static class TireModel
     /// <summary>Peak friction coefficient at vertical load <paramref name="fz"/> in a given pressure/temperature state.</summary>
     public static double Friction(TireSpec t, double fz, TyreState state)
     {
-        double ratio = Math.Max(0.05, fz / ReferenceLoad);
+        double ratio = Math.Max(0.05, fz / ReferenceLoad(t));
         double mu = t.PeakFriction * (1.0 - t.LoadSensitivity * Math.Log2(ratio));
         return Math.Clamp(mu, 0.3 * t.PeakFriction, 1.3 * t.PeakFriction) * PressureGripFactor(t, state.PressureKpa) * ThermalGripFactor(t, state.TemperatureK);
     }

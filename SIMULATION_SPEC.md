@@ -348,9 +348,20 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
 - Normalised combined slip: `sx = κ/κ_peak`, `sy = tan α / tan α_peak`, `s = |(sx, sy)|`.
 - `F = µ(Fz)·Fz·sin(1.5·atan(B·s))` with B chosen so the peak is at s = 1; sliding force falls to
   ≈ 77 % of peak at 10× peak slip (→ 71 %). Force is split along the slip direction (friction ellipse).
-- Load sensitivity: `µ = µ₀·(1 − k·log₂(Fz/3500 N))`, clamped to [0.3, 1.3]·µ₀.
+- Load sensitivity: `µ = µ₀·(1 − k·log₂(Fz/F_z0))`, clamped to [0.3, 1.3]·µ₀, with the tyre's nominal
+  load `F_z0 = 3500 N · width/205 mm` (Pacejka's nominal load scales with tyre size: load rating and
+  the width of the patch carrying it). At the same load a wider tyre sits further down its
+  load-sensitivity curve, so it grips more and loses a smaller share of grip to load transfer:
+  165 → 225 → 305 mm (same radius) gives 0.87 → 0.92 → 0.97 g on the skidpad. `k` is a property of
+  the construction/compound, not of the size.
+- Peak slip angle scales with `(205 mm / width)^0.5` (and with pressure, below): a wider, shorter
+  patch on a wider belt is stiffer in cornering. The authored `peak_slip_angle_deg` is the
+  construction's value at 205 mm.
 - Slip: `κ = (ω·r − u_w)/max(|u_w|, 2 m/s)`, `α = atan2(v_w, max(|u_w|, 2 m/s))` (low-speed guard).
-- Rolling radius from the size (`rim/2 + width·aspect`).
+- Rolling radius from the size (`rim/2 + width·aspect`). Mass, inertia, rolling resistance and
+  thermal mass are authored per tyre (a wider tyre's weight is its trade-off).
+- Not modelled: relaxation length (forces follow slip instantly; the 8 chassis substeps keep this
+  stable), aquaplaning, aero effect of width.
 
 ### Tyre temperature and pressure (`TyreThermalModel`, `TireModel`)
 - One lumped temperature per tyre (tread + carcass, `thermal_mass_j_per_k`):

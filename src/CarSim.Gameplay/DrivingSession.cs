@@ -197,7 +197,7 @@ public sealed class KeyboardInputFilter
         var tire = car.TiresFront;
         double v2 = Math.Max(speed * speed, 1.0);
         double needed = car.Wheelbase * tire.PeakFriction * CarSim.Core.Common.PhysicalConstants.Gravity / v2
-                        + tire.PeakSlipAngleDeg * Math.PI / 180.0;
+                        + CarSim.Core.Vehicles.TireModel.PeakSlipAngle(tire, tire.OptimalPressureKpa);
         return Math.Clamp(AssistMargin * needed / car.MaxSteer, 0.1, 1.0);
     }
 
