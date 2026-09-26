@@ -40,6 +40,20 @@ public sealed class EngineConfiguration
     /// </summary>
     public const double ManifoldHeatLossPerPrimaryMm = 0.0075;
 
+    /// <summary>
+    /// Exhaust-port (and late-cycle chamber) wall area per cylinder over bore², m²/m²: a port of throat ≈ 0.35·B
+    /// and length ≈ 1.2·B has π·0.35·1.2 ≈ 1.3·B² of wall.
+    /// </summary>
+    public const double ExhaustPortWallAreaPerBoreSquared = 1.3;
+
+    /// <summary>
+    /// Cycle-averaged gas-to-wall heat-transfer coefficient in the exhaust port, W/(m²·K). Port measurements
+    /// (Caton &amp; Heywood 1981) give ≈ 400–1000 W/(m²·K) while the valve is open, a third of the cycle. Held
+    /// constant with flow (like the manifold's loss), so the port takes a small share of the gas's excess
+    /// heat at full load and nearly all of it when only a few grams per second flow (closed-throttle overrun).
+    /// </summary>
+    public const double ExhaustPortHeatTransferCoefficient = 150.0;
+
     private EngineConfiguration(EngineAssembly assembly, FuelDefinition fuel, EngineGeometry geometry)
     {
         Assembly = assembly;
@@ -88,6 +102,8 @@ public sealed class EngineConfiguration
         ScavengingRpm = HeaderTuningConstant / ExhaustManifold.PrimaryLengthMm;
         ScavengingGain = ExhaustManifold.ScavengingGain;
         ExhaustManifoldHeatLoss = ManifoldHeatLossPerPrimaryMm * ExhaustManifold.PrimaryLengthMm * geometry.Cylinders;
+        ExhaustPortHeatTransfer = ExhaustPortHeatTransferCoefficient * ExhaustPortWallAreaPerBoreSquared
+                                  * geometry.Bore * geometry.Bore * geometry.Cylinders;
 
         // Rotating inertia: crank + flywheel + rod big ends (⅔ rod) + half the reciprocating mass at crank radius + accessories.
         double r2 = geometry.CrankRadius * geometry.CrankRadius;
@@ -159,6 +175,9 @@ public sealed class EngineConfiguration
 
     /// <summary>Heat-loss conductance of the exhaust manifold to the surroundings, W/K.</summary>
     public double ExhaustManifoldHeatLoss { get; }
+
+    /// <summary>Heat-transfer conductance between the exhaust gas and the coolant-jacketed port walls, W/K.</summary>
+    public double ExhaustPortHeatTransfer { get; }
 
     /// <summary>Engine rotating inertia seen at the crank, kg·m².</summary>
     public double RotatingInertia { get; }

@@ -171,14 +171,23 @@ The ECU only knows its sensors and its calibration; it never sees the engine's t
   shared across the excess fuel and CO/H₂ leave with their heating value:
   `f_rich = (525 − 119/λ)/406` (406 kJ released per mol O₂ by full oxidation — Thornton's rule — and
   525 kJ per mol O₂ of deficit left in CO/H₂): 96 % at λ 0.88, 90 % at λ 0.75. `CombustionModel.SplitHeat`
-  divides the released power into indicated work, coolant (`0.28 − 0.06·clamp(rpm/7000, 0, 1.4) + 0.01·KI`,
-  × 1.3 with a blown head gasket), oil (0.03) and exhaust (the remainder, so the split cannot create
-  energy). Pumping work leaves with the exhaust gas; friction heat goes 35 % to oil, 65 % to coolant.
-  Motoring (fuel cut, ignition off), the gas picks up 30 % of the coolant-to-charge temperature
-  difference from the chamber walls at the coolant's expense.
+  divides the released power into indicated work, in-cylinder coolant heat (`0.265 − 0.06·clamp(rpm/7000, 0, 1.4)
+  + 0.01·KI`, × 1.3 with a blown head gasket), oil (0.03) and exhaust (the remainder, so the split cannot
+  create energy). Pumping work leaves with the exhaust gas; friction heat goes 35 % to oil, 65 % to coolant.
+- **Exhaust port:** on its way out the gas exchanges heat with the coolant-jacketed port walls, by the
+  exact uniform-pipe law the manifold uses: `T_port = T_wall + (T_adiabatic − T_wall)·exp(−UA_port/(ṁ_exh·c_p))`
+  with `T_wall = T_coolant` and `UA_port = 150 W/(m²·K) · 1.3·B² · cylinders` (≈ 5.8 W/K for the K20; port
+  measurements, Caton & Heywood 1981, give 400–1000 W/(m²·K) while the valve is open, a third of the cycle).
+  The heat goes to the coolant. At full load it is 1–2 % of the fuel energy (the in-cylinder fraction above
+  was 0.28 before the port was split out, so the full-load coolant total is unchanged at ≈ 27–31 %); on
+  closed-throttle overrun a few g/s carry the whole pumping work and the walls take nearly all of it — without
+  them the gas left the ports at 1,500–4,500 °C and burned the turbine on the next tip-in (fixed in the
+  validation pass). Motoring with an open throttle, cold gas picks heat up from the walls by the same law.
+  UA is held constant with flow (h ∝ ṁ^0.8 would under-cool overrun, where the tidal backflow through a
+  nearly shut throttle, not the net flow, scrubs the port); documented simplification.
 - Exhaust gas temperature `= T_charge + (exhaust heat − latent heat of the excess fuel)/(ṁ_exh·c_p)`
-  (80 % of the unburned fuel's latent heat is absorbed in the cylinder). Richer mixtures run cooler
-  from these two effects alone. Lag 0.2 s (gas), 1.5 s (sensor).
+  after the port loss (80 % of the unburned fuel's latent heat is absorbed in the cylinder). Richer mixtures
+  run cooler from these two effects alone. Lag 0.2 s (gas), 1.5 s (sensor).
 - Piston crown temperature `= T_coolant + 150 K·(q/14.2 MW/m²)^0.7·(1 + 1.5·max(0, λ − 0.9)) + 8 K·KI`,
   q = burned-fuel power per piston area. Lag 3 s.
 - Coolant: capacity = coolant (1.05 kg/L, 3600 J/kgK) + half of block and head metal (900 J/kgK).

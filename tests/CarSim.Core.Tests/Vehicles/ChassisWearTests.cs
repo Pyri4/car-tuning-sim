@@ -2,6 +2,8 @@ using CarSim.Core.Common;
 using CarSim.Core.Damage;
 using CarSim.Core.Ecu;
 using CarSim.Core.Engines;
+using CarSim.Core.Parts;
+using CarSim.Core.Parts.Specs;
 using CarSim.Core.Tests.Simulation;
 using CarSim.Core.Vehicles;
 
@@ -150,6 +152,23 @@ public class ChassisWearTests
     private static VehicleSimulation BigTurboCar(params (string slot, string part)[] chassisSwaps) =>
         Car.Create(BigTurboEngine(), BigTurboTune.Value.Clone(), "e85", chassisSwaps);
 
+    /// <summary>The big-turbo car (twin-plate clutch) with a gearbox that is not in the content database.</summary>
+    private static VehicleSimulation BigTurboCarWith(PartDefinition gearbox)
+    {
+        var db = TestContent.Database;
+        var def = db.GetVehicle("kestrel_s2");
+        var factory = new PartInstanceFactory(21_000_000);
+        var chassis = VehicleAssembly.CreateStock(def, db, factory);
+        Assert.True(chassis.Remove("clutch", out _).Ok);
+        Assert.True(chassis.Install("clutch", factory.Create(db.GetPart("clutch.race_twin"))).Ok);
+        Assert.True(chassis.Remove("gearbox", out _).Ok);
+        Assert.True(chassis.Install("gearbox", factory.Create(gearbox)).Ok);
+        var engine = BigTurboEngine();
+        var sim = new VehicleSimulation(new VehicleConfiguration(def, chassis, engine, db), SimFactory.Create(engine, "e85", BigTurboTune.Value.Clone()));
+        sim.StartIdling();
+        return sim;
+    }
+
     private static EngineAssembly BigTurboEngine()
     {
         var db = TestContent.Database;
@@ -176,7 +195,12 @@ public class ChassisWearTests
         return SimFactory.WithCalibratedVe(BigTurboEngine(), "e85", tune);
     });
 
-    /// <summary>Full-throttle pulls in fourth from 110 km/h to the limiter until something in the driveline breaks.</summary>
+    /// <summary>
+    /// Full-throttle pulls in fourth from 110 km/h to the limiter until something in the driveline breaks. Between
+    /// pulls the driver lifts and coasts for a few seconds: <see cref="Car.Rolling"/> sets the engine speed
+    /// directly, and without the lift the turbo would still be at full shaft speed from the limiter when the engine
+    /// is put back to 4,400 rpm — boost far above the target at an engine speed no real pull reaches it at.
+    /// </summary>
     private static int PullsUntilBroken(VehicleSimulation sim, int maxPulls)
     {
         for (int pull = 1; pull <= maxPulls; pull++)
@@ -186,27 +210,65 @@ public class ChassisWearTests
             for (int i = 0; i < 8.0 / Car.Dt; i++)
                 if (sim.Step(Car.Dt, input).EngineRpm > 7300) break;
             if (sim.Wear.DriveBroken) return pull;
+            var lift = new VehicleInputs();
+            for (int i = 0; i < 3.0 / Car.Dt; i++) sim.Step(Car.Dt, lift);
         }
         return int.MaxValue;
     }
 
     [Fact]
-    public void TorqueAboveTheGearboxRatingBreaksItAndTheDogBoxSurvives()
+    public void TorqueAboveTheGearboxRatingFatiguesTheStockBoxOnEveryPullButNotTheDogBox()
     {
+        // Near peak torque the big-turbo build puts ≈ 445 N·m through the 400 N·m stock box: every pull costs it
+        // fatigue (Basquin, (load/rating)^6 per input revolution above 90 % of the rating) — about a hundred hard
+        // pulls of life at 11 % over. (Until the correction pass it broke within a few pulls only because the test
+        // never lifted between pulls: the turbo met 4,400 rpm at full shaft speed and over-boosted.)
         var stockBox = BigTurboCar(("clutch", "clutch.race_twin"));
-        int pulls = PullsUntilBroken(stockBox, 30);
-        Assert.InRange(pulls, 2, 30);
+        var gearbox = stockBox.Config.Chassis.PartIn("gearbox")!;
+        double previous = 0.0;
+        for (int pull = 0; pull < 3; pull++)
+        {
+            Assert.Equal(int.MaxValue, PullsUntilBroken(stockBox, 1));
+            double fatigue = gearbox.Damage.FatigueOf(FailureMode.GearboxOverload);
+            Assert.True(fatigue > previous + 1e-4, $"pull {pull + 1}: fatigue {fatigue:E2} after {previous:E2}");
+            previous = fatigue;
+        }
+        Assert.True(gearbox.Damage.ExposureOf(FailureMode.GearboxOverload).PeakRatio > 1.05, "the load really is above the rating");
         Assert.Empty(stockBox.Engine.Damage.Failures);
-        var report = Assert.Single(stockBox.Wear.Failures);
+
+        var dogBox = BigTurboCar(("clutch", "clutch.race_twin"), ("gearbox", "gearbox.close_ratio_6mt"));
+        Assert.Equal(int.MaxValue, PullsUntilBroken(dogBox, 3));
+        Assert.Equal(0.0, dogBox.Config.Chassis.PartIn("gearbox")!.Damage.MaxFatigue);
+    }
+
+    [Fact]
+    public void TorqueWellAboveTheGearboxRatingBreaksItWithAnExplanation()
+    {
+        // The same build through a light-duty box rated 360 N·m (≈ 24 % over): fatigue breaks it within a few pulls, the report
+        // says why, the car has no drive afterwards, and the engine is untouched.
+        var stock = TestContent.Database.GetPart("gearbox.kestrel_6mt");
+        var s = stock.GetSpec<GearboxSpec>();
+        var lightDuty = new PartDefinition
+        {
+            Id = "test.gearbox.light_duty", Name = "Light-duty 6-speed (test)", Category = stock.Category, MassKg = stock.MassKg,
+            Provides = stock.Provides, Requires = stock.Requires,
+            Spec = new GearboxSpec
+            {
+                Ratios = s.Ratios, ReverseRatio = s.ReverseRatio, Efficiency = s.Efficiency, MaxTorqueNm = 360,
+                ShiftTimeS = s.ShiftTimeS, InputInertiaKgM2 = s.InputInertiaKgM2,
+            },
+        };
+        var car = BigTurboCarWith(lightDuty);
+        int pulls = PullsUntilBroken(car, 30);
+        Assert.InRange(pulls, 2, 30);
+        Assert.Empty(car.Engine.Damage.Failures);
+        var report = Assert.Single(car.Wear.Failures);
         Assert.Equal(FailureMode.GearboxOverload, report.Mode);
         Assert.Contains(report.ContributingFactors, f => f.Contains("close to or above what the gearbox is built for"));
         // No drive: full throttle goes nowhere.
-        double speed = stockBox.Last!.Speed;
-        for (int i = 0; i < 1.0 / Car.Dt; i++) stockBox.Step(Car.Dt, new VehicleInputs { Throttle = 1 });
-        Assert.True(stockBox.Last!.Speed <= speed + 0.1);
-
-        var dogBox = BigTurboCar(("clutch", "clutch.race_twin"), ("gearbox", "gearbox.close_ratio_6mt"));
-        Assert.Equal(int.MaxValue, PullsUntilBroken(dogBox, pulls + 2));
+        double speed = car.Last!.Speed;
+        for (int i = 0; i < 1.0 / Car.Dt; i++) car.Step(Car.Dt, new VehicleInputs { Throttle = 1 });
+        Assert.True(car.Last!.Speed <= speed + 0.1);
     }
 
     [Fact]

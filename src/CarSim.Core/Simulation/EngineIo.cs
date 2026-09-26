@@ -178,7 +178,22 @@ public sealed record EngineTelemetry
     /// heat absorbed by unburned fuel). FuelPower = Power + HeatToCoolant + HeatToOil + ExhaustHeat.
     /// </summary>
     public double ExhaustHeat { get; init; }
+
+    /// <summary>
+    /// Heat the exhaust gas gives to the coolant-jacketed port walls on its way out, W (already included in
+    /// <see cref="HeatToCoolant"/>; negative when cold motored gas picks heat up from the walls).
+    /// </summary>
+    public double PortWallHeat { get; init; }
+
     public double RadiatorHeatRejection { get; init; }
+
+    // The rest of the thermal network, W (debug: lets a test close the first law over time with stored heat).
+    /// <summary>Heat the coolant loses from the block and hoses to the surroundings.</summary>
+    public double CoolantSurfaceLoss { get; init; }
+    /// <summary>Heat flowing from the oil into the coolant (negative while the oil is cooler).</summary>
+    public double OilToCoolantHeat { get; init; }
+    /// <summary>Heat the oil loses from the sump to the surroundings.</summary>
+    public double OilSumpLoss { get; init; }
 
     // Forced induction (zero for naturally aspirated builds).
     public double TurboRpm { get; init; }

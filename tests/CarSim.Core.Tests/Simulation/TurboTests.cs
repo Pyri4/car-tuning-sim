@@ -348,6 +348,35 @@ public class TurboTests
     }
 
     [Fact]
+    public void LiftingOffAndBackOnDoesNotBurnTheTurbine()
+    {
+        // Regression: closed-throttle overrun heated the port gas to thousands of kelvin (the whole pumping work in a
+        // few grams per second of gas) and the next tip-in sent it through the turbine — every gear change destroyed
+        // the T28 on its base tune (TurbineOverTemperature), and the hot gas over-spun small turbos.
+        foreach (double rpm in new[] { 3000.0, 5000, 6500 })
+        {
+            var sim = TurboSim(TurboBuild());
+            var input = new EngineInputs { SpeedMode = SpeedMode.Held, HeldRpm = rpm, CoolantTemperatureOverride = 363.15 };
+            double maxTurbineInlet = 0, maxShaft = 0;
+            for (int cycle = 0; cycle < 3; cycle++)
+            {
+                input.Throttle = 1.0;
+                for (int i = 0; i < 750; i++)
+                {
+                    var t = sim.Step(0.002, input);
+                    maxTurbineInlet = Math.Max(maxTurbineInlet, t.TurbineInletTemperature);
+                    maxShaft = Math.Max(maxShaft, sim.State.TurboOmega);
+                }
+                input.Throttle = 0.0;
+                for (int i = 0; i < 500; i++) maxTurbineInlet = Math.Max(maxTurbineInlet, sim.Step(0.002, input).TurbineInletTemperature);
+            }
+            Assert.Empty(sim.Damage.Failures);
+            Assert.True(maxTurbineInlet < sim.Config.Turbo!.MaxTurbineInletTemperature, $"{rpm} rpm: {Units.KToC(maxTurbineInlet):F0} °C");
+            Assert.True(maxShaft < sim.Config.Turbo.MaxShaftSpeed, $"{rpm} rpm: shaft at {maxShaft / sim.Config.Turbo.MaxShaftSpeed:P0} of its rating");
+        }
+    }
+
+    [Fact]
     public void ShaftPowersBalanceAtSteadyState()
     {
         var sim = TurboSim(TurboBuild());

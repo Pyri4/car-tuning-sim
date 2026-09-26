@@ -260,21 +260,26 @@ public sealed class EngineSimulation
         double exhaustHeat = heat.ToExhaust + pumpingPower;
         double heatToCoolant = heat.ToCoolant + (1.0 - CombustionModel.FrictionHeatToOil) * frictionPower;
         double heatToOil = heat.ToOil + CombustionModel.FrictionHeatToOil * frictionPower;
-        if (!firing && exhaustFlow > 0)
-        {
-            // Motoring: the gas picks up heat from the chamber walls, cooling the engine.
-            double pickup = CombustionModel.MotoringWallHeatPickup * exhaustFlow * PhysicalConstants.ExhaustCp
-                            * (s.CoolantTemperature - air.ChargeTemperature);
-            exhaustHeat += pickup;
-            heatToCoolant -= pickup;
-        }
         // Unburned (excess) fuel still has to evaporate: its latent heat comes out of the exhaust gas. The
         // share that evaporated in the intake was already taken from the charge temperature.
         double excessFuelFlow = firing ? Math.Max(0.0, fuelPerCycle - burnedFuel) * cyclesPerSecond : 0.0;
         double latentHeat = (1.0 - CombustionModel.EvaporatedBeforeInletValveCloses) * excessFuelFlow * fuel.LatentHeat;
-        double egtTarget = exhaustFlow > 0
-            ? air.ChargeTemperature + (exhaustHeat - latentHeat) / (exhaustFlow * PhysicalConstants.ExhaustCp)
-            : air.ChargeTemperature;
+        double egtTarget = air.ChargeTemperature, portWallHeat = 0.0;
+        if (exhaustFlow > 0)
+        {
+            // On its way out through the coolant-jacketed port the gas exchanges heat with the walls (exact
+            // uniform-pipe solution, like the manifold). At full load that is a few percent of its excess heat;
+            // on closed-throttle overrun a few grams per second carry the whole pumping work, and without the
+            // walls they would leave at thousands of kelvin. Motoring with an open throttle, cold gas picks heat
+            // up from the walls by the same law.
+            double capacityRate = exhaustFlow * PhysicalConstants.ExhaustCp;
+            double adiabatic = air.ChargeTemperature + (exhaustHeat - latentHeat) / capacityRate;
+            double exchanged = 1.0 - Math.Exp(-c.ExhaustPortHeatTransfer / capacityRate);
+            portWallHeat = exchanged * capacityRate * (adiabatic - s.CoolantTemperature);
+            exhaustHeat -= portWallHeat;
+            heatToCoolant += portWallHeat;
+            egtTarget = adiabatic - portWallHeat / capacityRate;
+        }
 
         // Piston crown temperature (quasi-steady target, lagged).
         double heatFlux = fuelPower / (g.Cylinders * g.PistonArea);
@@ -396,7 +401,11 @@ public sealed class EngineSimulation
             HeatToCoolant = heatToCoolant,
             HeatToOil = heatToOil,
             ExhaustHeat = exhaustHeat,
+            PortWallHeat = portWallHeat,
             RadiatorHeatRejection = radiatorHeat,
+            CoolantSurfaceLoss = surfaceLoss,
+            OilToCoolantHeat = oilToCoolant,
+            OilSumpLoss = sumpLoss,
             TurboRpm = Units.RadPerSecToRpm(s.TurboOmega),
             CompressorPressureRatio = c.Turbo != null ? air.Compressor.PressureRatio : 1.0,
             CompressorEfficiency = air.Compressor.Efficiency,

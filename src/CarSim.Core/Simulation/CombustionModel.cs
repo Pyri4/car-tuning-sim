@@ -105,11 +105,13 @@ public static class CombustionModel
     }
 
     /// <summary>
-    /// Fraction of burned-fuel energy rejected to coolant. Less time per cycle at high rpm means less
-    /// heat loss; knock scrubs the thermal boundary layer and increases it.
+    /// Fraction of burned-fuel energy rejected to coolant from inside the cylinder. Less time per cycle at high
+    /// rpm means less heat loss; knock scrubs the thermal boundary layer and increases it. The exhaust port's
+    /// share is modelled separately (<see cref="EngineConfiguration.ExhaustPortHeatTransfer"/>), so the full-load
+    /// total to coolant stays at ≈ 26–30 % of the fuel energy (it was a lumped 0.28 before the port was split out).
     /// </summary>
     public static double CoolantHeatFraction(double rpm, double knockIntensity) =>
-        0.28 - 0.06 * MathUtil.Clamp(rpm / 7000.0, 0.0, 1.4) + 0.01 * Math.Min(knockIntensity, 10.0);
+        0.265 - 0.06 * MathUtil.Clamp(rpm / 7000.0, 0.0, 1.4) + 0.01 * Math.Min(knockIntensity, 10.0);
 
     /// <summary>
     /// Heat released by full oxidation per mole of O₂ consumed, J/mol (Thornton's rule: nearly the same for
@@ -153,12 +155,6 @@ public static class CombustionModel
     /// <summary>Charge-temperature drop from fuel evaporating in the intake, K.</summary>
     public static double EvaporativeCooling(double fuelAirRatio, double latentHeat) =>
         EvaporatedBeforeInletValveCloses * Math.Max(0.0, fuelAirRatio) * latentHeat / PhysicalConstants.AirCp;
-
-    /// <summary>
-    /// While not firing (fuel cut, motoring), the fraction of the coolant-to-charge temperature difference
-    /// the gas picks up from the combustion-chamber walls on its way to the exhaust.
-    /// </summary>
-    public const double MotoringWallHeatPickup = 0.3;
 
     /// <summary>Where the energy released by the burned fuel goes (W). Sums exactly to the released power.</summary>
     public readonly record struct HeatSplit(double Indicated, double ToCoolant, double ToOil, double ToExhaust);
