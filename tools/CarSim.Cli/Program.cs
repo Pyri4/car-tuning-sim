@@ -16,30 +16,31 @@ public static class Program
         Usage:
           carsim validate [--content <dir>] [--mods <dir>]
                                                         Load and validate the base content and every mod.
-          carsim inspect [<engine-id>] [--content <dir>]
+          carsim inspect <engine-id> [--content <dir>]
                                                         Show the stock build, derived geometry and compatibility report.
-          carsim sweep [<engine-id>] [--swap slot=part,...] [--fuel <id>] [--tune <id>] [--from 1000] [--to 8000] [--step 500]
+          carsim sweep <engine-id> [--swap slot=part,...] [--fuel <id>] [--tune <id>] [--from 1000] [--to 8000] [--step 500]
                                                         Steady-state full-throttle dyno sweep of the stock build (with swaps).
-          carsim hold [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
+          carsim hold <engine-id> [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
                                                         Hold an operating point; print warnings, failure reports and inspection.
                                                         (--air-speed uses the radiator instead of test-cell coolant control.)
-          carsim drive [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--cold 1] [--trace <s>] [build options]
+          carsim drive <engine-id> [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--cold 1] [--trace <s>] [build options]
                                                         Autopilot laps of the test facility in the engine's car: lap times,
                                                         clutch/brake temperatures, wear, warnings and failure reports.
-          carsim calibrate-spark [--knock-margin 1.5] [--mbt-margin 1] [--hold 1] [build options]
-                                                        Measure best-torque and knock-limited timing on a steady-state dyno and
-                                                        print an ignition_advance_deg table (min(MBT − margin, knock limit − margin)
-                                                        on the --fuel given; a base map for content authors).
-          carsim calibrate-cams [--step 5] [--hold 0.8] [build options]
-                                                        For a cam phaser the ECU can drive: the intake advance that traps the most
-                                                        air at each rpm and load, as an intake_cam_advance_deg table (a base map).
-          carsim bench [<engine-id>] [--steps 20000] [--repeats 5] [--rpm 5000] [build options]
-                                                        Step cost: best-of-N time and allocated bytes per engine step (full
-                                                        throttle, held speed) and per vehicle step (autopilot on the test track).
-          carsim calibrate-ve [--hold 1] [build options]
+          carsim calibrate-ve <engine-id> [--hold 1] [build options]
                                                         Measure the build's breathing on a steady-state dyno and print a
                                                         volumetric_efficiency table for the tune (a base-map generator for
                                                         content authors; the game's ECU never sees the engine's true VE).
+          carsim calibrate-spark <engine-id> [--knock-margin 1.5] [--mbt-margin 1] [--hold 1] [build options]
+                                                        Measure best-torque and knock-limited timing on a steady-state dyno and
+                                                        print an ignition_advance_deg table (min(MBT − margin, knock limit − margin)
+                                                        on the --fuel given; a base map for content authors).
+          carsim calibrate-cams <engine-id> [--step 5] [--hold 0.8] [build options]
+                                                        For a cam phaser the ECU can drive: the intake advance that traps the most
+                                                        air at each rpm and load, as an intake_cam_advance_deg table (a base map).
+          carsim bench <engine-id> [--steps 20000] [--repeats 5] [--rpm 5000] [build options]
+                                                        Step cost: best-of-N time and allocated bytes per engine step (full
+                                                        throttle, held speed) and per vehicle step (autopilot on the test track).
+        <engine-id> (kestrel_k20, isar_m54, ...) may be left out only when the content has a single engine family.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
         """;
 
@@ -102,11 +103,19 @@ public static class Program
 
     private sealed record Built(EngineSimulation Sim, EcuTune Tune, ContentDatabase Db, PartInstanceFactory Factory);
 
+    /// <summary>The engine family named on the command line; optional only when the content has a single family.</summary>
+    private static string EngineId(CliOptions o, ContentDatabase db)
+    {
+        if (o.Positional.FirstOrDefault() is { } id) return id;
+        if (db.Engines.Count == 1) return db.Engines.Keys.First();
+        throw new ArgumentException($"Several engine families are loaded; name one: {string.Join(", ", db.Engines.Keys.OrderBy(k => k, StringComparer.Ordinal))}.");
+    }
+
     /// <summary>Builds the stock engine with --swap/--add parts, --fuel and --tune applied.</summary>
     private static Built BuildEngine(CliOptions o)
     {
         var db = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o)).GetOrThrow();
-        var engine = db.GetEngine(o.Positional.FirstOrDefault() ?? db.Engines.Keys.First());
+        var engine = db.GetEngine(EngineId(o, db));
         var factory = new PartInstanceFactory();
         var assembly = EngineAssembly.CreateStock(engine, db, factory);
         if (o.Named.TryGetValue("swap", out var swaps))
@@ -384,8 +393,7 @@ public static class Program
     private static int Inspect(CliOptions o)
     {
         var db = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o)).GetOrThrow();
-        var engineId = o.Positional.FirstOrDefault() ?? db.Engines.Keys.First();
-        var engine = db.GetEngine(engineId);
+        var engine = db.GetEngine(EngineId(o, db));
         var assembly = EngineAssembly.CreateStock(engine, db, new PartInstanceFactory());
 
         Console.WriteLine($"{engine.Name} [{engine.Id}]");
