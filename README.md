@@ -30,5 +30,17 @@ The first milestone is intentionally small:
 - SIMULATION_SPEC.md — initial simulation model and equations
 - PARTS_DATABASE.md — initial component/data schema
 
+## Technology
+Godot 4.7 (.NET) for presentation; the mechanical simulation is a pure C# (.NET 8) library with no
+engine dependency. See ARCHITECTURE.md for the decision record.
+
+## Building and testing
+Requirements: .NET SDK 8.0.
+
+```
+dotnet build CarTuningSim.sln
+dotnet test CarTuningSim.sln
+```
+
 ## Current status
-Pre-production / architecture phase.
+Early implementation. See ROADMAP.md for what exists and what is next.

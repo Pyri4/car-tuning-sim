@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+
+# Godot
+.godot/
+*.translation
+export_presets.cfg.local
+/game/build/
+
+# Tool output
+/out/
+*.csv.tmp
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
