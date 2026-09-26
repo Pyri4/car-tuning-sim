@@ -12,7 +12,7 @@ public static class SpecDescriber
 {
     private static readonly (string Suffix, string Unit)[] UnitSuffixes =
     {
-        ("JPerK", "J/K"), ("Mj", "MJ"), ("KgCm2", "kg·cm²"), ("KgM2", "kg·m²"), ("WPerK", "W/K"), ("CcPerRev", "cc/rev"), ("CcMin", "cc/min"), ("KgS", "kg/s"),
+        ("NmDeg", "N·m/°"), ("NsM", "N·s/m"), ("NMm", "N/mm"), ("JPerK", "J/K"), ("Mj", "MJ"), ("KgCm2", "kg·cm²"), ("KgM2", "kg·m²"), ("WPerK", "W/K"), ("CcPerRev", "cc/rev"), ("CcMin", "cc/min"), ("KgS", "kg/s"),
         ("Cm2", "cm²"), ("Cfm", "CFM"), ("Lph", "L/h"), ("Kpa", "kPa"), ("Bar", "bar"), ("Rpm", "rpm"), ("Deg", "°"),
         ("Mm", "mm"), ("Cc", "cc"), ("Kn", "kN"), ("Nm", "N·m"), ("Ms", "m/s"), ("Kg", "kg"), ("C", "°C"), ("G", "g"),
         ("N", "N"), ("L", "L"),
@@ -42,6 +42,14 @@ public static class SpecDescriber
             rows.Add((label, text));
         }
         return rows;
+    }
+
+    /// <summary>Unit of a snake_case content field ("front_camber_deg" → "°"), or "" if none.</summary>
+    public static string UnitOfField(string snakeField)
+    {
+        string pascal = string.Concat(snakeField.Split('_', StringSplitOptions.RemoveEmptyEntries).Select(w => char.ToUpperInvariant(w[0]) + w[1..]));
+        Label(pascal, out string unit);
+        return unit;
     }
 
     private static string Format(double d) =>

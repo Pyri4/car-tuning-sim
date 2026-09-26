@@ -157,6 +157,13 @@ public class SpecDescriberTests
         Assert.Contains(rows, r => r.Label == "Max crown temperature" && r.Value == "300°C");
         Assert.Contains(rows, r => r.Label == "Dish volume" && r.Value == "-2 cc");
         Assert.DoesNotContain(rows, r => r.Label.Contains("Mass each") && r.Value.Contains("kg"));
+        var susp = CarSim.Core.Parts.SpecDescriber.Describe(TestContent.Database.GetPart("suspension.oem").Spec);
+        Assert.Contains(susp, r => r.Label == "Front arb" && r.Value == "500 N·m/°");
+        Assert.Contains(susp, r => r.Label == "Front spring" && r.Value == "45 N/mm");
+        Assert.Contains(susp, r => r.Label == "Front damper" && r.Value == "2,400 N·s/m");
+        Assert.Equal("°", CarSim.Core.Parts.SpecDescriber.UnitOfField("front_camber_deg"));
+        Assert.Equal("kPa", CarSim.Core.Parts.SpecDescriber.UnitOfField("pressure_kpa"));
+        Assert.Equal("", CarSim.Core.Parts.SpecDescriber.UnitOfField("rear_pressure_factor"));
     }
 
     [Fact]

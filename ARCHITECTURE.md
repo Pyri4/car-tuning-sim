@@ -135,7 +135,8 @@ The prototype UI is built in C# code (`game/scripts/UI/`) rather than in large `
 are reviewable in diffs and the scene file stays trivial (`scenes/Main.tscn`). `GameState` (plain C#)
 holds the session (content, garage, dyno runs, failure reports) and raises `Changed`; views rebuild
 from it. Tabs: Garage (car, fuel, shelf, save/load, log, test-track button), Workshop (engine and
-chassis component tree, inspection, specs, removal order, shelf/shop), Tuning (ECU limits,
+chassis component tree, inspection, specs, removal order, shelf/shop), Setup (every adjustable
+setting of the installed parts, balance figures, chassis bench test via `ChassisBench`), Tuning (ECU limits,
 calibration, tables), Dyno (sweep/steady runs, live telemetry, warnings, graphs, comparisons, failure
 reports), Reports (failure history, inspection of engine and chassis).
 

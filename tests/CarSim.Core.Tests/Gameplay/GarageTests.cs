@@ -161,6 +161,28 @@ public class GarageTests
     }
 
     [Fact]
+    public void TheChassisBenchComparesSetupsWithoutWearingAnything()
+    {
+        var g = NewGame();
+        double tyreWear = g.PartIn("tires_rear")!.Wear;
+        var stock = ChassisBench.Run(g);
+        Assert.True(stock.Ok, stock.Problem);
+        Assert.InRange(stock.SkidpadG, 0.8, 1.05);
+        Assert.InRange(stock.BrakingDistance100M, 38, 55);
+        Assert.InRange(stock.FrontBrakeShare, 0.6, 0.8);
+        Assert.Equal(tyreWear, g.PartIn("tires_rear")!.Wear);
+        Assert.Empty(g.FailedParts);
+
+        Assert.True(g.Adjust("tires_front", "pressure_kpa", 150).Ok);
+        Assert.True(g.Adjust("tires_rear", "pressure_kpa", 150).Ok);
+        var soft = ChassisBench.Run(g);
+        Assert.True(soft.SkidpadG < stock.SkidpadG);
+
+        Assert.True(g.RemoveEngineFromCar().Ok);
+        Assert.False(ChassisBench.Run(g).Ok, "no engine in the car, no test");
+    }
+
+    [Fact]
     public void DamageFromDrivingPersistsInTheGarage()
     {
         var g = NewGame();

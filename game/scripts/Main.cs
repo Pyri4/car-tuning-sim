@@ -5,8 +5,8 @@ using Godot;
 namespace CarTuningSim;
 
 /// <summary>
-/// Root of the prototype UI: a status bar and tabs for the garage, workshop, tuning, dyno and reports.
-/// Command-line (after "--"): --tab=garage|workshop|tuning|dyno|reports, --select=slot, --autorun,
+/// Root of the prototype UI: a status bar and tabs for the garage, workshop, set-up, tuning, dyno and reports.
+/// Command-line (after "--"): --tab=garage|workshop|setup|tuning|dyno|reports, --select=slot, --autorun,
 /// --dyno-end=rpm, --screenshot=file.png, --frames=N, --drive (go straight to the test track; see DriveScene).
 /// </summary>
 public partial class Main : Control
@@ -49,6 +49,7 @@ public partial class Main : Control
         if (double.TryParse(Arg("dyno-end"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var end)) dyno.AutoEndRpm = end;
         _tabs.AddChild(new GarageView { Name = "Garage" });
         _tabs.AddChild(engine);
+        _tabs.AddChild(new SetupView { Name = "Setup" });
         _tabs.AddChild(new TuningView { Name = "Tuning" });
         _tabs.AddChild(dyno);
         _tabs.AddChild(new ReportsView { Name = "Reports" });
