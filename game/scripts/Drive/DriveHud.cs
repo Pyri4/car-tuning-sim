@@ -161,7 +161,7 @@ public partial class DriveHud : Control
         _laps.Text = $"Lap {timer.Laps + 1}   {current}\nLast  {(timer.LastLap is double last ? Time(last) : "--:--.---")}\nBest  {(timer.BestLap is double b ? Time(b) : "--:--.---")}";
 
         var e = t.Engine;
-        string boost = sim.Engine.Config.Turbo != null ? $"\nBoost     {(e.MapKpa - 101.3) / 100.0:+0.00;-0.00} bar" : "";
+        string boost = sim.Engine.Config.Turbos[0].Spec != null ? $"\nBoost     {(e.MapKpa - 101.3) / 100.0:+0.00;-0.00} bar" : "";
         _gauges.Text = $"Coolant   {e.CoolantC:F0} °C\nOil       {e.OilC:F0} °C   {e.OilPressure / 1e5:F1} bar\nAFR       {e.Afr:F1}   knock retard {e.KnockRetard:F1}°{boost}\n"
                        + $"Clutch    {t.ClutchTemperatureC:F0} °C   holds {t.ClutchCapacityNm:F0} N·m\nBrakes    F {t.BrakeTemperatureFrontC:F0} °C   R {t.BrakeTemperatureRearC:F0} °C\n"
                        + $"Lateral   {t.LateralG:F2} g   long {t.LongitudinalG:+0.00;-0.00} g";

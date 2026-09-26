@@ -25,7 +25,8 @@ public static class CamPhaseCalibrator
         var loadAxis = original.IgnitionAdvance.YAxis;
         var table = new double[loadAxis.Count][];
         for (int r = 0; r < loadAxis.Count; r++) table[r] = new double[rpmAxis.Count];
-        double range = sim.Config.IntakePhaserRange;
+        // Every bank's phaser follows the one table (each clamped to its own range): search the widest.
+        double range = sim.Config.Banks.Max(b => b.IntakePhaserRange);
         if (range <= 0) return table;
 
         bool damage = sim.DamageEnabled;

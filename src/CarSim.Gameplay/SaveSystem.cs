@@ -181,16 +181,10 @@ public static class SaveSystem
             // target λ as far as its breathing differs from stock — exactly what the player now has to tune.
             var stockVe = new CarSim.Core.Common.Table2D(stock.RpmAxis, stock.LoadAxisKpa, stock.VolumetricEfficiency);
             double[][] ve = tune.LoadAxisKpa.Select(load => tune.RpmAxis.Select(rpm => stockVe.Evaluate(rpm, load)).ToArray()).ToArray();
-            file.Tune = new TuneDocument
+            file.Tune = tune with
             {
-                Id = tune.Id, Name = tune.Name, Description = tune.Description, RpmAxis = tune.RpmAxis, LoadAxisKpa = tune.LoadAxisKpa,
-                TargetLambda = tune.TargetLambda, IgnitionAdvanceDeg = tune.IgnitionAdvanceDeg, BoostTargetKpa = tune.BoostTargetKpa,
-                IntakeCamAdvanceDeg = tune.IntakeCamAdvanceDeg,
-                RevLimitRpm = tune.RevLimitRpm, IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
-                InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = tune.Source,
                 VolumetricEfficiency = tune.VolumetricEfficiency ?? ve,
                 DisplacementCc = tune.DisplacementCc ?? stock.DisplacementCc,
-                InjectorDeadTimeMs = tune.InjectorDeadTimeMs, FuelDensityKgL = tune.FuelDensityKgL,
             };
         }
         if (file.Version < 4 && file.Tune is { } oldTune)

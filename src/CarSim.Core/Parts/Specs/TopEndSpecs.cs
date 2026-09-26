@@ -43,6 +43,12 @@ public sealed class CylinderHeadSpec : PartSpec
     public int ValvesPerCylinder { get; init; } = 4;
     public string Material { get; init; } = "aluminium";
 
+    /// <summary>
+    /// Valvetrain the head is built for (<see cref="ValvetrainTypes"/>): "dohc" and "sohc" heads carry their camshafts,
+    /// an "ohv" (pushrod) head takes its valve motion from a camshaft in the block. The camshafts fitted must match.
+    /// </summary>
+    public string Valvetrain { get; init; } = ValvetrainTypes.Dohc;
+
     [JsonIgnore] public double ChamberVolume => Units.CcToM3(ChamberVolumeCc);
     [JsonIgnore] public double ValveMovingMass => Units.GToKg(ValveMovingMassG);
 
@@ -62,6 +68,47 @@ public sealed class CylinderHeadSpec : PartSpec
         check.CurvePairs("exhaust_port_flow_cfm", ExhaustPortFlowCfm);
         check.Range("valve_moving_mass_g", ValveMovingMassG, 20, 500);
         check.Range("valves_per_cylinder", ValvesPerCylinder, 2, 5);
+        ValvetrainTypes.Check(check, Valvetrain);
+    }
+}
+
+/// <summary>Valvetrain architectures (cams over the valves, one cam per bank, or pushrods from a cam in the block).</summary>
+public static class ValvetrainTypes
+{
+    public const string Dohc = "dohc";
+    public const string Sohc = "sohc";
+    public const string Ohv = "ohv";
+    public static readonly IReadOnlyList<string> All = new[] { Dohc, Sohc, Ohv };
+
+    public static string Describe(string type) => type switch
+    {
+        Dohc => "DOHC",
+        Sohc => "SOHC",
+        Ohv => "OHV (pushrod)",
+        _ => type,
+    };
+
+    internal static void Check(SpecChecker check, string type) =>
+        check.That(All.Contains(type), $"valvetrain must be one of {string.Join(", ", All)} (was '{type}').");
+}
+
+/// <summary>
+/// One cam profile: durations in crank degrees at 1 mm valve lift, peak valve lifts. A camshaft set has its base
+/// profile and, with variable valve lift, a second one the ECU can switch to.
+/// </summary>
+public sealed class CamProfileSpec
+{
+    public required double IntakeDurationDeg { get; init; }
+    public required double IntakeLiftMm { get; init; }
+    public required double ExhaustDurationDeg { get; init; }
+    public required double ExhaustLiftMm { get; init; }
+
+    internal void Validate(SpecChecker check, string prefix)
+    {
+        check.Range(prefix + "intake_duration_deg", IntakeDurationDeg, 150, 340);
+        check.Range(prefix + "exhaust_duration_deg", ExhaustDurationDeg, 150, 340);
+        check.Range(prefix + "intake_lift_mm", IntakeLiftMm, 3, 20);
+        check.Range(prefix + "exhaust_lift_mm", ExhaustLiftMm, 3, 20);
     }
 }
 
@@ -96,9 +143,31 @@ public sealed class CamshaftSpec : PartSpec
     /// </summary>
     public double IntakePhaserRangeDeg { get; init; }
 
+    /// <summary>
+    /// Variable valve lift: a second, longer and higher cam profile the ECU switches to above its valve-lift switch
+    /// speed (two-stage systems: switched rocker or tappet). Null = one profile. Needs an ECU with valve-lift control.
+    /// </summary>
+    public CamProfileSpec? HighLiftProfile { get; init; }
+
+    /// <summary>Valvetrain the camshafts are for (<see cref="ValvetrainTypes"/>): must match the head's.</summary>
+    public string Valvetrain { get; init; } = ValvetrainTypes.Dohc;
+
+    /// <summary>The base profile (<paramref name="high"/> false) or the variable-lift profile (true; the base if there is none).</summary>
+    public CamProfileSpec Profile(bool high) => high && HighLiftProfile != null
+        ? HighLiftProfile
+        : new CamProfileSpec
+        {
+            IntakeDurationDeg = IntakeDurationDeg, IntakeLiftMm = IntakeLiftMm, ExhaustDurationDeg = ExhaustDurationDeg, ExhaustLiftMm = ExhaustLiftMm,
+        };
+
+    [JsonIgnore] public bool HasVariableLift => HighLiftProfile != null;
+
     [JsonIgnore] public double IntakeLift => Units.MmToM(IntakeLiftMm);
     [JsonIgnore] public double ExhaustLift => Units.MmToM(ExhaustLiftMm);
-    [JsonIgnore] public double MaxLiftMm => Math.Max(IntakeLiftMm, ExhaustLiftMm);
+    /// <summary>Highest valve lift any profile opens to (what the springs must accommodate).</summary>
+    [JsonIgnore] public double MaxLiftMm => HighLiftProfile == null
+        ? Math.Max(IntakeLiftMm, ExhaustLiftMm)
+        : Math.Max(Math.Max(IntakeLiftMm, ExhaustLiftMm), Math.Max(HighLiftProfile.IntakeLiftMm, HighLiftProfile.ExhaustLiftMm));
 
     /// <summary>Whether the lobe centrelines are authored (otherwise straight up on the lobe separation).</summary>
     [JsonIgnore] public bool HasCenterlines => IntakeCenterlineDeg != null && ExhaustCenterlineDeg != null;
@@ -121,6 +190,11 @@ public sealed class CamshaftSpec : PartSpec
         Math.Max(0.0, (IntakeDurationDeg + ExhaustDurationDeg) / 2.0
                       - (InstalledIntakeCenterlineDeg + InstalledExhaustCenterlineDeg) + intakeAdvanceDeg);
 
+    /// <summary>Valve overlap on profile <paramref name="profile"/> (lobes share their centrelines across profiles).</summary>
+    public double OverlapAt(double intakeAdvanceDeg, CamProfileSpec profile) =>
+        Math.Max(0.0, (profile.IntakeDurationDeg + profile.ExhaustDurationDeg) / 2.0
+                      - (InstalledIntakeCenterlineDeg + InstalledExhaustCenterlineDeg) + intakeAdvanceDeg);
+
     protected override void Validate(SpecChecker check)
     {
         check.Range("intake_duration_deg", IntakeDurationDeg, 150, 340);
@@ -135,6 +209,13 @@ public sealed class CamshaftSpec : PartSpec
         check.Range("intake_phaser_range_deg", IntakePhaserRangeDeg, 0, 80);
         check.That(IntakePhaserRangeDeg == 0 || HasCenterlines,
             "intake_phaser_range_deg needs the installed (park) centrelines intake_centerline_deg and exhaust_centerline_deg.");
+        ValvetrainTypes.Check(check, Valvetrain);
+        if (HighLiftProfile is { } high)
+        {
+            high.Validate(check, "high_lift_profile.");
+            check.That(high.IntakeLiftMm >= IntakeLiftMm && high.IntakeDurationDeg >= IntakeDurationDeg,
+                "high_lift_profile must open the intake valves at least as far and as long as the base profile.");
+        }
     }
 }
 

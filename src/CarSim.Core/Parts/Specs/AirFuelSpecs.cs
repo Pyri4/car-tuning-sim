@@ -8,6 +8,13 @@ public sealed class IntakeManifoldSpec : PartSpec
     /// <summary>Runner length; longer runners tune the torque peak to lower RPM.</summary>
     public required double RunnerLengthMm { get; init; }
 
+    /// <summary>
+    /// Variable intake: the effective runner length once the ECU switches the manifold's valve or flap (above its
+    /// runner switch speed), usually shorter for top-end breathing. Null = a fixed manifold. Needs an ECU with
+    /// intake-runner control.
+    /// </summary>
+    public double? SwitchedRunnerLengthMm { get; init; }
+
     /// <summary>Total flow capacity (air filter/inlet included), CFM at 28 inH2O.</summary>
     public required double FlowCfm { get; init; }
 
@@ -16,6 +23,7 @@ public sealed class IntakeManifoldSpec : PartSpec
     protected override void Validate(SpecChecker check)
     {
         check.Range("runner_length_mm", RunnerLengthMm, 50, 1000);
+        if (SwitchedRunnerLengthMm is double switched) check.Range("switched_runner_length_mm", switched, 50, 1000);
         check.Positive("flow_cfm", FlowCfm);
     }
 }

@@ -54,15 +54,12 @@ public static class SimFactory
     {
         var d = tune.ToDocument();
         double[][] Extend(double[][] rows) => rows.Concat(extraKpa.Select(_ => rows[^1].ToArray())).ToArray();
-        return EcuTune.FromDocument(new CarSim.Core.Content.TuneDocument
+        return EcuTune.FromDocument(d with
         {
-            Id = d.Id, Name = d.Name, RpmAxis = d.RpmAxis, LoadAxisKpa = d.LoadAxisKpa.Concat(extraKpa).ToArray(),
+            LoadAxisKpa = d.LoadAxisKpa.Concat(extraKpa).ToArray(),
             TargetLambda = Extend(d.TargetLambda), IgnitionAdvanceDeg = Extend(d.IgnitionAdvanceDeg),
-            VolumetricEfficiency = Extend(d.VolumetricEfficiency!), DisplacementCc = d.DisplacementCc,
-            BoostTargetKpa = d.BoostTargetKpa, IntakeCamAdvanceDeg = d.IntakeCamAdvanceDeg == null ? null : Extend(d.IntakeCamAdvanceDeg),
-            RevLimitRpm = d.RevLimitRpm, IdleRpm = d.IdleRpm,
-            KnockControlEnabled = d.KnockControlEnabled, InjectorFlowCcMin = d.InjectorFlowCcMin, FuelStoichAfr = d.FuelStoichAfr,
-            InjectorDeadTimeMs = d.InjectorDeadTimeMs, FuelDensityKgL = d.FuelDensityKgL,
+            VolumetricEfficiency = Extend(d.VolumetricEfficiency!),
+            IntakeCamAdvanceDeg = d.IntakeCamAdvanceDeg == null ? null : Extend(d.IntakeCamAdvanceDeg),
         });
     }
 

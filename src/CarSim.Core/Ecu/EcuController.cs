@@ -50,6 +50,23 @@ public sealed class EcuController
             ? MathUtil.Clamp(Tune.IntakeCamAdvanceAt(rpm, Units.PaToKpa(mapReading)), 0.0, phaserRangeDeg)
             : 0.0;
 
+    /// <summary>How far below a switch speed a switched valvetrain or intake stage switches back, rpm (no chatter at the threshold).</summary>
+    public const double SwitchHysteresisRpm = 150.0;
+
+    /// <summary>
+    /// Whether variable-valve-lift camshafts should run their high-lift profile: above the tune's switch speed (with
+    /// hysteresis from <paramref name="wasHigh"/>), with an ECU that can drive them, while the engine runs (the switching
+    /// pins are oil-pressure operated).
+    /// </summary>
+    public bool HighValveLift(double rpm, bool wasHigh, bool running) =>
+        running && Hardware.ValveLiftControl && Tune.ValveLiftSwitchRpm is double on
+        && rpm >= (wasHigh ? on - SwitchHysteresisRpm : on);
+
+    /// <summary>Whether a variable intake manifold should run its switched runner (same rule as <see cref="HighValveLift"/>).</summary>
+    public bool SwitchedIntakeRunner(double rpm, bool wasSwitched, bool running) =>
+        running && Hardware.IntakeRunnerControl && Tune.IntakeRunnerSwitchRpm is double on
+        && rpm >= (wasSwitched ? on - SwitchHysteresisRpm : on);
+
     /// <summary>Table advance minus active knock retard, degrees BTDC.</summary>
     public double SparkAdvance(double rpm, double mapReading) => Tune.AdvanceAt(rpm, Units.PaToKpa(mapReading)) - KnockRetard;
 

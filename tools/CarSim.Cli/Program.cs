@@ -174,11 +174,12 @@ public static class Program
     private static int CalibrateCams(CliOptions o)
     {
         var (sim, tune, _, _) = BuildEngine(o);
-        if (sim.Config.IntakePhaserRange <= 0)
-            return Fail($"This build has no intake cam phaser its ECU can drive ({sim.Config.Part(PartCategory.Camshafts).Definition.Name}, {sim.Config.Part(PartCategory.Ecu).Definition.Name}).");
+        double range = sim.Config.Banks.Max(b => b.IntakePhaserRange);
+        if (range <= 0)
+            return Fail($"This build has no intake cam phaser its ECU can drive ({string.Join(", ", sim.Config.Banks.Select(b => b.CamsPart.Definition.Name).Distinct())}, {sim.Config.Part(PartCategory.Ecu).Definition.Name}).");
         var table = CamPhaseCalibrator.Calibrate(sim, Num(o, "step", 5.0), Num(o, "hold", 0.8));
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        Console.WriteLine($"// {tune.Id}: rpm {string.Join(", ", tune.IgnitionAdvance.XAxis)}; load kPa {string.Join(", ", tune.IgnitionAdvance.YAxis)}; phaser range {sim.Config.IntakePhaserRange:0.#}°");
+        Console.WriteLine($"// {tune.Id}: rpm {string.Join(", ", tune.IgnitionAdvance.XAxis)}; load kPa {string.Join(", ", tune.IgnitionAdvance.YAxis)}; phaser range {range:0.#}°");
         Console.WriteLine("\"intake_cam_advance_deg\": [");
         for (int r = 0; r < table.Length; r++)
             Console.WriteLine($"  [{string.Join(", ", table[r].Select(v => v.ToString("0.#", inv)))}]{(r < table.Length - 1 ? "," : "")}");

@@ -79,7 +79,7 @@ public class SpecFuzzTests
                     EngineTelemetry t = null!;
                     for (int i = 0; i < 60; i++) t = sim.Step(0.005, input);
                     Assert.True(double.IsFinite(t.Torque) && double.IsFinite(t.AirMassFlow) && double.IsFinite(t.PortGasTemperature)
-                                && double.IsFinite(t.FuelPower) && double.IsFinite(sim.State.TurboOmega), $"{what} at {rpm} rpm");
+                                && double.IsFinite(t.FuelPower) && sim.State.Turbos.All(x => double.IsFinite(x.Omega)), $"{what} at {rpm} rpm");
                 }
             }
         }

@@ -86,46 +86,25 @@ public sealed class EngineConfiguration
         RodBearings = Spec<BearingSpec>(PartCategory.RodBearings);
         Rods = Spec<ConnectingRodSpec>(PartCategory.ConnectingRods);
         Pistons = Spec<PistonSpec>(PartCategory.Pistons);
-        HeadGasket = Spec<HeadGasketSpec>(PartCategory.HeadGasket);
-        Head = Spec<CylinderHeadSpec>(PartCategory.CylinderHead);
-        Cams = Spec<CamshaftSpec>(PartCategory.Camshafts);
-        Springs = Spec<ValveSpringSpec>(PartCategory.ValveSprings);
-        Intake = Spec<IntakeManifoldSpec>(PartCategory.IntakeManifold);
-        Throttle = Spec<ThrottleBodySpec>(PartCategory.ThrottleBody);
         Injectors = Spec<InjectorSpec>(PartCategory.Injectors);
         FuelPump = Spec<FuelPumpSpec>(PartCategory.FuelPump);
-        ExhaustManifold = Spec<ExhaustManifoldSpec>(PartCategory.ExhaustManifold);
-        Exhaust = Spec<ExhaustSpec>(PartCategory.Exhaust);
         OilPump = Spec<OilPumpSpec>(PartCategory.OilPump);
         OilPan = Spec<OilPanSpec>(PartCategory.OilPan);
         Radiator = Spec<RadiatorSpec>(PartCategory.Radiator);
         Flywheel = Spec<FlywheelSpec>(PartCategory.Flywheel);
         Ecu = Spec<EcuSpec>(PartCategory.Ecu);
-        Turbo = assembly.SpecOf<TurbochargerSpec>(PartCategory.Turbocharger);
-        Intercooler = assembly.SpecOf<IntercoolerSpec>(PartCategory.Intercooler);
-        IntercoolerCdA = Intercooler == null ? 0.0 : CompressibleFlow.EffectiveAreaFromCfm(Intercooler.FlowCfm);
 
-        // Air path restrictions (effective flow areas).
-        IntakeCdA = CompressibleFlow.EffectiveAreaFromCfm(Intake.FlowCfm);
-        ThrottleCdA = CompressibleFlow.EffectiveAreaFromCfm(Throttle.FlowCfm);
-        ExhaustManifoldCdA = CompressibleFlow.EffectiveAreaFromCfm(ExhaustManifold.FlowCfm);
-        ExhaustSystemCdA = CompressibleFlow.EffectiveAreaFromCfm(Exhaust.FlowCfm);
-        IntakePortCdA = CompressibleFlow.EffectiveAreaFromCfm(MeanFlowOverLiftProfile(Head.IntakeFlowCurve(), Cams.IntakeLiftMm));
-        ExhaustPortCdA = CompressibleFlow.EffectiveAreaFromCfm(MeanFlowOverLiftProfile(Head.ExhaustFlowCurve(), Cams.ExhaustLiftMm));
-        IntakeEventFraction = Math.Min(1.0, (Cams.IntakeDurationDeg + ValveEventRampDeg) / 720.0);
-        ExhaustEventFraction = Math.Min(1.0, (Cams.ExhaustDurationDeg + ValveEventRampDeg) / 720.0);
-
-        // Volumetric-efficiency tuning.
-        _durationTunedPistonSpeed = BaseTunedPistonSpeed + (Cams.IntakeDurationDeg - 220.0) * TunedPistonSpeedPerDeg;
-        _runnerTuning = Math.Pow(ReferenceRunnerLength / Intake.RunnerLength, 0.25);
-        IntakePhaserRange = Ecu.CamPhaseControl ? Cams.IntakePhaserRangeDeg : 0.0;
-        VePeakRpm = VePeakRpmAt(0.0);
-        OverlapDeg = Cams.OverlapDeg;
-        ScavengingRpm = HeaderTuningConstant / ExhaustManifold.PrimaryLengthMm;
-        ScavengingGain = ExhaustManifold.ScavengingGain;
-        ExhaustManifoldHeatLoss = ManifoldHeatLossPerPrimaryMm * ExhaustManifold.PrimaryLengthMm * geometry.Cylinders;
-        ExhaustPortHeatTransfer = ExhaustPortHeatTransferCoefficient * ExhaustPortWallAreaPerBoreSquared
-                                  * geometry.Bore * geometry.Bore * geometry.Cylinders;
+        // One turbocharger configuration per installed turbo (it may serve several banks), then one air path per bank.
+        var def = assembly.Definition;
+        var turbos = new List<TurboConfiguration>();
+        foreach (var (slot, part) in assembly.PartsOf(PartCategory.Turbocharger))
+            turbos.Add(new TurboConfiguration(turbos.Count, slot, part, def.BanksServedBy(slot), def.CylindersServedBy(slot)));
+        Turbos = turbos;
+        var banks = new BankConfiguration[def.Banks.Count];
+        for (int b = 0; b < banks.Length; b++)
+            banks[b] = new BankConfiguration(this, b, turbos.FirstOrDefault(t => t.Banks.Contains(b)));
+        Banks = banks;
+        Capabilities = EngineCapabilities.Resolve(assembly);
 
         // Rotating inertia: crank + flywheel + rod big ends (⅔ rod) + half the reciprocating mass at crank radius + accessories.
         double r2 = geometry.CrankRadius * geometry.CrankRadius;
@@ -136,8 +115,9 @@ public sealed class EngineConfiguration
         // Thermal capacities, J/K. Coolant ~ 50/50 glycol (ρ 1.05 kg/L, cp 3600 J/kgK); roughly half of the
         // block + head metal follows the coolant temperature.
         double coolantLitres = Block.CoolantCapacityL + Radiator.CoolantCapacityL;
-        double metalMass = assembly.FindByCategory(PartCategory.Block)!.Definition.MassKg
-                         + assembly.FindByCategory(PartCategory.CylinderHead)!.Definition.MassKg;
+        double headsMass = 0.0;
+        foreach (var (_, head) in assembly.PartsOf(PartCategory.CylinderHead)) headsMass += head.Definition.MassKg;
+        double metalMass = assembly.FindByCategory(PartCategory.Block)!.Definition.MassKg + headsMass;
         CoolantHeatCapacity = coolantLitres * 1.05 * 3600.0 + 0.5 * metalMass * 900.0;
         OilHeatCapacity = OilPan.CapacityL * 0.88 * 1900.0 + 8000.0;
     }
@@ -146,94 +126,32 @@ public sealed class EngineConfiguration
     public FuelDefinition Fuel { get; }
     public EngineGeometry Geometry { get; }
 
+    // Engine-wide parts (one for the whole engine; see EngineTopology.EngineWideCategories).
     public BlockSpec Block { get; }
     public CrankshaftSpec Crankshaft { get; }
     public BearingSpec MainBearings { get; }
     public BearingSpec RodBearings { get; }
     public ConnectingRodSpec Rods { get; }
     public PistonSpec Pistons { get; }
-    public HeadGasketSpec HeadGasket { get; }
-    public CylinderHeadSpec Head { get; }
-    public CamshaftSpec Cams { get; }
-    public ValveSpringSpec Springs { get; }
-    public IntakeManifoldSpec Intake { get; }
-    public ThrottleBodySpec Throttle { get; }
     public InjectorSpec Injectors { get; }
     public FuelPumpSpec FuelPump { get; }
-    public ExhaustManifoldSpec ExhaustManifold { get; }
-    public ExhaustSpec Exhaust { get; }
     public OilPumpSpec OilPump { get; }
     public OilPanSpec OilPan { get; }
     public RadiatorSpec Radiator { get; }
     public FlywheelSpec Flywheel { get; }
     public EcuSpec Ecu { get; }
 
-    /// <summary>Installed turbocharger, or null for a naturally aspirated build.</summary>
-    public TurbochargerSpec? Turbo { get; }
-
-    /// <summary>Installed intercooler, or null.</summary>
-    public IntercoolerSpec? Intercooler { get; }
-
-    public double IntercoolerCdA { get; }
-
-    /// <summary>Effective flow areas, m².</summary>
-    public double IntakeCdA { get; }
-    public double ThrottleCdA { get; }
-    public double ExhaustManifoldCdA { get; }
-    public double ExhaustSystemCdA { get; }
-
-    /// <summary>Per-cylinder port flow area averaged over the valve-lift profile, m².</summary>
-    public double IntakePortCdA { get; }
-    public double ExhaustPortCdA { get; }
-
-    /// <summary>Fraction of the 720° cycle each valve is open (advertised duration / 720).</summary>
-    public double IntakeEventFraction { get; }
-    public double ExhaustEventFraction { get; }
-
-    /// <summary>Speed of peak cam/runner filling with the cams at their installed (park) position, rpm.</summary>
-    public double VePeakRpm { get; }
-
-    /// <summary>Valve overlap with the cams at their installed (park) position, crank degrees.</summary>
-    public double OverlapDeg { get; }
-
     /// <summary>
-    /// How far the ECU can advance the intake cam, crank degrees: the phaser's range when the ECU can drive it,
-    /// otherwise 0 (fixed cams, or a phaser the ECU cannot control, stay at their installed position).
+    /// One air path per bank: the head, cams, springs, gasket, intake, throttle, exhaust manifold and exhaust serving
+    /// it, and its share of anything it shares with other banks.
     /// </summary>
-    public double IntakePhaserRange { get; }
+    public IReadOnlyList<BankConfiguration> Banks { get; }
 
-    private readonly double _durationTunedPistonSpeed, _runnerTuning;
+    /// <summary>Installed turbochargers (empty for a naturally aspirated engine), each with its own shaft.</summary>
+    public IReadOnlyList<TurboConfiguration> Turbos { get; }
 
-    /// <summary>
-    /// Crank degrees the intake closes later than the correlation's reference installation, with the intake cam
-    /// advanced <paramref name="intakeAdvanceDeg"/> from its installed centreline (0 for straight-up cams).
-    /// </summary>
-    public double IntakeClosingShiftDeg(double intakeAdvanceDeg) => Cams.HasCenterlines
-        ? Cams.InstalledIntakeCenterlineDeg - intakeAdvanceDeg - ReferenceIntakeCenterlineDeg
-        : 0.0;
-
-    /// <summary>Tuned mean piston speed of the cam/runner filling peak (before the <see cref="MinTunedPistonSpeed"/> guard), m/s.</summary>
-    public double TunedPistonSpeed(double intakeAdvanceDeg) =>
-        _durationTunedPistonSpeed + IntakeClosingShiftDeg(intakeAdvanceDeg) * TunedPistonSpeedPerCenterlineDeg;
-
-    /// <summary>Speed of peak cam/runner filling with the intake cam advanced <paramref name="intakeAdvanceDeg"/>, rpm.</summary>
-    public double VePeakRpmAt(double intakeAdvanceDeg)
-    {
-        double tunedPistonSpeed = Math.Max(MinTunedPistonSpeed, TunedPistonSpeed(intakeAdvanceDeg));
-        double camPeakRpm = tunedPistonSpeed * 60.0 / (2.0 * Geometry.Stroke);
-        return camPeakRpm * _runnerTuning;
-    }
-
-    /// <summary>Valve overlap with the intake cam advanced <paramref name="intakeAdvanceDeg"/>, crank degrees.</summary>
-    public double OverlapAt(double intakeAdvanceDeg) => Cams.OverlapAt(intakeAdvanceDeg);
-    public double ScavengingRpm { get; }
-    public double ScavengingGain { get; }
-
-    /// <summary>Heat-loss conductance of the exhaust manifold to the surroundings, W/K.</summary>
-    public double ExhaustManifoldHeatLoss { get; }
-
-    /// <summary>Heat-transfer conductance between the exhaust gas and the coolant-jacketed port walls, W/K.</summary>
-    public double ExhaustPortHeatTransfer { get; }
+    /// <summary>What the installed parts let this engine do (a derived summary; the simulation reads the parts).</summary>
+    public EngineCapabilities Capabilities { get; }
 
     /// <summary>Engine rotating inertia seen at the crank, kg·m².</summary>
     public double RotatingInertia { get; }
@@ -241,10 +159,20 @@ public sealed class EngineConfiguration
     public double CoolantHeatCapacity { get; }
     public double OilHeatCapacity { get; }
 
+    /// <summary>The installed part of an engine-wide category (see <see cref="EngineTopology.EngineWideCategories"/>).</summary>
     public PartInstance Part(string category) =>
         Assembly.FindByCategory(category) ?? throw new InvalidOperationException($"No {category} installed.");
 
     private T Spec<T>(string category) where T : PartSpec => Part(category).Spec<T>();
+
+    /// <summary>The bank configuration that <paramref name="part"/> serves first (a bank-scoped part), or null.</summary>
+    public BankConfiguration? BankOf(PartInstance part)
+    {
+        var slot = Assembly.SlotOf(part);
+        if (slot == null) return null;
+        var served = Assembly.Definition.BanksServedBy(slot);
+        return served.Count > 0 ? Banks[served[0]] : null;
+    }
 
     /// <summary>
     /// Average flow-bench CFM over a harmonic valve-lift event of peak <paramref name="maxLiftMm"/>.

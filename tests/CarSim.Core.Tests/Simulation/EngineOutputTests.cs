@@ -87,7 +87,7 @@ public class EngineOutputTests
     {
         var stock = SimFactory.Create();
         var shortRunner = SimFactory.Create(("intake_manifold", "k20.intake.short_runner"));
-        Assert.True(shortRunner.Config.VePeakRpm > stock.Config.VePeakRpm);
+        Assert.True(shortRunner.Config.Banks[0].VePeakRpm > stock.Config.Banks[0].VePeakRpm);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class EngineOutputTests
         {
             var baseSim = SimFactory.Create(extra);
             var ported = SimFactory.Create(extra.Append(("cylinder_head", "k20.head.ported")).ToArray());
-            return ported.Config.IntakePortCdA / baseSim.Config.IntakePortCdA;
+            return ported.Config.Banks[0].Profiles[0].IntakePortCdA / baseSim.Config.Banks[0].Profiles[0].IntakePortCdA;
         }
         double withStockCams = FlowGain();
         double withRaceCams = FlowGain(("valve_springs", "k20.valve_springs.performance"), ("camshafts", "k20.cams.race"));

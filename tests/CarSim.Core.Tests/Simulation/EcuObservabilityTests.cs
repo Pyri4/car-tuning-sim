@@ -172,8 +172,8 @@ public class EcuObservabilityTests
         // Closed-loop boost control only runs above its pedal threshold; part throttle is left to the spring.
         var sim = TurboTests.TurboSim(TurboTests.TurboBuild());
         var t = SimFactory.At(sim, 5500, EngineSimulation.BoostControlMinThrottle - 0.05, 4.0);
-        Assert.Equal(0.0, sim.State.BoostControlIntegral);
-        Assert.True(t.CompressorOutletPressure - 101_325 < sim.Config.Turbo!.WastegateSpring + EngineSimulation.WastegateActuatorSpan);
+        Assert.Equal(0.0, sim.State.Turbos[0].BoostControlIntegral);
+        Assert.True(t.CompressorOutletPressure - 101_325 < sim.Config.Turbos[0].Spec.WastegateSpring + EngineSimulation.WastegateActuatorSpan);
     }
 
     [Fact]

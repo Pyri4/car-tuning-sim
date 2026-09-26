@@ -113,7 +113,7 @@ public static class CombustionModel
     /// <summary>
     /// Fraction of burned-fuel energy rejected to coolant from inside the cylinder. Less time per cycle at high
     /// rpm means less heat loss; knock scrubs the thermal boundary layer and increases it. The exhaust port's
-    /// share is modelled separately (<see cref="EngineConfiguration.ExhaustPortHeatTransfer"/>), so the full-load
+    /// share is modelled separately (<see cref="BankConfiguration.ExhaustPortHeatTransfer"/>), so the full-load
     /// total to coolant stays at ≈ 26–30 % of the fuel energy (it was a lumped 0.28 before the port was split out).
     /// </summary>
     public static double CoolantHeatFraction(double rpm, double knockIntensity) =>

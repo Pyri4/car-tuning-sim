@@ -56,44 +56,96 @@ public sealed class EngineState
     public double Omega;
     public double CoolantTemperature = PhysicalConstants.StandardTemperature;
     public double OilTemperature = PhysicalConstants.StandardTemperature;
-    public double ExhaustGasTemperature = PhysicalConstants.StandardTemperature;
-    public double EgtSensor = PhysicalConstants.StandardTemperature;
     public double PistonCrownTemperature = PhysicalConstants.StandardTemperature;
-    public double LastFuelAirRatio = 1.0 / 14.7;
     public bool Running;
 
     /// <summary>Fraction of the coolant still in the system (boiling vents it through the cap).</summary>
     public double CoolantLevel = 1.0;
 
-    /// <summary>Turbocharger shaft speed, rad/s.</summary>
-    public double TurboOmega;
+    /// <summary>Manifold pressure of the previous step, Pa (what the ECU's MAP sensor last reported, before clipping).</summary>
+    public double LastManifoldPressure = PhysicalConstants.StandardPressure;
 
-    /// <summary>Wastegate valve opening 0–1.</summary>
-    public double WastegateOpening;
+    /// <summary>
+    /// Per-bank state (exhaust temperatures, cam phaser, valve-lift and runner stages). A new state has one entry; the
+    /// simulation sizes it to its engine's banks, each new bank starting as a copy of the first.
+    /// </summary>
+    public List<BankState> Banks { get; private set; } = new() { new BankState() };
 
-    /// <summary>Integrator of the ECU's closed-loop boost controller.</summary>
-    public double BoostControlIntegral;
+    /// <summary>Per-turbocharger state (shaft speed, wastegate, boost controller), sized by the simulation.</summary>
+    public List<TurboState> Turbos { get; private set; } = new();
 
-    /// <summary>Exhaust temperature after the turbine (mixed with wastegate flow), K.</summary>
+    /// <summary>Sizes the per-bank and per-turbo state for an engine (new entries copy the first, or start at rest).</summary>
+    public void EnsureShape(int banks, int turbos)
+    {
+        while (Banks.Count < banks) Banks.Add(Banks[0].Clone());
+        if (Banks.Count > banks) Banks.RemoveRange(banks, Banks.Count - banks);
+        while (Turbos.Count < turbos) Turbos.Add(new TurboState());
+        if (Turbos.Count > turbos) Turbos.RemoveRange(turbos, Turbos.Count - turbos);
+    }
+
+    /// <summary>Starts the state warm (fully warmed-up engine), as after a warm-up drive.</summary>
+    public static EngineState Warm(double coolantK = 363.15, double oilK = 368.15)
+    {
+        var s = new EngineState
+        {
+            CoolantTemperature = coolantK,
+            OilTemperature = oilK,
+            PistonCrownTemperature = coolantK + 30.0,
+        };
+        s.Banks[0].ExhaustGasTemperature = 700.0;
+        s.Banks[0].EgtSensor = 700.0;
+        return s;
+    }
+
+    public EngineState Clone()
+    {
+        var c = (EngineState)MemberwiseClone();
+        c.Banks = Banks.Select(b => b.Clone()).ToList();
+        c.Turbos = Turbos.Select(t => t.Clone()).ToList();
+        return c;
+    }
+}
+
+/// <summary>State of one bank carried between steps.</summary>
+public sealed class BankState
+{
+    /// <summary>Exhaust gas temperature leaving this bank's ports (the gas itself), K.</summary>
+    public double ExhaustGasTemperature = PhysicalConstants.StandardTemperature;
+
+    /// <summary>This bank's EGT probe (lags the gas), K.</summary>
+    public double EgtSensor = PhysicalConstants.StandardTemperature;
+
+    /// <summary>Delivered fuel / trapped air of the previous step (sets the charge's evaporative cooling).</summary>
+    public double LastFuelAirRatio = 1.0 / 14.7;
+
+    /// <summary>Exhaust temperature after this bank's share of its turbine (mixed with wastegate flow), K; 0 before the first turbo step.</summary>
     public double TurbineOutletTemperature;
 
     /// <summary>Intake cam phaser position: advance from the park position, crank degrees.</summary>
     public double IntakeCamAdvance;
 
-    /// <summary>Manifold pressure of the previous step, Pa (what the ECU's MAP sensor last reported, before clipping).</summary>
-    public double LastManifoldPressure = PhysicalConstants.StandardPressure;
+    /// <summary>Whether this bank's camshafts run their high-lift profile.</summary>
+    public bool HighValveLift;
 
-    /// <summary>Starts the state warm (fully warmed-up engine), as after a warm-up drive.</summary>
-    public static EngineState Warm(double coolantK = 363.15, double oilK = 368.15) => new()
-    {
-        CoolantTemperature = coolantK,
-        OilTemperature = oilK,
-        ExhaustGasTemperature = 700.0,
-        EgtSensor = 700.0,
-        PistonCrownTemperature = coolantK + 30.0,
-    };
+    /// <summary>Whether this bank's intake manifold runs its switched runner.</summary>
+    public bool SwitchedRunner;
 
-    public EngineState Clone() => (EngineState)MemberwiseClone();
+    public BankState Clone() => (BankState)MemberwiseClone();
+}
+
+/// <summary>State of one turbocharger carried between steps.</summary>
+public sealed class TurboState
+{
+    /// <summary>Shaft speed, rad/s.</summary>
+    public double Omega;
+
+    /// <summary>Wastegate valve opening 0–1.</summary>
+    public double WastegateOpening;
+
+    /// <summary>Integrator of the ECU's closed-loop boost controller for this turbo's wastegate.</summary>
+    public double BoostControlIntegral;
+
+    public TurboState Clone() => (TurboState)MemberwiseClone();
 }
 
 /// <summary>Why the delivered fuel fell short of the ECU's request (if it did).</summary>
@@ -144,6 +196,12 @@ public sealed record EngineTelemetry
 
     /// <summary>Intake cam phaser position, crank degrees advanced from park (0 for fixed cams). A cam-position sensor reads it.</summary>
     public double IntakeCamAdvance { get; init; }
+
+    /// <summary>Whether variable-lift camshafts run their high-lift profile (any bank).</summary>
+    public bool HighValveLift { get; init; }
+
+    /// <summary>Whether a variable intake manifold runs its switched runner (any bank).</summary>
+    public bool SwitchedRunner { get; init; }
 
     public double TargetLambda { get; init; }
     public double Lambda { get; init; }
@@ -259,6 +317,15 @@ public sealed record EngineTelemetry
     public bool ValveFloat { get; init; }
     public bool RevLimiterActive { get; init; }
 
+    /// <summary>
+    /// Per-bank channels (one entry per bank). The engine-level channels above aggregate them: flows and heat are sums,
+    /// per-cylinder quantities cylinder-weighted means, damage drivers (peak pressure, knock, EGT) the worst bank.
+    /// </summary>
+    public ValueList<BankTelemetry> Banks { get; init; } = ValueList<BankTelemetry>.Empty;
+
+    /// <summary>Per-turbocharger channels (empty when naturally aspirated). The Turbo*/Compressor* channels above are the first turbo's.</summary>
+    public ValueList<TurboTelemetry> Turbos { get; init; } = ValueList<TurboTelemetry>.Empty;
+
     public double TorqueLbFt => Units.NmToLbFt(Torque);
     public double PowerHp => Units.WToHp(Power);
     public double PowerKw => Units.WToKw(Power);
@@ -269,4 +336,56 @@ public sealed record EngineTelemetry
     public double EgtC => Units.KToC(ExhaustGasTemperature);
     public double OilPressureBar => Units.PaToBar(OilPressure);
     public double PeakCylinderPressureBar => Units.PaToBar(PeakCylinderPressure);
+}
+
+/// <summary>One bank's operating point in a step.</summary>
+public readonly record struct BankTelemetry(
+    double AirPerCycle,
+    double ManifoldPressure,
+    double PortPressure,
+    double ExhaustPortPressure,
+    double Lambda,
+    double KnockIntensity,
+    double KnockLimitAdvance,
+    double PeakCylinderPressure,
+    double Imep,
+    double ExhaustGasTemperature,
+    double IntakeCamAdvance,
+    bool HighValveLift,
+    bool SwitchedRunner,
+    double ValveFloatRpm,
+    double Torque);
+
+/// <summary>One turbocharger's state in a step.</summary>
+public readonly record struct TurboTelemetry(
+    double ShaftRpm,
+    double PressureRatio,
+    double WastegateOpening,
+    double TurbineInletTemperature,
+    double CompressorSurgeDepth,
+    bool Overspeed);
+
+/// <summary>An immutable list with value equality (so telemetry records compare by content, bank by bank).</summary>
+public sealed class ValueList<T> : IReadOnlyList<T>, IEquatable<ValueList<T>>
+{
+    private readonly T[] _items;
+
+    public ValueList(T[] items) => _items = items;
+
+    public static readonly ValueList<T> Empty = new(Array.Empty<T>());
+
+    public T this[int index] => _items[index];
+    public int Count => _items.Length;
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)_items).GetEnumerator();
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _items.GetEnumerator();
+
+    public bool Equals(ValueList<T>? other) => other != null && _items.AsSpan().SequenceEqual(other._items, EqualityComparer<T>.Default);
+    public override bool Equals(object? obj) => Equals(obj as ValueList<T>);
+    public override int GetHashCode()
+    {
+        var h = new HashCode();
+        foreach (var item in _items) h.Add(item);
+        return h.ToHashCode();
+    }
+    public override string ToString() => "[" + string.Join("; ", _items) + "]";
 }

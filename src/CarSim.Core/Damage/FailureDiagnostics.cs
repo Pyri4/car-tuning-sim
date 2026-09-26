@@ -2,6 +2,7 @@ using System.Globalization;
 using CarSim.Core.Common;
 using CarSim.Core.Engines;
 using CarSim.Core.Parts;
+using CarSim.Core.Parts.Specs;
 using CarSim.Core.Simulation;
 
 namespace CarSim.Core.Damage;
@@ -75,9 +76,10 @@ public static class FailureDiagnostics
                 break;
             case FailureMode.HeadGasketBreach:
             {
-                Measure("Peak cylinder pressure", $"{N0(t.PeakCylinderPressureBar)} bar (gasket rated {N0(c.HeadGasket.MaxCylinderPressureBar)} bar)");
+                var gasketSpec = x.Part.Spec<HeadGasketSpec>();
+                Measure("Peak cylinder pressure", $"{N0(t.PeakCylinderPressureBar)} bar (gasket rated {N0(gasketSpec.MaxCylinderPressureBar)} bar)");
                 Measure("Maximum coolant temperature", $"{N0(x.History.MaxCoolantC)} °C");
-                bool pressure = t.PeakCylinderPressureBar > 0.85 * c.HeadGasket.MaxCylinderPressureBar;
+                bool pressure = t.PeakCylinderPressureBar > 0.85 * gasketSpec.MaxCylinderPressureBar;
                 bool overheat = x.History.MaxCoolantC > 115;
                 if (pressure) PressureFactors(x, f, m);
                 if (overheat) f.Add($"Coolant reached {N0(x.History.MaxCoolantC)} °C (boiling): the head and block expanded and the gasket lost clamp.");
@@ -119,16 +121,18 @@ public static class FailureDiagnostics
                 break;
             case FailureMode.ValvePistonContact:
             {
-                double springWear = c.Part(PartCategory.ValveSprings).Wear;
-                double springForce = ValvetrainModel.SpringForceN(c.Springs, springWear);
+                // The failed head's bank: its springs, camshafts and valves.
+                var bank = c.BankOf(x.Part) ?? c.Banks[0];
+                double springWear = bank.SpringsPart.Wear;
+                double springForce = ValvetrainModel.SpringForceN(bank.Springs, springWear);
                 Measure("Valve float speed", $"{N0(t.ValveFloatRpm)} rpm");
-                Measure("Valve spring force at full lift", springWear > 0.01 ? $"{N0(springForce)} N (new {N0(c.Springs.OpenForceN)} N)" : $"{N0(springForce)} N");
+                Measure("Valve spring force at full lift", springWear > 0.01 ? $"{N0(springForce)} N (new {N0(bank.Springs.OpenForceN)} N)" : $"{N0(springForce)} N");
                 if (t.Rpm > x.RevLimitRpm + 100)
                     f.Add($"Engine speed ({N0(t.Rpm)} rpm) was above the rev limiter ({N0(x.RevLimitRpm)} rpm): over-rev (missed shift or forced by the dyno/drivetrain).");
                 else
                     f.Add($"The rev limit ({N0(x.RevLimitRpm)} rpm) allows the engine past its valve-float speed ({N0(t.ValveFloatRpm)} rpm).");
-                f.Add($"Cam lift {F1(c.Cams.MaxLiftMm)} mm with {N0(c.Head.ValveMovingMassG)} g valves needs more spring force than {N0(springForce)} N at this speed.");
-                if (springWear > 0.2) f.Add($"The valve springs were worn ({N0(100 * springWear)} %), which cost {N0(c.Springs.OpenForceN - springForce)} N of spring force.");
+                f.Add($"Cam lift {F1(bank.Cams.MaxLiftMm)} mm with {N0(bank.Head.ValveMovingMassG)} g valves needs more spring force than {N0(springForce)} N at this speed.");
+                if (springWear > 0.2) f.Add($"The valve springs were worn ({N0(100 * springWear)} %), which cost {N0(bank.Springs.OpenForceN - springForce)} N of spring force.");
                 r.Add("Fit stiffer valve springs (and lighter valves), or lower the rev limit below the float speed.");
                 r.Add("The head needs new valves and guides; check the pistons for valve strikes.");
                 break;
@@ -141,14 +145,17 @@ public static class FailureDiagnostics
                 break;
             case FailureMode.TurboOverspeed:
             {
-                Measure("Turbo shaft speed", $"{N0(t.TurboRpm)} rpm (rated {N0(c.Turbo!.MaxShaftRpm)} rpm)");
+                var turboSpec = x.Part.Spec<TurbochargerSpec>();
+                var turboIndex = c.Turbos.FirstOrDefault(tc => ReferenceEquals(tc.Part, x.Part))?.Index ?? 0;
+                double shaftRpm = t.Turbos.Count > turboIndex ? t.Turbos[turboIndex].ShaftRpm : t.TurboRpm;
+                Measure("Turbo shaft speed", $"{N0(shaftRpm)} rpm (rated {N0(turboSpec.MaxShaftRpm)} rpm)");
                 Measure("Compressor flow", $"{N0(100 * t.CompressorChokeRatio)} % of choke, efficiency {N0(100 * t.CompressorEfficiency)} %");
                 f.Add("The compressor was too small for the airflow: near choke it must spin ever faster to hold the boost target.");
                 r.Add("Fit a larger compressor, or reduce the boost target at high rpm.");
                 break;
             }
             case FailureMode.TurbineOverTemperature:
-                Measure("Turbine inlet temperature", $"{N0(Units.KToC(t.TurbineInletTemperature))} °C (rated {N0(c.Turbo!.MaxTurbineInletTemperatureC)} °C)");
+                Measure("Turbine inlet temperature", $"{N0(Units.KToC(TurbineInlet(x)))} °C (rated {N0(x.Part.Spec<TurbochargerSpec>().MaxTurbineInletTemperatureC)} °C)");
                 Measure("Mixture", $"λ {F2(t.Lambda)}");
                 LeanFactors(x, f, r);
                 if (t.KnockRetard > 3) f.Add($"Knock control had retarded timing {F1(t.KnockRetard)}°: late combustion sends heat into the exhaust.");
@@ -240,8 +247,15 @@ public static class FailureDiagnostics
         r.Add($"Remove at least {N0(Math.Ceiling(h.MaxKnockIntensity + 2))}° of timing around {N0(t.Rpm)} rpm / {N0(t.MapKpa)} kPa.");
         r.Add("Use higher-octane fuel (RON 98, race fuel or E85 with a matching calibration).");
         if (c.Geometry.CompressionRatio > 10 && t.BoostKpa > 20) r.Add("Lower the compression ratio (dished pistons or a thicker gasket) for boost.");
-        if (c.Turbo != null && c.Intercooler == null) r.Add("Fit an intercooler.");
+        if (c.Banks.Any(b => b.Turbo != null && b.Intercooler == null)) r.Add("Fit an intercooler.");
         r.Add("Replace the pistons (and inspect the head gasket and rod bearings).");
+    }
+
+    /// <summary>Turbine inlet temperature of the failed turbo (the first turbo's channel when there is one turbo).</summary>
+    private static double TurbineInlet(FailureContext x)
+    {
+        var tc = x.Config.Turbos.FirstOrDefault(t => ReferenceEquals(t.Part, x.Part));
+        return tc != null && x.T.Turbos.Count > tc.Index ? x.T.Turbos[tc.Index].TurbineInletTemperature : x.T.TurbineInletTemperature;
     }
 
     private static void OilFactors(FailureContext x, List<string> f, List<ReportLine> m, List<string> r)

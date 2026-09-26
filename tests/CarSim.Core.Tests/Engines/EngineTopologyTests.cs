@@ -77,10 +77,11 @@ public class EngineTopologyTests
     [Fact]
     public void TwoSlotsForAPartTheModelReadsOnceAreRejected()
     {
-        // A V engine with a slot per head: the model would silently use one head and ignore the other.
+        // Two heads for the one bank of an inline engine: the model would have to ignore one of them. (A slot per bank
+        // on an engine with two banks is fine: see ArchitectureTests.)
         var head = TestContent.Database.GetEngine(TestContent.K20).FindSlot("cylinder_head")!;
         var def = K20Variant(s => s, extra: Copy(head, id: "cylinder_head_b"));
-        Assert.Contains(EngineTopology.CheckFamily(def), p => p.Contains("'cylinder_head_b'") && p.Contains("uses one"));
+        Assert.Contains(EngineTopology.CheckFamily(def), p => p.Contains("'cylinder_head_b'") && p.Contains("each bank takes one"));
         var report = AssemblyValidator.Validate(StockOf(def));
         Assert.True(report.Has("unsupported_topology"));
         Assert.False(EngineConfiguration.Build(StockOf(def), TestContent.Database.GetFuel("gasoline_95")).Success);
