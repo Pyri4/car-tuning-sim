@@ -13,7 +13,7 @@ public sealed class TurbochargerSpec : PartSpec
     /// <summary>Compressor exducer (outer) diameter; sets tip speed and therefore pressure ratio.</summary>
     public required double CompressorWheelDiameterMm { get; init; }
 
-    /// <summary>Corrected mass flow at which the compressor chokes.</summary>
+    /// <summary>Corrected mass flow at which the compressor chokes at <see cref="MaxShaftRpm"/> (choke flow scales with √speed).</summary>
     public required double CompressorChokeFlowKgS { get; init; }
 
     public required double CompressorPeakEfficiency { get; init; }

@@ -36,15 +36,17 @@ public class TurboTests
     [Fact]
     public void CompressorPressureRatioRisesWithShaftSpeed()
     {
+        // At 40 krpm, 0.15 kg/s is past this wheel's choke flow: it is a restriction (PR < 1), and
+        // spinning it faster turns it back into a pump.
         var s = Spec("turbo.t28_ball");
-        double last = 1.0;
-        foreach (double krpm in new[] { 40, 80, 120, 160 })
+        double last = 0.0;
+        foreach (double krpm in new[] { 40, 80, 120, 160, 175 })
         {
             var p = TurbochargerModel.Compressor(s, Units.RpmToRadPerSec(krpm * 1000), 0.15, 101_325, 298);
-            Assert.True(p.PressureRatio > last);
+            Assert.True(p.PressureRatio > last, $"{krpm} krpm: PR {p.PressureRatio:F3} after {last:F3}");
             last = p.PressureRatio;
         }
-        Assert.InRange(last, 2.2, 3.4);
+        Assert.InRange(last, 3.0, 4.0);
     }
 
     [Fact]
@@ -66,8 +68,13 @@ public class TurboTests
     public void CompressorEnergyIsConsistent()
     {
         var s = Spec("turbo.t28_ball");
-        var p = TurbochargerModel.Compressor(s, Units.RpmToRadPerSec(120_000), 0.15, 101_325, 298);
-        Assert.Equal(0.15 * p.SpecificWork, p.Power, 6);
+        double omega = Units.RpmToRadPerSec(120_000);
+        var p = TurbochargerModel.Compressor(s, omega, 0.15, 101_325, 298);
+        Assert.False(p.Surge);
+        // Shaft power = through-flow work + disk friction (which heats the housing, not the charge).
+        double density = 101_325 / (PhysicalConstants.AirGasConstant * 298);
+        double disk = 0.5 * TurbochargerModel.DiskFrictionCoefficient * density * Math.Pow(omega, 3) * Math.Pow(s.CompressorTipRadius, 5);
+        Assert.Equal(0.15 * p.SpecificWork + disk, p.Power, 6);
         Assert.Equal(298 + p.SpecificWork / PhysicalConstants.AirCp, p.OutletTemperature, 6);
         // Isentropic outlet temperature is below the actual one by the efficiency.
         double isentropicRise = 298 * (Math.Pow(p.PressureRatio, 0.4 / 1.4) - 1);
@@ -177,14 +184,62 @@ public class TurboTests
     }
 
     [Fact]
-    public void SmallTurboChokesAndOverspeedsAtHighRpm()
+    public void SmallTurboChokesAtHighRpm()
     {
         var sim = TurboSim(TurboBuild("turbo.t25_small"));
         sim.DamageEnabled = false;
         var t = SimFactory.At(sim, 7000, 1.0, 3.0);
         Assert.True(t.CompressorChokeRatio > 0.85);
         Assert.True(t.CompressorEfficiency < 0.65);
+        // Out of breath: the small turbine also chokes the exhaust.
+        Assert.True(t.TurbineInletPressure > 1.2 * t.ManifoldPressure);
+    }
+
+    /// <summary>Base turbo tune with the boost target raised to <paramref name="kpa"/> wherever it was at full boost.</summary>
+    public static Ecu.EcuTune TuneWithBoost(double kpa)
+    {
+        var tune = Ecu.EcuTune.FromDocument(TestContent.Database.GetTune("k20.turbo_base"));
+        for (int c = 0; c < tune.BoostTarget!.Columns; c++) if (tune.BoostTarget[0, c] >= 170) tune.BoostTarget[0, c] = kpa;
+        return tune;
+    }
+
+    [Fact]
+    public void SmallTurboOverspeedsChasingABoostTargetItCannotHold()
+    {
+        // Near choke a small compressor can only pass more air by spinning faster; the ECU keeps the
+        // wastegate shut, so the shaft runs past its rating — but it settles where the compressor's work
+        // balances the turbine (the work does not vanish at choke), it does not run away.
+        var sim = SimFactory.Create(TurboBuild("turbo.t25_small"), "gasoline_98", TuneWithBoost(200));
+        sim.DamageEnabled = false;
+        var t = SimFactory.At(sim, 7000, 1.0, 4.0);
         Assert.True(t.TurboOverspeed);
+        double tipSpeed = sim.State.TurboOmega * sim.Config.Turbo!.CompressorTipRadius;
+        double ratedTip = sim.Config.Turbo.MaxShaftSpeed * sim.Config.Turbo.CompressorTipRadius;
+        Assert.InRange(tipSpeed / ratedTip, 1.0, 1.3);
+    }
+
+    [Theory]
+    [InlineData("turbo.t28_ball", 240, 7000)]
+    [InlineData("turbo.t28_ball", 280, 6000)]
+    [InlineData("turbo.t25_small", 200, 6000)]
+    public void ClosedLoopBoostSettlesWithoutStepToStepRipple(string turbo, double targetKpa, double rpm)
+    {
+        // Regression: the old compressor iteration flipped between two solutions every few steps
+        // (torque 305 ↔ 375 N·m) once the boost target was above the shipped 175 kPa.
+        // Race fuel keeps knock control out of it: this is about the compressor, not knock-control dither.
+        var sim = SimFactory.Create(TurboBuild(turbo), "race_110", TuneWithBoost(targetKpa));
+        sim.DamageEnabled = false;
+        SimFactory.At(sim, rpm, 1.0, 4.0);
+        var input = new EngineInputs { Throttle = 1, SpeedMode = SpeedMode.Held, HeldRpm = rpm, CoolantTemperatureOverride = 363.15 };
+        double min = double.MaxValue, max = double.MinValue;
+        for (int i = 0; i < 250; i++)
+        {
+            var t = sim.Step(0.002, input);
+            Assert.True(double.IsFinite(t.Torque));
+            min = Math.Min(min, t.Torque);
+            max = Math.Max(max, t.Torque);
+        }
+        Assert.True((max - min) / max < 0.01, $"torque {min:F1}..{max:F1} N·m");
     }
 
     [Fact]

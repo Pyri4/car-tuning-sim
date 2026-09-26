@@ -138,7 +138,7 @@ public sealed class AirPath
     /// For an assumed through-flow, walk the restrictions and return the engine's demand
     /// (<see cref="AirPathResult.MassFlow"/>) and the pressures along the way.
     /// </summary>
-    private AirPathResult Evaluate(double massFlow, double veDyn, in AirPathConditions k)
+    internal AirPathResult Evaluate(double massFlow, double veDyn, in AirPathConditions k)
     {
         var g = _c.Geometry;
         const double gamma = PhysicalConstants.AirGamma;

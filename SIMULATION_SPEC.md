@@ -160,13 +160,30 @@ between the intake/filter and the intercooler/throttle; the turbine and wastegat
 exhaust manifold and the exhaust system.
 
 ### Compressor
-- Corrected flow `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; choke ratio `x = ṁ_c / choke_flow`.
-- Tip speed `U = ω · D/2`; actual specific work `w = 0.75 · U² · ψ(x)`, `ψ = max(0.02, 1 − 0.95·x⁸)`
-  (speed lines droop toward choke and collapse past it).
-- Efficiency island: `η = η_peak·(1 − 0.25·Δm² − 0.15·Δp²)`, `Δm = (ṁ_c − ṁ_peak)/(0.5·choke)`,
-  `Δp = (PR − PR_peak)/1.5`, halved over x ∈ [0.9, 1.1], clamped to [0.40, η_peak].
-  Surge when `ṁ_c < surge_flow_at_pr2 · (PR − 1)`: efficiency × 0.85 and a telemetry flag.
-- `PR = (1 + η·w/(c_p·T₁))^(γ/(γ−1))`, `T₂ = T₁ + w/c_p`, absorbed power `ṁ·w`.
+Closed form (no iteration), so every operating point has exactly one answer that varies continuously.
+Flows are corrected: `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; `n` = corrected tip speed / tip speed at
+`max_shaft_rpm`.
+- Choke flow grows with speed: `ṁ_choke(n) = compressor_choke_flow · √n` (the authored value is the choke
+  flow at the rated maximum speed). Flow ratio `x = ṁ_c/ṁ_choke(n)`. A small wheel can only pass more air
+  by spinning faster, which is how small turbos over-speed at high engine rpm.
+- Euler work `w = 0.68·U²·(1 − 0.25·x/(1 + x/2))`: backswept blades do slightly less work per kilogram at
+  high flow, but the work never collapses (≥ 50 % of 0.68·U²) — past choke the wheel keeps absorbing
+  power, so the shaft cannot run away.
+- Efficiency island in flow and speed (never pressure ratio, which removed the old circular
+  efficiency↔PR iteration): `η = η_peak/(1 + (Δṁ/ṁ_choke,max)² + 0.5·(n − n_peak)²)`, where `n_peak`
+  is the speed whose speed line passes through the authored island centre (peak-efficiency flow and
+  PR). Choke collapses it: `× (1 − smoothstep(0.85, 1, x))`.
+- Surge line `ṁ_surge = surge_flow_at_pr2·(PR₀ − 1)` (PR₀ = pressure ratio before surge losses). Left of
+  it, efficiency falls smoothly by up to 15 % over half the surge flow, and half of the flow deficit
+  recirculates through the wheel (absorbing work, heating the housing): a compressor surging after a
+  throttle lift keeps braking the shaft.
+- `PR = (1 + η·w/(c_p·T₁))^(γ/(γ−1)) · exp(−10·((x − 1)·n)²)` for x > 1: beyond choke the wheel is a
+  restriction whose loss grows with tip speed and vanishes on a stopped turbo. PR rises monotonically
+  with speed for any flow below twice the speed's choke flow.
+- `T₂ = T₁ + w/c_p` (all through-flow work heats the charge). Shaft power
+  `P_c = (ṁ + ṁ_recirc)·w + ½·0.005·ρ₁·ω³·r⁵` (recirculation and disk friction).
+- The reported efficiency is the effective isentropic efficiency `(PR^((γ−1)/γ) − 1)·c_p·T₁/w`; it is
+  negative past choke.
 
 ### Charge cooling
 - Intercooler: `T = T₂ − ε·(T₂ − T_ambient)`, `ε = min(0.95, ε_ref·(ṁ_ref/ṁ)^0.15·clamp((v_air/15)^0.25, 0.5, 1.1))`;
@@ -186,7 +203,8 @@ exhaust manifold and the exhaust system.
   valve overlap causes reversion.
 
 ### Shaft
-- Energy `E = ½·I·ω²`, `dE/dt = P_t − P_c − k·ω²` (k = 2e−6 journal, 1e−6 ball bearing).
+- Energy `E = ½·I·ω²`, `dE/dt = P_t − P_c − k·ω²` (k = 2e−6 journal, 1e−6 ball bearing). No speed clamp:
+  the shaft settles where the powers balance.
 - Overspeed (ω above `max_shaft_rpm`) is flagged in telemetry for the damage model.
 
 ### Boost control
@@ -200,8 +218,10 @@ exhaust manifold and the exhaust system.
   105 kPa → lean and over-advanced under boost (validator warning `map_sensor_range`).
 
 ### Calibration reference (forged K20, 550 cc, standalone ECU, RON 98, 175 kPa target)
-Steady-state full boost ≈ 3500 rpm (small), ≈ 4500 rpm (mid), ≈ 7000 rpm (big); peak ≈ 220 hp
-(small, choking and over-speeding at 7000 rpm), ≈ 235 hp (mid), ≈ 240 hp and still climbing (big).
+Steady-state full boost ≈ 3800 rpm (small), ≈ 4400 rpm (mid), ≈ 6200 rpm (big); peak ≈ 205 hp
+(small: near choke above 5500 rpm, efficiency falling to ≈ 0.4, drive pressure ≈ 1.35× boost), ≈ 233 hp
+(mid), ≈ 236 hp (big). Asked for 200 kPa, the small turbo over-speeds (≈ 1.15× rated at 7000 rpm) and
+fails; the mid turbo holds 240 kPa at 7000 rpm just above its rating.
 
 ## Damage and failure (`Damage/`)
 Every step, `StressEvaluator` turns the operating point into stress ratios `r = load / rating`:

@@ -132,8 +132,10 @@ public sealed class EngineSimulation
         double compressorPower = air.Compressor.Power;
         double friction = TurbochargerModel.FrictionPower(t, s.TurboOmega);
         double energy = 0.5 * t.RotorInertia * s.TurboOmega * s.TurboOmega;
+        // Kinetic energy cannot go below zero (the shaft stops); there is no upper clamp: the compressor
+        // absorbs work in proportion to tip speed squared, so the shaft settles where the powers balance.
         energy = Math.Max(0.0, energy + (turbinePower - compressorPower - friction) * dt);
-        s.TurboOmega = Math.Min(Math.Sqrt(2.0 * energy / t.RotorInertia), 2.0 * t.MaxShaftSpeed);
+        s.TurboOmega = Math.Sqrt(2.0 * energy / t.RotorInertia);
 
         // Exhaust temperature after the turbine, mixed with the wastegate bypass flow.
         if (air.ExhaustMassFlow > 0)

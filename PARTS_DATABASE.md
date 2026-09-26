@@ -169,7 +169,7 @@ tuning, 0–0.15).
 
 ### `turbocharger`
 `compressor_wheel_diameter_mm` (exducer; tip speed → pressure ratio), `compressor_choke_flow_kg_s`
-(corrected), `compressor_peak_efficiency`, `compressor_peak_efficiency_flow_kg_s`,
+(corrected choke flow at `max_shaft_rpm`; choke flow scales with √speed), `compressor_peak_efficiency`, `compressor_peak_efficiency_flow_kg_s`,
 `compressor_peak_efficiency_pressure_ratio` (island centre), `compressor_surge_flow_at_pr2_kg_s`,
 `turbine_flow_area_cm2` (effective nozzle area — the A/R trade-off), `turbine_wheel_diameter_mm`,
 `turbine_peak_efficiency`, `rotor_inertia_kg_cm2`, `max_shaft_rpm`, `wastegate_spring_kpa` (gauge),

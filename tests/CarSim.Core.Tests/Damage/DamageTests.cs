@@ -208,7 +208,8 @@ public class DamageTests
     [Fact]
     public void SmallTurboOverspeedKillsTheTurboButNotTheEngine()
     {
-        var sim = TurboTests.TurboSim(TurboTests.TurboBuild("turbo.t25_small"));
+        // Asked for more boost than it can make efficiently at 7000 rpm, the small turbo over-speeds.
+        var sim = SimFactory.Create(TurboTests.TurboBuild("turbo.t25_small"), "gasoline_98", TurboTests.TuneWithBoost(200));
         Hold(sim, 7000, 60);
         var report = Assert.Single(sim.Damage.Failures);
         Assert.Equal(FailureMode.TurboOverspeed, report.Mode);
