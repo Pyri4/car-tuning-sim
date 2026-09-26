@@ -190,6 +190,31 @@ public sealed class Garage
         return r.Ok ? ActionResult.Success("") : ActionResult.Fail(r.Message);
     }
 
+    /// <summary>
+    /// Why <paramref name="part"/> would not fit <paramref name="slotId"/> as the engine and car stand (empty when it
+    /// fits): mounting interfaces that no other installed part provides, or a per-cylinder set sized for another
+    /// cylinder count. The same rules the assembly validator applies after installation, asked before buying.
+    /// </summary>
+    public IReadOnlyList<string> FitProblems(PartDefinition part, string slotId)
+    {
+        var problems = new List<string>();
+        var others = Engine.Installed.Concat(Chassis?.Installed ?? Enumerable.Empty<KeyValuePair<string, PartInstance>>())
+            .Where(kv => kv.Key != slotId).Select(kv => kv.Value.Definition);
+        var provided = new HashSet<string>(others.SelectMany(d => d.Provides), StringComparer.Ordinal);
+        var missing = part.Requires.Where(r => !provided.Contains(r)).ToList();
+        if (missing.Count > 0) problems.Add($"needs {string.Join(", ", missing)}, which nothing fitted provides");
+        int? count = part.Spec switch
+        {
+            CarSim.Core.Parts.Specs.PistonSpec p => p.Count,
+            CarSim.Core.Parts.Specs.ConnectingRodSpec r => r.Count,
+            CarSim.Core.Parts.Specs.InjectorSpec i => i.Count,
+            _ => null,
+        };
+        if (count is int n && Engine.Definition.FindSlot(slotId) != null && n != Engine.Definition.Cylinders)
+            problems.Add($"a set of {n} for a {Engine.Definition.Cylinders}-cylinder engine");
+        return problems;
+    }
+
     /// <summary>Slots of the engine or the car that accept <paramref name="part"/>'s category.</summary>
     public IEnumerable<EngineSlotDefinition> SlotsFor(PartInstance part) =>
         Engine.Definition.Slots.Concat(Chassis?.Definition.Slots ?? Array.Empty<EngineSlotDefinition>()).Where(s => s.Category == part.Category);

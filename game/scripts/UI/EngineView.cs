@@ -249,10 +249,12 @@ public partial class EngineView : HSplitContainer
 
         // Shop.
         _details.AddChild(Ui.Label($"Shop — {slot.Category.Replace('_', ' ')}", 15, Ui.Accent));
-        foreach (var def in State.Content.PartsInCategory(slot.Category))
+        foreach (var (def, fit) in State.Content.PartsInCategory(slot.Category)
+                     .Select(d => (Def: d, Fit: G.FitProblems(d, slot.Id))).OrderBy(x => x.Fit.Count > 0).ToList())
         {
             var row = Ui.HBox();
-            var name = Ui.Expand(Ui.Wrapped(def.Name + (def.Description.Length > 0 ? $" — {def.Description}" : ""), 13));
+            var name = Ui.Expand(Ui.Wrapped(def.Name + (def.Description.Length > 0 ? $" — {def.Description}" : "")
+                + (fit.Count > 0 ? $"  [does not fit this engine: {string.Join("; ", fit)}]" : ""), 13, fit.Count > 0 ? Ui.Muted : null));
             row.AddChild(name);
             row.AddChild(Ui.Label($"{def.Price:N0}", 14, def.Price <= G.Money ? Ui.Good : Ui.Danger));
             var buy = Ui.Button("Buy", () => Act(G.Buy(def.Id)));

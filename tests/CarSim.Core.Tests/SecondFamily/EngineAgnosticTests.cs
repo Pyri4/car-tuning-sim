@@ -102,6 +102,25 @@ public class EngineAgnosticTests
         Assert.NotEqual("", g.CreateVehicleSimulation().Problem);
     }
 
+    [Fact]
+    public void TheShopSaysWhichPartsFitWhichFamily()
+    {
+        var m54 = Garage.NewGame(TestContent.Database, "isar_c30_six");
+        var k20 = Garage.NewGame(TestContent.Database, "project_car");
+        var db = TestContent.Database;
+        Assert.Empty(m54.FitProblems(db.GetPart("m54.cams.oem"), "camshafts"));
+        Assert.Contains(m54.FitProblems(db.GetPart("k20.cams.race"), "camshafts"), p => p.Contains("k20.cam_carrier"));
+        Assert.Contains(k20.FitProblems(db.GetPart("m54.cams.oem"), "camshafts"), p => p.Contains("m54.cam_carrier"));
+        Assert.Contains(m54.FitProblems(db.GetPart("injectors.310cc"), "injectors"), p => p.Contains("set of 4"));
+        Assert.Empty(m54.FitProblems(db.GetPart("injectors.6x230cc"), "injectors"));
+        Assert.Empty(k20.FitProblems(db.GetPart("throttle.68mm"), "throttle_body")); // universal parts fit both
+        Assert.Empty(m54.FitProblems(db.GetPart("ecu.standalone"), "ecu"));
+        // The same rule the validator applies once the wrong part is in.
+        var wrong = TestContent.StockM54();
+        TestContent.Swap(wrong, "camshafts", "k20.cams.race");
+        Assert.False(AssemblyValidator.Validate(wrong).CanRun);
+    }
+
     // ---- Identity: the same data under other ids behaves identically -----------------------------------------
 
     private static IEnumerable<(string Source, string Json)> BaseDocuments() =>

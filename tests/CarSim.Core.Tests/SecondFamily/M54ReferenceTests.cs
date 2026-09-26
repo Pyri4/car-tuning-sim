@@ -399,6 +399,31 @@ public class M54ReferenceTests
     }
 
     [Fact]
+    public void DrivingALoadedGarageReplaysTheOriginalExactly()
+    {
+        // Save → load → drive is bit-identical for the second family too (VANOS state starts parked each session).
+        var g = Garage.NewGame(TestContent.Database, "isar_c30_six");
+        g.Engine.PartIn("connecting_rods")!.Damage.RecordExposure(FailureMode.RodTensileOverload, 1.02, 2.0);
+        var loaded = SaveSystem.Deserialize(SaveSystem.Serialize(g), TestContent.Database);
+        List<string> Drive(Garage garage)
+        {
+            var (sim, problem) = garage.CreateVehicleSimulation();
+            Assert.True(sim != null, problem);
+            var trace = new List<string>();
+            var input = new CarSim.Core.Vehicles.VehicleInputs { ShiftUp = true };
+            for (int i = 0; i < 2500; i++)
+            {
+                var t = sim!.Step(0.002, input);
+                input.ShiftUp = false;
+                input.Throttle = 1;
+                if (i % 100 == 0) trace.Add($"{t.Speed:R} {t.EngineRpm:R} {t.Engine.Torque:R} {t.Engine.IntakeCamAdvance:R}");
+            }
+            return trace;
+        }
+        Assert.Equal(Drive(g), Drive(loaded));
+    }
+
+    [Fact]
     public void DynoRunsAreDeterministic()
     {
         DynoRun Run() => new DynoRunner(Stock(), new DynoSettings { StartRpm = 2000, EndRpm = 6500 }).RunToCompletion();
