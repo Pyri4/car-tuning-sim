@@ -2,7 +2,8 @@
 
 ## Status
 **Decided (2026-09-26).** Engine/framework: **Godot 4.7 (.NET edition) for presentation, with an
-engine-agnostic C# (.NET 8) simulation core.** Sections below marked *(planned)* describe intended
+game-engine-agnostic C# (.NET 8) simulation core** (no Godot dependency; the *car*-engine model's own limits are
+in `EngineTopology` and SIMULATION_SPEC.md). Sections below marked *(planned)* describe intended
 structure that does not exist yet; everything else reflects the repository as it is.
 
 ---
@@ -69,7 +70,7 @@ CarTuningSim.sln
 Directory.Build.props      shared compiler settings (nullable, warnings-as-errors, LangVersion)
 global.json                .NET SDK pin
 content/base/              base-game content as JSON (parts, engines, fuels, tunes, vehicles)
-src/CarSim.Core/           engine-agnostic simulation + domain model (NO Godot references)
+src/CarSim.Core/           game-engine-agnostic simulation + domain model (NO Godot references)
 src/CarSim.Gameplay/       garage, economy, scenarios, save/load (NO Godot references)
 tests/CarSim.Core.Tests/   xUnit tests for the core
 tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno) built on the core
@@ -226,6 +227,19 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
   convergence (engine and vehicle), bit-identical save → load → drive replays, every part in every
   slot (builds and runs to finite numbers, or is refused with reasons), and a per-step allocation
   budget.
+- **Validation-pass additions** (2026-09-26): independent first-law checks (a warm-up closing the energy balance
+  with stored heat, brake efficiency under the Otto limit, released ≤ supplied fuel energy, no failure raising
+  torque); ECU observability (delivered fuel reconstructed exactly from what the ECU can see across hardware whose
+  true breathing differs by > 15 % λ; no hidden closed loop; dyno logs hold only measurable channels); turbo
+  invariants far from calibration (first/second law at every compressor point, a 24-case closed-loop matrix to
+  350 kPa with zero reversals, square waves, target steps, overspeed as a reported failure); spec fuzzing (every
+  numeric field of every fitted part scaled from −1× to 10³×; wherever the part's validator accepts the value, the
+  engine or car must be refused with reasons or run finite); clamp-activation tests (guards on fitted laws never
+  carry normal running); tyre-width and suspension trade-offs; Miner additivity across a save/load.
+- **Mutation checks:** new invariants are shown to fail on the bug they guard — the previous physics (overrun
+  exhaust heat), an ECU fed the true air mass or the true fuel density, boost feedback from the compressor outlet,
+  choke that removes compressor work, no boost anti-windup, a raised VE floor. A test that cannot fail on its bug is
+  not counted as evidence.
 - **Content tests** load every file under `content/` and validate references, ranges and that the
   stock engine assembles and runs.
 - **CLI**: CI runs `carsim validate` and a short `carsim sweep` after the tests.

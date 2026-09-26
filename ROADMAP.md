@@ -9,15 +9,19 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 348 automated tests (simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves,
-  mods, physical invariants and property sweeps). CI runs them, a CLI content check and dyno sweep, and
-  two headless Godot smoke tests (dyno pull; autopilot drive) on the official Godot 4.7.2 .NET build.
-- A simulation-correction phase (below) fixed the foundational issues found by the review of PR #1
-  before any new systems were added.
+- 435 automated tests (348 before the validation pass): simulation, content, damage, dyno, vehicle
+  dynamics, wear, gameplay, saves, mods, physical invariants, property sweeps, spec fuzzing and clamp-activation
+  checks. CI runs them, a CLI content check and dyno sweep, and two headless Godot smoke tests (dyno pull;
+  autopilot drive) on the official Godot 4.7.2 .NET build.
+- A simulation-correction phase (below) addressed the review of PR #1; a validation pass then re-checked every
+  finding against independent evidence, found and fixed a regression the correction phase itself introduced
+  (overrun exhaust heat burning turbines) and three remaining ECU oracles. See "Validation pass" for the status of
+  every review issue.
 - Content: 77 parts, 1 engine family, 1 vehicle, 5 fuels, 2 base tunes, 1 scenario; mods load as extra
   content layers.
-- Reference numbers: stock K20 ≈ 148 hp / 189 N·m (the worn project car ≈ 137 hp); T28 turbo build ≈ 230
-  hp / 300 N·m; stock car 0–100 km/h ≈ 8.8 s, ≈ 0.9 g skidpad (≈ 0.85 g on kerb-grade roughness).
+- Reference numbers (re-measured after the validation pass): stock K20 ≈ 149 hp / 189 N·m (the worn project car
+  ≈ 137 hp); T28 turbo build ≈ 238 hp / 293 N·m; stock car 0–100 km/h ≈ 8.8 s, ≈ 0.90 g skidpad (≈ 0.84 g on
+  kerb-grade roughness).
 
 ## Completed work
 ### Phase 0 — Architecture ✅
@@ -97,6 +101,35 @@ tune the ECU → dyno pull → drive the test track → break something through 
 - [x] Invariant tests: load transfer statics, coast-down energy, timestep convergence, save → load →
       drive replay, every part in every slot, allocation budget
 
+### Validation pass ✅ (PR #2 checked against the review of PR #1)
+The review of PR #1 is not stored in the repository; its findings are reconstructed from the correction phase's
+"before" descriptions and the validation brief. A status counts as FIXED only with evidence that does not restate
+the implementation, and new regression tests were shown to fail on the bug they guard.
+
+| # | Original issue | Status | Independent evidence | Remaining |
+|---|---|---|---|---|
+| 1 | ECU read the true trapped air mass (every mod fuelled perfectly) | **FIXED** | Delivered fuel reconstructed exactly from rpm/MAP/IAT/tune across cams, head, stroker, turbo, coolant temperature (true breathing spreads λ > 15 %); an ECU fed the true air fails 14 tests | — |
+| 2 | …and still used the true fuel density; boost PI read the true compressor-outlet pressure | **FIXED** (validation pass) | Race fuel on a pump-fuel density runs 4 % lean; a 2.5-bar MAP sensor chasing 280 kPa holds the gate shut and over-boosts; mutants caught | — |
+| 3 | Player could read MBT and the knock limit | **FIXED** | MBT/limit off screens and CSV (PR #2). Validation pass: the "knock sensor N" readout was degrees past the limit (limit = advance − N); now a coarse level, onset still exact; CSV `iat_c` was the charge temperature | Debug telemetry keeps MBT/limit for developers |
+| 4 | Open-loop tuning could not be wrong; no dead time | **FIXED** | VE, displacement, injector flow and dead time (0.4 ms ≈ 20 % at idle, 2 % at WOT), fuel stoich and density, regulator pressure (√(4/3) rich), coolant temperature all move λ | Warm-up/transient enrichment not modelled |
+| 5 | Closed-loop λ | **INTENTIONALLY DEFERRED** | Explicitly absent: an open-loop error persists unchanged over 30 s (tested) | — |
+| 6 | Compressor iteration diverged above 175 kPa (torque 305 ↔ 375 N·m) | **FIXED** | Closed form; one air-path root at every point (2001-point scans); 24-case closed-loop matrix to 350 kPa with zero reversals; first/second law at every compressor point | — |
+| 7 | Choke removed compressor work → shaft runaway, hidden 2× clamp | **FIXED** | Work never below (1 − 2β)σU²; no clamp; an unreachable target settles ≤ 1.1× rated and fails `TurboOverspeed` with a report; the choke-collapse mutant fails 12 tests | — |
+| 8 | Boost integrator wind-up (196 vs 175 kPa) | **FIXED** | Tip-in ≤ 8 % overshoot; target steps settle within 4 kPa; square waves bounded; the no-anti-windup mutant fails 5 tests | Wastegate duty is PI only (no feed-forward table) |
+| 9 | Energy created with a blown head gasket; rich-EGT fudge | **FIXED** | 60 s warm-up closes the first law with stored heat; brake efficiency < Otto limit (NA and turbo); no degraded failure raises torque | — |
+| 10 | …the correction made overrun exhaust adiabatic: 1,500–4,500 °C port gas, every lift burned the T28's turbine | **FIXED** (validation pass) | Exhaust-port wall exchange (same exact-pipe law as the manifold); lift/re-apply at 3000–6500 rpm causes no failure; overrun cooler than full load; the previous physics fails all five new tests | Constant port UA (no flow dependence) — documented |
+| 11 | Valid content crashed `Build` (optional radiator, duplicate slots, hard-coded chassis ids) | **FIXED** | `EngineTopology`; every part in every slot; spec fuzz: 905 validator-accepted engine variants (0 crashes/NaN), 199 chassis variants driven (0 crashes/NaN) | — |
+| 12 | Twin turbos, per-bank air paths, superchargers, dry sumps | **INTENTIONALLY DEFERRED** | Rejected at load with a reason; docs no longer claim otherwise | Needs model work |
+| 13 | Tyre width had no effect | **FIXED** | 165→305 mm: grip +10 %, braking 55.8→49.0 m, sub-linear, no power; with authored mass/inertia/thermal mass, 0–100 slower and warm-up slower | **PARTIAL:** width's costs are authored per part (shipped tyres checked); no aero drag, relaxation length or aligning torque |
+| 14 | Suspension had no trade-offs | **FIXED** | On kerb-grade roughness ride height, damping, camber and spring choice have interior optima; camber always costs braking; bars trade balance for bump grip | Toe and roll centres not modelled (no toe slider exists) |
+| 15 | Octane never limited the NA engine | **FIXED** | Knock-limited below ≈ 3000 rpm on RON 95; the limited range widens with compression and narrows with octane; every factor acts the same way over a 36-point grid | Mean single-zone cycle; coolant only raises knock above 90 °C |
+| 16 | Fatigue per second, Celsius ratios, rpm as stress, forgotten history | **FIXED** | Per-cycle Miner law, Arrhenius in kelvin, speed² stress, persisted ledger; identical sessions add identical damage across a save/load | **PARTIAL:** the overstress curve is far steeper than literature Basquin (documented game compression); engine thermal state restarts warm each session |
+| 17 | Hidden clamps | **FIXED / DOCUMENTED** | 2× shaft clamp removed; every guard on a fitted law is flagged and tested inactive in normal running; the turbine efficiency floor no longer drives a windmilling wheel (validation pass) | Tyre light-load μ cap carries ≈ 1 % of the force on semi-slicks (a physical bound, documented) |
+| 18 | K20-normalised calibration | **PARTIALLY FIXED** | Valvetrain FMEP, block/sump/oil-coolant and exhaust-port conductances now scale with geometry (K20 unchanged < 0.1 %); constants classed A–D in SIMULATION_SPEC | Otto realisation and FMEP coefficients set the level and are fitted to the K20; crown and wave-tuning correlations fitted on one family |
+| 19 | Tests restated the implementation | **FIXED** | Independent invariants + mutation checks (see ARCHITECTURE.md §7); a big-turbo gearbox test that passed only through a harness artifact was restructured | — |
+| 20 | Allocations / step cost | **NOT FIXED (measured)** | NA 62–75 µs & 10.6 KB/step, turbo ≈ 85 µs & 13.9 KB, vehicle ≈ 80 µs; an allocation-free root finder halved allocations but ran ≈ 25 % slower on NA/vehicle steps under .NET 8 dynamic PGO, so it was not merged | See Technical debt |
+| 21 | Docs overclaimed (a "real compressor map", engine agnosticism) | **FIXED** | "Parametric", "game-engine-agnostic", modding limits in README, clamps/calibration section | — |
+
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
@@ -120,13 +153,16 @@ tune the ECU → dyno pull → drive the test track → break something through 
   transfer, wall or collision. Leaving the track is punished by time, not damage.
 - The air path is quasi-static (no plenum, intercooler or exhaust-manifold filling; no blow-off
   valve; no intercooler heat soak). Turbine drive pressure is slightly optimistic in the mid range.
-- The ECU is open-loop speed-density only: no injector dead time, warm-up/transient enrichment or
-  closed-loop λ trim. A VE table calibrated on gasoline runs a few percent lean on E85 (charge cooling
-  after the IAT sensor) — realistic, but the player has no autotune helper.
+- The ECU is open-loop speed-density only: no warm-up/transient enrichment, no coolant correction and no
+  closed-loop λ trim (injector dead time is modelled, constant with voltage and pressure). A VE table calibrated
+  on gasoline runs a few percent lean on E85 (charge cooling after the IAT sensor) — realistic, but the player
+  has no autotune helper. There is no decel fuel cut: on closed-throttle overrun the engine keeps firing at
+  manifold pressures of 4–15 kPa (the idle valve shuts; no dashpot air).
 - Knock uses a mean-value cycle: no cycle-to-cycle or per-cylinder variation. Octane is worth
   ≈ 0.5° per RON at the limit (Douaud–Eyzat), on the low side of engine data.
-- Tyres have no relaxation length, aligning torque or toe; the load-sensitivity law is still clamped
-  to [0.3, 1.3]·µ₀ (only matters for nearly unloaded wheels).
+- Tyres have no relaxation length, aligning torque or toe; the load-sensitivity law is capped at 1.3·µ₀ for
+  nearly unloaded wheels (never on the stock car; ≈ 1 % of the tyre force on semi-slicks and track coilovers).
+  A wider tyre's costs (mass, inertia, thermal mass) come from its part data; no tyre aero drag.
 - Driving uses an automated clutch: there is no clutch pedal or manual rev-matching, and no ABS,
   traction control or stability control.
 - Launch shock through shafts (wind-up, wheel hop) is not modelled, so wheelspin always protects the
@@ -134,8 +170,11 @@ tune the ECU → dyno pull → drive the test track → break something through 
 - A broken gearbox or differential means no drive at all (no "lost third gear").
 - The autopilot follows the centreline (not a racing line). With powerful rear-drive builds on street
   tyres it can still spin; it recovers after 2 s.
-- Engine state resets to warm each time you drive or run the dyno; dyno runs and failure reports are
-  not saved.
+- Engine state resets to warm each time you drive or run the dyno (so thermally activated damage in many short
+  sessions is slightly lower than in one long run); dyno runs and failure reports are not saved.
+- Fatigue lives are game-compressed and the overstress curve is far steeper than literature Basquin (100 → 110 %
+  of a rating: rods 11×, gearbox 64×, turbo overspeed ≈ 900× shorter life). Knock is a mean single-zone cycle;
+  coolant only raises knock above 90 °C (a colder wall does not lower it).
 - Tyres have one lumped temperature each (no surface/core split, no per-edge temperatures) and no
   toe. Camber, pressure and temperature effects are calibrated to be plausible, not fitted to measured
   tyre data.
@@ -146,21 +185,24 @@ tune the ECU → dyno pull → drive the test track → break something through 
 ## Technical debt
 - The engine model supports one part (or set) per modelled category: twin turbos, per-bank air paths,
   dry sumps and superchargers are rejected at load, not supported (`EngineTopology`).
-- Calibration constants are normalised to the K20 (runner and header tuning constants, crown heat-flux
-  reference, friction's valvetrain term, coolant heat fraction on rpm/7000). A second engine family
-  needs them made dimensionless or moved into engine data.
-- The engine step allocates ≈ 14 KB (closures in the air path's nested root finders) and costs
-  ≈ 100 µs; an allocation-budget test guards regressions. Allocation-free root finders would roughly
-  halve the cost.
-- A few hidden clamps remain (tyre µ range, front weight fraction, VE floor); none is reached in the
-  shipped content, but they are not flagged in telemetry.
+- Level-setting calibration is fitted to the K20 (Otto realisation 0.80, FMEP coefficients), and the crown
+  heat-flux and wave-tuning correlations are fitted on one family; a second engine family needs them re-fitted or
+  moved into engine data (SIMULATION_SPEC.md, "Clamps, guards and calibration constants"). The valvetrain and
+  thermal-conductance terms are size-aware since the validation pass.
+- The engine step allocates 10.6 KB (NA) / 13.9 KB (turbo), the vehicle step 11.9 KB: closures in the orifice root
+  finds (≈ 5–8 KB) and live warning strings rebuilt every step (≈ 3 KB). An allocation-free root finder
+  (struct-generic Brent, bit-identical) was measured ≈ 25 % slower on NA/vehicle steps under .NET 8's default
+  dynamic PGO and not merged; revisit with a profiler (or cache warnings at display rate). An allocation-budget
+  test guards regressions.
+- Guards on fitted laws (VE floor, wall-heat scaling, tyre µ cap, weight-share and CG guards, turbine efficiency
+  floor below the optimum) are flagged (debug telemetry / helpers) and tested inactive in normal running.
 - `FailureMode` mixes engine and chassis modes; chassis warnings reuse the `EngineWarning` type.
 - `VehicleSimulation.Step` is long (driveline, wheels and body in one loop) and should be split.
 - `TrackLayout.TestFacility()` is code, not content.
 - The CLI `Program.cs` has grown; split commands into classes.
 - UI views rebuild their subtrees on every change event (fine at this scale; revisit with more data).
-- The full test suite takes ≈ 80 s (lap, wear, VE-calibration and big-turbo gearbox tests); tag the
-  slow ones if it grows.
+- The full test suite takes ≈ 55–65 s on this container (lap, wear, VE-calibration, fuzz and big-turbo gearbox
+  tests); tag the slow ones if it grows.
 
 ## Rule
 Each phase should produce a demonstrable playable/testable increment before proceeding.

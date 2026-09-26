@@ -90,7 +90,11 @@ Development aids for the game (arguments after `--`): `--tab=dyno`, `--autorun`,
 ## Modding
 Mods are folders of JSON under `content/mods/`, loaded after the base game; they can add parts,
 engines, fuels, tunes, scenarios and cars, or redefine existing ones by id. See PARTS_DATABASE.md
-("Mods") and the example in `docs/example-mod/`.
+("Mods") and the example in `docs/example-mod/`. Limits: new parts in existing categories are data only, new
+categories need code, and an engine family must fit what the engine model represents (one part or set per
+category — no twin turbos, per-bank air paths, superchargers or dry sumps yet); anything else is rejected at load
+with a reason. Several constants are still fitted to the one shipped engine family (SIMULATION_SPEC.md, "Clamps,
+guards and calibration constants"), so a very different engine would need re-fitting.
 
 ## Current status
 Early implementation. See ROADMAP.md for what exists and what is next.

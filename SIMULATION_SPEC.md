@@ -25,10 +25,24 @@ Each `Step(dt, inputs)`:
 
 Outputs are an `EngineTelemetry` record (≈60 channels).
 
-Performance (measured, Release, one core of this project's CI-class container): ≈ 100 µs per turbo
-engine step, of which the air path's nested root finders take most and the knock integral ≈ 12 µs;
-≈ 14 KB allocated per step (closures in the root finders — a known cost, guarded by an allocation-budget
-test). At 500 Hz that is ≈ 5 % of a core.
+Performance (measured in the validation pass, Release, .NET 8 defaults, one core of a shared 4-core container;
+best of 5 × 20 000 steps, ±10 % run to run):
+
+| Step | Time | Allocated | At 500 Hz |
+|---|---|---|---|
+| NA engine | ≈ 62–75 µs | 10.6 KB | 5.2 MB/s |
+| Turbo engine | ≈ 84–87 µs | 13.9 KB | 6.8 MB/s |
+| ↳ air-path solve (8 outer Brent evaluations, ≈ 8 orifice inversions each) | 37 / 54 µs | 5.2 / 7.6 KB | |
+| ↳ knock limit (two cycle integrals) | ≈ 12 µs | 0 | |
+| ↳ damage update + live warnings | ≈ 5–7 µs | 2.9 KB | |
+| ↳ telemetry record | 0.1 µs | 0.6 KB | |
+| Vehicle (engine + 8 chassis substeps, ride, tyre thermal) | ≈ 79–82 µs | 11.9 KB | 5.8 MB/s |
+
+That is ≈ 4–5 % of a core at 500 Hz. The allocations are short-lived gen-0 garbage: closures in the orifice root
+finds, and warning strings rebuilt every step. An allocation-free (struct-generic) root finder was built and
+measured: bit-identical results, half the allocation, turbo steps 10 % faster — but NA and vehicle steps ≈ 25 %
+*slower* under .NET 8's default dynamic PGO (equal or faster with PGO off), so it was not merged. An
+allocation-budget test (16.5 KB per turbo step) guards regressions.
 
 ## Geometry (`Engines/EngineGeometry.cs`)
 - Swept volume per cylinder `V_d = π/4 · B² · S`; displacement `V = n · V_d`.
@@ -310,10 +324,11 @@ Flows are corrected: `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; `n` = corre
   105 kPa → lean and over-advanced under boost (validator warning `map_sensor_range`).
 
 ### Calibration reference (forged K20, 550 cc, standalone ECU, RON 98, 175 kPa target)
-Steady-state full boost ≈ 3800 rpm (small), ≈ 4600 rpm (mid), above 6800 rpm (big: ≈ 155 kPa at
-6800 rpm); peak ≈ 205 hp (small: near choke above 5500 rpm, efficiency falling to ≈ 0.4, drive pressure
-≈ 1.35× boost), ≈ 233 hp (mid), ≈ 215 hp (big, not yet at full boost). Asked for 200 kPa, the small turbo over-speeds (≈ 1.15× rated at 7000 rpm) and
-fails; the mid turbo holds 240 kPa at 7000 rpm just above its rating.
+Steady-state full boost ≈ 3800 rpm (small), ≈ 4600 rpm (mid), ≈ 7200 rpm (big: ≈ 157 kPa at 6800 rpm);
+peak ≈ 205 hp (small: near choke above 5500 rpm, efficiency falling to ≈ 0.37, drive pressure ≈ 1.38× boost),
+≈ 238 hp (mid), ≈ 244 hp at 7200 rpm (big, only just at full boost). Asked for 200 kPa, the small turbo over-speeds
+(≈ 1.09× rated at 7000 rpm, 193 kPa) and fails (`TurboOverspeed`, with a report); the mid turbo holds 240 kPa at
+7000 rpm at 1.015× its rating. (Re-measured in the validation pass, after the exhaust-port heat exchange.)
 
 ## Damage and failure (`Damage/`)
 Every step, `StressEvaluator` turns the operating point into stress ratios `r = load / rating`:
@@ -516,10 +531,11 @@ instances (persists in the garage and saves).
   (a T35 on E85 at 300 kPa puts ≈ 445 N·m through the 400 N·m stock box near peak torque: ≈ 0.8 % of its life per
   fourth-gear pull, about a hundred hard pulls; a 360 N·m box breaks in ≈ 7; the 550 N·m dog box takes no damage).
   Until the validation pass a test claimed "a few pulls" for the stock box — true only because its harness never
-  lifted between pulls, so the turbo met 4,400 rpm at full shaft speed and over-boosted. The report names engine torque vs rating, and clutch capacity vs rating when the clutch
+  lifted between pulls, so the turbo met 4,400 rpm at full shaft speed and over-boosted.
+  The report names engine torque vs rating, and clutch capacity vs rating when the clutch
   could pass more than the gearbox can take.
 - Reference: the stock car at the test driver's pace runs its front brakes at ≈ 240 °C and wears
-  ≈ 0.3 % of the pads and ≈ 0.25 % of the tyres per lap. The T28 turbo build (≈ 300 N·m) slips the OEM
+  ≈ 0.3 % of the pads and ≈ 0.25 % of the tyres per lap. The T28 turbo build (≈ 290 N·m) slips the OEM
   clutch (280 N·m new) a little; on the project car's 40 %-worn clutch (224 N·m) it slips, passes 250 °C
   in two laps and burns out in about six; the sport clutch (500 N·m) never slips.
 
@@ -546,7 +562,7 @@ instances (persists in the garage and saves).
 ### Calibration reference (stock Kestrel S2, street tyres)
 0–100 km/h ≈ 8.5 s, top speed ≈ 220 km/h (drag-limited), 100–0 ≈ 48 m threshold braking (with a
 0.3 s pedal ramp) vs ≈ 54 m locked, skidpad ≈ 0.9 g (≈ 1.15 g on semi-slicks), mild understeer at the
-limit. ≈ 90 µs per 2 ms step including the engine (8 chassis substeps, ride model, tyre thermal).
+limit. ≈ 80 µs per 2 ms step including the engine (8 chassis substeps, ride model, tyre thermal).
 
 ## Clamps, guards and calibration constants
 Every `Clamp`/`Min`/`Max` in the simulation was reviewed in the validation pass. Three kinds remain:
