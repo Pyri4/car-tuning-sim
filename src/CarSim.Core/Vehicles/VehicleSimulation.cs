@@ -35,10 +35,16 @@ public sealed class VehicleSimulation
         _wheelX[Wheel.RL] = _wheelX[Wheel.RR] = -c.CgToRear;
         _wheelY[Wheel.FL] = c.TrackFront / 2; _wheelY[Wheel.FR] = -c.TrackFront / 2;
         _wheelY[Wheel.RL] = c.TrackRear / 2; _wheelY[Wheel.RR] = -c.TrackRear / 2;
+        Wear = new ChassisWearModel(config);
     }
 
     public VehicleConfiguration Config { get; }
     public EngineSimulation Engine { get; }
+
+    /// <summary>Heat and wear of the clutch, brakes and tyres (and their failures).</summary>
+    public ChassisWearModel Wear { get; }
+
+    private readonly FrictionEnergy _energy = new();
 
     /// <summary>Optional circuit: provides surface grip under each wheel (asphalt, kerb, grass).</summary>
     public TrackLayout? Track { get; set; }
@@ -96,6 +102,10 @@ public sealed class VehicleSimulation
         double ieng = Engine.Config.RotatingInertia;
         double ratio = c.OverallRatio(s.Gear);
         double eff = c.Gearbox.Efficiency;
+        double clutchCapacity = Wear.ClutchCapacityNm;
+        double brakeFront = c.Brakes.FrontMaxTorqueNm * Wear.BrakeFactor(0), brakeRear = c.Brakes.RearMaxTorqueNm * Wear.BrakeFactor(1);
+        _energy.Clear();
+        double lastGearboxOmega = 0;
 
         for (int k = 0; k < Substeps; k++)
         {
@@ -114,8 +124,10 @@ public sealed class VehicleSimulation
                 _slipRatio[w] = (s.WheelOmega[w] * tire.Radius - ul) / denom;
                 _slipAngle[w] = Math.Atan2(vl, denom);
                 var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w]);
-                fx *= _surfaceGrip[w];
-                fy *= _surfaceGrip[w];
+                double grip = _surfaceGrip[w] * Wear.GripFactor(w);
+                fx *= grip;
+                fy *= grip;
+                _energy.Tyre[w] += (Math.Abs(fx * (s.WheelOmega[w] * tire.Radius - ul)) + Math.Abs(fy * vl)) * h;
                 _fx[w] = fx;
                 _fy[w] = fy;
                 double bx = fx * cos - fy * sin;
@@ -137,9 +149,11 @@ public sealed class VehicleSimulation
                 double iDrive = c.Gearbox.InputInertiaKgM2 + (c.TireOf(d0).InertiaKgM2 * 2) / (ratio * ratio);
                 double reduced = seized ? iDrive : ieng * iDrive / (ieng + iDrive);
                 double kc = 0.8 * reduced / h;
-                double capacity = s.Clutch * c.Clutch.MaxTorqueNm;
+                double capacity = s.Clutch * clutchCapacity;
                 clutchTorque = Math.Clamp(kc * (s.EngineOmega - gearboxOmega), -capacity, capacity);
+                _energy.Clutch += Math.Abs(clutchTorque * (s.EngineOmega - gearboxOmega)) * h;
             }
+            lastGearboxOmega = gearboxOmega;
             double carrierTorque = clutchTorque * ratio * (clutchTorque * ratio >= 0 ? eff : 1.0 / eff);
             double bias = DifferentialBias(carrierTorque, s.WheelOmega[d0], s.WheelOmega[d1], h);
             for (int w = 0; w < 4; w++) _driveTorque[w] = 0.0;
@@ -151,7 +165,8 @@ public sealed class VehicleSimulation
             {
                 var tire = c.TireOf(w);
                 double inertia = WheelInertia(w, s.Gear);
-                double brakeTorque = input.Brake * (w < 2 ? c.Brakes.FrontMaxTorqueNm : c.Brakes.RearMaxTorqueNm)
+                double footBrake = input.Brake * (w < 2 ? brakeFront : brakeRear);
+                double brakeTorque = footBrake
                                      + (w >= 2 ? input.Handbrake * HandbrakeTorqueNm : 0.0)
                                      + _fz[w] * tire.RollingResistance * tire.Radius;
                 double net = _driveTorque[w] - _fx[w] * tire.Radius;
@@ -160,6 +175,7 @@ public sealed class VehicleSimulation
                 double brakeStep = brakeTorque / inertia * h;
                 if (Math.Abs(predicted) <= brakeStep) s.WheelOmega[w] = 0.0;
                 else s.WheelOmega[w] = predicted - Math.Sign(predicted) * brakeStep;
+                if (brakeTorque > 0) _energy.BrakeAxle[w < 2 ? 0 : 1] += footBrake * Math.Abs(s.WheelOmega[w]) * h;
             }
 
             // Engine side of the clutch.
@@ -197,6 +213,8 @@ public sealed class VehicleSimulation
             }
         }
         s.Time += dt;
+        bool clutchCommanded = s.Clutch >= 0.999 && s.ShiftTimer <= 0 && s.Gear != 0;
+        Wear.Update(dt, s.Time, _energy, speed, et.Torque, Units.RadPerSecToRpm(s.EngineOmega - lastGearboxOmega), clutchCommanded);
         return Last!;
     }
 
@@ -322,6 +340,10 @@ public sealed class VehicleSimulation
             BodySlipAngle = Math.Abs(s.U) > 1 ? Math.Atan2(s.V, Math.Abs(s.U)) : 0.0,
             X = s.X, Y = s.Y, Heading = s.Heading, Distance = s.Distance,
             Engine = et,
+            ClutchTemperatureC = Wear.ClutchTemperatureC,
+            ClutchCapacityNm = Wear.ClutchCapacityNm,
+            BrakeTemperatureFrontC = Units.KToC(Wear.BrakeTemperature[0]),
+            BrakeTemperatureRearC = Units.KToC(Wear.BrakeTemperature[1]),
         };
         for (int w = 0; w < 4; w++)
         {

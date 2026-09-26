@@ -12,7 +12,7 @@ public static class SpecDescriber
 {
     private static readonly (string Suffix, string Unit)[] UnitSuffixes =
     {
-        ("KgCm2", "kg·cm²"), ("KgM2", "kg·m²"), ("WPerK", "W/K"), ("CcPerRev", "cc/rev"), ("CcMin", "cc/min"), ("KgS", "kg/s"),
+        ("JPerK", "J/K"), ("Mj", "MJ"), ("KgCm2", "kg·cm²"), ("KgM2", "kg·m²"), ("WPerK", "W/K"), ("CcPerRev", "cc/rev"), ("CcMin", "cc/min"), ("KgS", "kg/s"),
         ("Cm2", "cm²"), ("Cfm", "CFM"), ("Lph", "L/h"), ("Kpa", "kPa"), ("Bar", "bar"), ("Rpm", "rpm"), ("Deg", "°"),
         ("Mm", "mm"), ("Cc", "cc"), ("Kn", "kN"), ("Nm", "N·m"), ("Ms", "m/s"), ("Kg", "kg"), ("C", "°C"), ("G", "g"),
         ("N", "N"), ("L", "L"),

@@ -153,7 +153,9 @@ public partial class DriveHud : Control
 
         var e = t.Engine;
         string boost = sim.Engine.Config.Turbo != null ? $"\nBoost     {(e.MapKpa - 101.3) / 100.0:+0.00;-0.00} bar" : "";
-        _gauges.Text = $"Coolant   {e.CoolantC:F0} °C\nOil       {e.OilC:F0} °C   {e.OilPressure / 1e5:F1} bar\nAFR       {e.Afr:F1}   knock retard {e.KnockRetard:F1}°{boost}\nLateral   {t.LateralG:F2} g   long {t.LongitudinalG:+0.00;-0.00} g";
+        _gauges.Text = $"Coolant   {e.CoolantC:F0} °C\nOil       {e.OilC:F0} °C   {e.OilPressure / 1e5:F1} bar\nAFR       {e.Afr:F1}   knock retard {e.KnockRetard:F1}°{boost}\n"
+                       + $"Clutch    {t.ClutchTemperatureC:F0} °C   holds {t.ClutchCapacityNm:F0} N·m\nBrakes    F {t.BrakeTemperatureFrontC:F0} °C   R {t.BrakeTemperatureRearC:F0} °C\n"
+                       + $"Lateral   {t.LateralG:F2} g   long {t.LongitudinalG:+0.00;-0.00} g";
 
         for (int w = 0; w < 4; w++)
         {
@@ -170,7 +172,7 @@ public partial class DriveHud : Control
         _status.Text = $"{status}   [{cameraName}]".Trim();
 
         Ui.Clear(_warnings);
-        foreach (var wng in sim.Engine.Damage.Warnings.Take(4))
+        foreach (var wng in sim.Engine.Damage.Warnings.Concat(sim.Wear.Warnings).Take(5))
         {
             var l = Ui.Label(wng.Message, 15, wng.Level == WarningLevel.Danger ? Ui.Danger : Ui.Caution);
             l.HorizontalAlignment = HorizontalAlignment.Center;

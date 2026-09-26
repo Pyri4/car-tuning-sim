@@ -21,8 +21,12 @@ public sealed class DrivingSession
 
     private double _accumulator;
     private int _queuedShift;
-    private int _knownFailures;
+    private int _knownFailures, _knownChassisFailures;
     private TrackDriver? _autopilot;
+    private double _lostSeconds;
+
+    /// <summary>How long the autopilot tolerates being lost (far off the track, facing backwards or stuck) before recovering.</summary>
+    public const double AutopilotLostSeconds = 2.0;
     private readonly List<FailureReport> _failures = new();
 
     public DrivingSession(VehicleSimulation sim, TrackLayout track)
@@ -33,6 +37,7 @@ public sealed class DrivingSession
         Timer = new LapTimer(track);
         TrackIndex = track.Nearest(sim.State.X, sim.State.Y);
         _knownFailures = sim.Engine.Damage.Failures.Count;
+        _knownChassisFailures = sim.Wear.Failures.Count;
     }
 
     public VehicleSimulation Sim { get; }
@@ -45,7 +50,10 @@ public sealed class DrivingSession
     /// <summary>The built-in test driver takes over the controls.</summary>
     public bool AutopilotEnabled { get; set; }
 
-    /// <summary>Failures that happened during this session, oldest first.</summary>
+    /// <summary>Times the autopilot got lost (spun off, stuck) and put the car back on the track.</summary>
+    public int AutopilotRecoveries { get; private set; }
+
+    /// <summary>Failures (engine and chassis) that happened during this session, oldest first.</summary>
     public IReadOnlyList<FailureReport> Failures => _failures;
 
     public VehicleTelemetry? Last => Sim.Last;
@@ -94,14 +102,26 @@ public sealed class DrivingSession
             steps++;
             TrackIndex = Track.Nearest(t.X, t.Y, TrackIndex);
             lap |= Timer.Update(TrackIndex, t.Time);
+            if (AutopilotEnabled) CheckAutopilotLost(t);
             var failures = Sim.Engine.Damage.Failures;
-            for (; _knownFailures < failures.Count; _knownFailures++)
-            {
-                fresh.Add(failures[_knownFailures]);
-                _failures.Add(failures[_knownFailures]);
-            }
+            for (; _knownFailures < failures.Count; _knownFailures++) fresh.Add(failures[_knownFailures]);
+            var chassisFailures = Sim.Wear.Failures;
+            for (; _knownChassisFailures < chassisFailures.Count; _knownChassisFailures++) fresh.Add(chassisFailures[_knownChassisFailures]);
         }
+        _failures.AddRange(fresh);
         return new DrivingStep(steps, lap, fresh);
+    }
+
+    private void CheckAutopilotLost(VehicleTelemetry t)
+    {
+        double headingError = Math.Abs(TrackLayout.NormalizeAngle(Sim.State.Heading - Track.HeadingAt(TrackIndex)));
+        bool lost = Math.Abs(LateralOffset) > Track.Width / 2 + TrackLayout.KerbWidth + 4.0
+                    || headingError > 2.0
+                    || (t.Speed < 0.5 && t.Time > 5.0 && !Sim.Engine.Damage.Seized);
+        _lostSeconds = lost ? _lostSeconds + StepSeconds : 0.0;
+        if (_lostSeconds < (t.Speed < 0.5 ? 2 * AutopilotLostSeconds : AutopilotLostSeconds)) return;
+        ResetToTrack();
+        AutopilotRecoveries++;
     }
 
     /// <summary>
@@ -124,6 +144,7 @@ public sealed class DrivingSession
         s.Gear = s.PendingGear = 1;
         s.Clutch = 0.0;
         _queuedShift = 0;
+        _lostSeconds = 0;
         TrackIndex = i;
         Timer.Invalidate();
     }

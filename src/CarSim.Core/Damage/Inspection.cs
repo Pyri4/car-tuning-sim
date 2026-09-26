@@ -99,6 +99,12 @@ public static class PartInspector
                 return w < MajorThreshold ? "Cylinder bores lightly scored." : "Cylinder bores badly scored: bore oversize or replace.";
             case ConnectingRodSpec:
                 return "Big ends discoloured from overheating.";
+            case ClutchSpec c:
+                return $"Friction facings worn ({pct}): clamp capacity down to about {c.MaxTorqueNm * (1 - Vehicles.ChassisWearModel.ClutchWearCapacityLoss * w):F0} N·m (new {c.MaxTorqueNm:F0} N·m).";
+            case BrakeSpec:
+                return w < MajorThreshold ? $"Pads worn ({pct})." : $"Pads nearly down to the backing plates ({pct}).";
+            case TireSpec:
+                return $"Tread worn ({pct}): about {Vehicles.ChassisWearModel.TyreWearGripLoss * w * 100:F0} % less grip.";
             default:
                 return $"Worn ({pct}).";
         }

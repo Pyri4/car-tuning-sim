@@ -8,7 +8,22 @@ public sealed class ClutchSpec : PartSpec
     /// <summary>Torque the clutch can transmit fully engaged before it slips.</summary>
     public required double MaxTorqueNm { get; init; }
 
-    protected override void Validate(SpecChecker check) => check.Range("max_torque_nm", MaxTorqueNm, 50, 3000);
+    /// <summary>Facing temperature where friction starts to fade and wear accelerates (organic ≈ 250 °C, cerametallic ≈ 400 °C).</summary>
+    public double FadeStartC { get; init; } = 250;
+
+    /// <summary>Slip energy the facings absorb over their life at normal temperatures.</summary>
+    public double LifeMj { get; init; } = 150;
+
+    /// <summary>Thermal mass of the friction surfaces (pressure plate, flywheel face, disc).</summary>
+    public double HeatCapacityJPerK { get; init; } = 4000;
+
+    protected override void Validate(SpecChecker check)
+    {
+        check.Range("max_torque_nm", MaxTorqueNm, 50, 3000);
+        check.Range("fade_start_c", FadeStartC, 150, 800);
+        check.Range("life_mj", LifeMj, 1, 10000);
+        check.Range("heat_capacity_j_per_k", HeatCapacityJPerK, 500, 50000);
+    }
 }
 
 public sealed class GearboxSpec : PartSpec
@@ -98,6 +113,9 @@ public sealed class TireSpec : PartSpec
 
     public string Compound { get; init; } = "street";
 
+    /// <summary>Friction work (sliding energy) the pair's tread absorbs before it is worn out.</summary>
+    public double TreadLifeMj { get; init; } = 80;
+
     [JsonIgnore] public double Radius => Units.MmToM(RimDiameterIn * 25.4 / 2.0 + WidthMm * AspectRatio / 100.0);
     [JsonIgnore] public double PeakSlipAngle => Units.DegToRad(PeakSlipAngleDeg);
 
@@ -112,6 +130,7 @@ public sealed class TireSpec : PartSpec
         check.Range("peak_slip_angle_deg", PeakSlipAngleDeg, 1, 20);
         check.Range("rolling_resistance", RollingResistance, 0.003, 0.05);
         check.Range("inertia_kg_m2", InertiaKgM2, 0.2, 5);
+        check.Range("tread_life_mj", TreadLifeMj, 1, 10000);
     }
 }
 
@@ -149,9 +168,23 @@ public sealed class BrakeSpec : PartSpec
     public required double FrontMaxTorqueNm { get; init; }
     public required double RearMaxTorqueNm { get; init; }
 
+    /// <summary>Disc/pad temperature where the pads start to fade (street pads ≈ 450 °C, race pads ≈ 600 °C).</summary>
+    public double FadeStartC { get; init; } = 450;
+
+    /// <summary>Braking energy one axle's pads absorb over their life at normal temperatures.</summary>
+    public double PadLifeMj { get; init; } = 200;
+
+    /// <summary>Thermal mass of the front discs (both), and of the rear discs.</summary>
+    public double FrontHeatCapacityJPerK { get; init; } = 6000;
+    public double RearHeatCapacityJPerK { get; init; } = 4000;
+
     protected override void Validate(SpecChecker check)
     {
         check.Range("front_max_torque_nm", FrontMaxTorqueNm, 200, 10000);
         check.Range("rear_max_torque_nm", RearMaxTorqueNm, 100, 10000);
+        check.Range("fade_start_c", FadeStartC, 200, 1000);
+        check.Range("pad_life_mj", PadLifeMj, 1, 10000);
+        check.Range("front_heat_capacity_j_per_k", FrontHeatCapacityJPerK, 500, 50000);
+        check.Range("rear_heat_capacity_j_per_k", RearHeatCapacityJPerK, 500, 50000);
     }
 }

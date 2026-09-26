@@ -54,6 +54,7 @@ public class DrivingSessionTests
         var session = new DrivingSession(Car.Chassis(), Track);
         var s = session.Sim.State;
         s.X = 200; s.Y = -25; s.Heading = 2.0; s.U = 20; s.YawRate = 1.0;
+        session.Timer.Update(Track.Count / 2, 5);
         session.Timer.Update(Track.Count - 1, 10);
         session.Timer.Update(0, 11);
         Assert.True(session.Timer.Timing);
@@ -84,6 +85,36 @@ public class DrivingSessionTests
         Assert.NotEmpty(reported);
         Assert.Equal(session.Failures, reported);
         Assert.Equal(session.Sim.Engine.Damage.Failures.Count, reported.Count);
+    }
+
+    [Fact]
+    public void AutopilotRecoversWhenLost()
+    {
+        var session = new DrivingSession(Car.Chassis(), Track) { AutopilotEnabled = true };
+        var s = session.Sim.State;
+        s.X = 200; s.Y = -40; s.Heading = Math.PI; // in a field, facing the wrong way
+        for (int i = 0; i < 6 * 60 && session.AutopilotRecoveries == 0; i++) session.Advance(Frame, new VehicleInputs());
+        Assert.Equal(1, session.AutopilotRecoveries);
+        Assert.True(Math.Abs(session.LateralOffset) < Track.Width / 2);
+        for (int i = 0; i < 5 * 60; i++) session.Advance(Frame, new VehicleInputs());
+        Assert.Equal(1, session.AutopilotRecoveries);
+        Assert.True(session.Last!.SpeedKmh > 20, "drives on after the recovery");
+    }
+
+    [Fact]
+    public void ChassisFailuresAreReportedLikeEngineFailures()
+    {
+        var sim = Car.Create(CarSim.Core.Tests.Simulation.TurboTests.TurboBuild(),
+            CarSim.Core.Ecu.EcuTune.FromDocument(TestContent.Database.GetTune("k20.turbo_base")), "gasoline_98");
+        sim.Config.Chassis.PartIn("clutch")!.Wear = 0.9999; // a few more seconds of slipping finishes it
+        var session = new DrivingSession(sim, Track);
+        Car.Rolling(sim, 90, 4);
+        var reported = new List<CarSim.Core.Damage.FailureReport>();
+        for (int i = 0; i < 10 * 60 && reported.Count == 0; i++)
+            reported.AddRange(session.Advance(Frame, new VehicleInputs { Throttle = 1 }).NewFailures);
+        var report = Assert.Single(reported);
+        Assert.Equal(CarSim.Core.Damage.FailureMode.ClutchBurnout, report.Mode);
+        Assert.Equal(session.Failures, reported);
     }
 
     [Fact]

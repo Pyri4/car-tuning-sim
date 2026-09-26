@@ -286,6 +286,26 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
 - Brakes: per-wheel torque from pedal × per-axle maximum (no ABS; locking the fronts is possible);
   handbrake on the rear; rolling resistance torque. Brake torque can stop but never reverse a wheel.
 
+### Heat and wear of the friction parts (`ChassisWearModel`)
+Every joule the clutch, brakes and tyres dissipate heats a lumped mass and wears the friction
+material; hot material fades and wears much faster, so abuse snowballs. Wear lives on the part
+instances (persists in the garage and saves).
+- Energy per step: clutch `|T_clutch·(ω_engine − ω_gearbox)|`; brakes (per axle) `T_pedal·|ω_wheel|`
+  (a locked wheel puts its energy into the tyre instead); tyres `|F_x·(ωR − u)| + |F_y·v|` per wheel.
+- Clutch: `C·dT/dt = P − 15 W/K·(T − T_amb)`. Capacity `= rated · (1 − 0.5·wear) · (1 − 0.4·s)`,
+  `s = smoothstep((T − T_fade)/200 K)`. Wear rate `= P/life · (1 + max(0, T − T_fade)/25 K)²`. At wear 1 the
+  clutch burns out (capacity 8 % of rated) with a report built from the peak engine torque while
+  slipping and the wear when slipping began. "Slipping" = commanded fully engaged, |slip| > 100 rpm.
+- Brakes (per axle): `C·dT/dt = P − (10 + k·v)(T − T_amb) − 0.15 m²·σ(T⁴ − T_amb⁴)`, k = 3.5 W/K per
+  m/s front (vented), 2.0 rear. Torque `× (1 − 0.45·smoothstep((T − T_fade)/250 K))`; pad wear
+  `= Σ P·(1 + max(0, T − T_fade)/100 K)² / (2·pad_life)`; worn out → 40 % torque.
+- Tyres (per axle pair): grip `× (1 − 0.10·wear)`, wear `= Σ P / tread_life`; worn out → grip × 0.75.
+- Warnings: clutch slipping (> 0.3 s), clutch above its fade temperature, brakes fading, tyres > 85 %.
+- Reference: the stock car at the test driver's pace runs its front brakes at ≈ 240 °C and wears
+  ≈ 0.3 % of the pads and ≈ 0.25 % of the tyres per lap. The T28 turbo build (≈ 300 N·m) slips the OEM
+  clutch (280 N·m new) a little; on the project car's 40 %-worn clutch (224 N·m) it slips, passes 250 °C
+  in two laps and burns out in about six; the sport clutch (500 N·m) never slips.
+
 ### Engine coupling
 - The engine sees the crank speed imposed by the clutch — a missed downshift drags it past the rev
   limiter (fuel cut cannot prevent it) and the damage model reacts (valve float, rods, ...).
@@ -298,7 +318,12 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
 - `TrackDriver`: pure pursuit (look-ahead 8 m + 0.6 s) with a speed-scheduled lateral-offset
   correction; target speed from exact curvature (`√(a_lat/κ)`) with backward braking passes; planned
   lateral/braking g = 0.8/0.78 × tyre µ; throttle cut on wheelspin or body slip; shifts judged from
-  gearbox-side speed; restarts a stalled engine. Used for lap-time regression tests and demos.
+  gearbox-side speed; restarts a stalled engine; caps throttle to the friction circle
+  (`≤ max(0.15, √(1 − turning²))`) so boost arriving mid-corner does not spin the car. Used for
+  lap-time regression tests and demos. In a `DrivingSession` the autopilot recovers to the track
+  after 2 s lost (> 4 m beyond the kerbs, heading error > 115°, or stuck).
+- `LapTimer` counts a lap only if the car passed the far side of the circuit since the last crossing
+  (a spin back and forth over the line is not a lap); a recovery voids the lap in progress.
 - Reference laps: stock ≈ 52 s, semi-slicks ≈ 48 s.
 
 ### Calibration reference (stock Kestrel S2, street tyres)

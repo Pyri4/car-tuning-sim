@@ -1,12 +1,12 @@
 {
   "parts": [
     { "id": "clutch.oem", "name": "OEM clutch", "category": "clutch", "manufacturer": "Kestrel", "price": 320, "mass_kg": 6.5,
-      "description": "Holds about 350 N·m: fine for the stock engine, slips behind a strong turbo build.",
-      "spec": { "max_torque_nm": 350 } },
+      "description": "Holds about 280 N·m new, less as the facings wear: fine for the stock engine, slips behind a turbo build.",
+      "spec": { "max_torque_nm": 280, "fade_start_c": 250, "life_mj": 120, "heat_capacity_j_per_k": 4000 } },
     { "id": "clutch.sport", "name": "Sport clutch (organic, uprated plate)", "category": "clutch", "manufacturer": "Gripline", "price": 540, "mass_kg": 6.8,
-      "spec": { "max_torque_nm": 500 } },
+      "spec": { "max_torque_nm": 500, "fade_start_c": 300, "life_mj": 180, "heat_capacity_j_per_k": 4500 } },
     { "id": "clutch.race_twin", "name": "Twin-plate race clutch", "category": "clutch", "manufacturer": "Gripline", "price": 1400, "mass_kg": 5.2,
-      "spec": { "max_torque_nm": 850 } },
+      "spec": { "max_torque_nm": 850, "fade_start_c": 450, "life_mj": 250, "heat_capacity_j_per_k": 6000 } },
 
     { "id": "gearbox.kestrel_6mt", "name": "Kestrel 6-speed manual", "category": "gearbox", "manufacturer": "Kestrel", "price": 1800, "mass_kg": 38,
       "description": "Wide ratios for the road. Rated for 400 N·m.",
@@ -28,14 +28,14 @@
       "spec": { "final_drive_ratio": 4.10, "type": "locked" } },
 
     { "id": "tires.street_205_55r16", "name": "Street tyres 205/55 R16 (pair)", "category": "tires", "manufacturer": "Roadmaster", "price": 260, "mass_kg": 36,
-      "spec": { "width_mm": 205, "aspect_ratio": 55, "rim_diameter_in": 16, "peak_friction": 0.95, "load_sensitivity": 0.12, "peak_slip_ratio": 0.11, "peak_slip_angle_deg": 7.5, "rolling_resistance": 0.012, "inertia_kg_m2": 1.1, "compound": "street" } },
+      "spec": { "width_mm": 205, "aspect_ratio": 55, "rim_diameter_in": 16, "peak_friction": 0.95, "load_sensitivity": 0.12, "peak_slip_ratio": 0.11, "peak_slip_angle_deg": 7.5, "rolling_resistance": 0.012, "inertia_kg_m2": 1.1, "compound": "street", "tread_life_mj": 80 } },
     { "id": "tires.street_225_50r16", "name": "Street tyres 225/50 R16 (pair)", "category": "tires", "manufacturer": "Roadmaster", "price": 290, "mass_kg": 38,
-      "spec": { "width_mm": 225, "aspect_ratio": 50, "rim_diameter_in": 16, "peak_friction": 0.95, "load_sensitivity": 0.11, "peak_slip_ratio": 0.11, "peak_slip_angle_deg": 7.5, "rolling_resistance": 0.012, "inertia_kg_m2": 1.2, "compound": "street" } },
+      "spec": { "width_mm": 225, "aspect_ratio": 50, "rim_diameter_in": 16, "peak_friction": 0.95, "load_sensitivity": 0.11, "peak_slip_ratio": 0.11, "peak_slip_angle_deg": 7.5, "rolling_resistance": 0.012, "inertia_kg_m2": 1.2, "compound": "street", "tread_life_mj": 80 } },
     { "id": "tires.sport_225_45r17", "name": "Sport tyres 225/45 R17 (pair)", "category": "tires", "manufacturer": "Apex Rubber", "price": 480, "mass_kg": 38,
-      "spec": { "width_mm": 225, "aspect_ratio": 45, "rim_diameter_in": 17, "peak_friction": 1.08, "load_sensitivity": 0.11, "peak_slip_ratio": 0.09, "peak_slip_angle_deg": 6.5, "rolling_resistance": 0.013, "inertia_kg_m2": 1.2, "compound": "sport" } },
+      "spec": { "width_mm": 225, "aspect_ratio": 45, "rim_diameter_in": 17, "peak_friction": 1.08, "load_sensitivity": 0.11, "peak_slip_ratio": 0.09, "peak_slip_angle_deg": 6.5, "rolling_resistance": 0.013, "inertia_kg_m2": 1.2, "compound": "sport", "tread_life_mj": 55 } },
     { "id": "tires.semislick_235_40r17", "name": "Semi-slick track tyres 235/40 R17 (pair)", "category": "tires", "manufacturer": "Apex Rubber", "price": 820, "mass_kg": 37,
       "description": "Huge grip and a sharp, narrow peak: fast when driven cleanly, snappy when not.",
-      "spec": { "width_mm": 235, "aspect_ratio": 40, "rim_diameter_in": 17, "peak_friction": 1.28, "load_sensitivity": 0.15, "peak_slip_ratio": 0.08, "peak_slip_angle_deg": 6.0, "rolling_resistance": 0.015, "inertia_kg_m2": 1.15, "compound": "semi-slick" } },
+      "spec": { "width_mm": 235, "aspect_ratio": 40, "rim_diameter_in": 17, "peak_friction": 1.28, "load_sensitivity": 0.15, "peak_slip_ratio": 0.08, "peak_slip_angle_deg": 6.0, "rolling_resistance": 0.015, "inertia_kg_m2": 1.15, "compound": "semi-slick", "tread_life_mj": 30 } },
 
     { "id": "suspension.oem", "name": "OEM springs, dampers and anti-roll bars", "category": "suspension", "manufacturer": "Kestrel", "price": 700, "mass_kg": 42,
       "spec": { "front_spring_n_mm": 45, "rear_spring_n_mm": 40, "front_damper_ns_m": 2400, "rear_damper_ns_m": 2300, "front_arb_nm_deg": 500, "rear_arb_nm_deg": 300, "ride_height_offset_mm": 0 } },
@@ -45,8 +45,10 @@
       "spec": { "front_spring_n_mm": 110, "rear_spring_n_mm": 95, "front_damper_ns_m": 4500, "rear_damper_ns_m": 4200, "front_arb_nm_deg": 900, "rear_arb_nm_deg": 650, "ride_height_offset_mm": -40 } },
 
     { "id": "brakes.oem", "name": "OEM brakes", "category": "brakes", "manufacturer": "Kestrel", "price": 450, "mass_kg": 30,
-      "spec": { "front_max_torque_nm": 2000, "rear_max_torque_nm": 900 } },
+      "spec": { "front_max_torque_nm": 2000, "rear_max_torque_nm": 900, "fade_start_c": 450, "pad_life_mj": 200,
+                "front_heat_capacity_j_per_k": 6000, "rear_heat_capacity_j_per_k": 4000 } },
     { "id": "brakes.big_kit", "name": "Big brake kit (4-piston front)", "category": "brakes", "manufacturer": "Stopwell", "price": 1900, "mass_kg": 33,
-      "spec": { "front_max_torque_nm": 2800, "rear_max_torque_nm": 1150 } }
+      "spec": { "front_max_torque_nm": 2800, "rear_max_torque_nm": 1150, "fade_start_c": 600, "pad_life_mj": 250,
+                "front_heat_capacity_j_per_k": 9500, "rear_heat_capacity_j_per_k": 5000 } }
   ]
 }

@@ -22,6 +22,11 @@ public enum FailureMode
     CylinderHeadWarp,
     TurboOverspeed,
     TurbineOverTemperature,
+
+    // Chassis (see Vehicles.ChassisWearModel): wear-driven, accelerated by heat.
+    ClutchBurnout,
+    BrakePadsWornOut,
+    TyresWornOut,
 }
 
 public static class FailureModeNames
@@ -105,6 +110,12 @@ public sealed record FailureModeInfo(
             "Turbocharger failure", "Compressor wheel over-sped and failed"),
         new FailureModeInfo(FailureMode.TurbineOverTemperature, PartCategory.Turbocharger, 0.95, 120, FailureSeverity.Degraded,
             "Turbocharger failure", "Turbine inlet temperature exceeded the housing and wheel rating"),
+        new FailureModeInfo(FailureMode.ClutchBurnout, PartCategory.Clutch, 0.0, 60, FailureSeverity.Degraded,
+            "Burnt-out clutch", "The clutch facings wore through from slipping (torque above the clutch's capacity, or heat)"),
+        new FailureModeInfo(FailureMode.BrakePadsWornOut, PartCategory.Brakes, 0.0, 60, FailureSeverity.Degraded,
+            "Brake pads worn out", "The pads wore down to their backing plates"),
+        new FailureModeInfo(FailureMode.TyresWornOut, PartCategory.Tires, 0.0, 60, FailureSeverity.Degraded,
+            "Tyres worn out", "The tread wore down to the cords"),
     }.ToDictionary(i => i.Mode);
 
     public static FailureModeInfo Of(FailureMode mode) => All[mode];

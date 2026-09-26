@@ -149,17 +149,22 @@ Turbos `require` a flange interface (`turbo_flange.t25`, `turbo_flange.t3`) and 
 Requires `boost.source`.
 
 ### Chassis categories (vehicle slots)
-- `clutch`: `max_torque_nm`.
+- `clutch`: `max_torque_nm` (new, cold), `fade_start_c` (facing temperature where friction fades and
+  wear accelerates; organic ≈ 250, cerametallic ≈ 450), `life_mj` (slip energy the facings absorb at
+  normal temperature), `heat_capacity_j_per_k`.
 - `gearbox`: `ratios` (forward, first gear first), `reverse_ratio`, `efficiency`, `max_torque_nm`,
   `shift_time_s`, `input_inertia_kg_m2`.
 - `differential`: `final_drive_ratio`, `type` (`open` | `clutch_lsd` | `locked`), `preload_nm`,
   `locking_accel`, `locking_decel` (0–1), `max_torque_nm`.
 - `tires` (a pair, one axle): `width_mm`, `aspect_ratio`, `rim_diameter_in`, `peak_friction`,
   `load_sensitivity`, `peak_slip_ratio`, `peak_slip_angle_deg`, `rolling_resistance`, `inertia_kg_m2`
-  (per wheel), `compound`.
+  (per wheel), `compound`, `tread_life_mj` (sliding energy the pair absorbs before it is worn out;
+  softer compounds wear faster).
 - `suspension`: `front_spring_n_mm`, `rear_spring_n_mm` (wheel rates), `front_damper_ns_m`,
   `rear_damper_ns_m` (per wheel), `front_arb_nm_deg`, `rear_arb_nm_deg`, `ride_height_offset_mm`.
-- `brakes`: `front_max_torque_nm`, `rear_max_torque_nm` (per wheel at full pedal).
+- `brakes`: `front_max_torque_nm`, `rear_max_torque_nm` (per wheel at full pedal), `fade_start_c`
+  (pad fade temperature; street ≈ 450, race ≈ 600), `pad_life_mj` (energy per axle at normal
+  temperature), `front_heat_capacity_j_per_k`, `rear_heat_capacity_j_per_k` (disc thermal mass).
 
 ## Vehicles (`vehicles`)
 `id`, `name`, `description`, `engine` (engine family id), `drivetrain` (`rwd`|`fwd`), `curb_mass_kg`

@@ -27,6 +27,9 @@ public static class PhysicalConstants
     /// <summary>Ratio of specific heats for hot exhaust gas.</summary>
     public const double ExhaustGamma = 1.33;
 
+    /// <summary>Stefan–Boltzmann constant, W/(m²·K⁴).</summary>
+    public const double StefanBoltzmann = 5.670374e-8;
+
     /// <summary>Polytropic exponent used for in-cylinder compression estimates.</summary>
     public const double CompressionPolytropicExponent = 1.3;
 

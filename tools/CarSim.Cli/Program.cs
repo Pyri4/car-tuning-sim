@@ -22,6 +22,9 @@ public static class Program
           carsim hold [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
                                                         Hold an operating point; print warnings, failure reports and inspection.
                                                         (--air-speed uses the radiator instead of test-cell coolant control.)
+          carsim drive [--laps 3] [--chassis slot=part,...] [--wear slot=0.4,...] [--trace <s>] [build options]
+                                                        Autopilot laps of the test facility in the engine's car: lap times,
+                                                        clutch/brake temperatures, wear, warnings and failure reports.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
         """;
 
@@ -41,6 +44,7 @@ public static class Program
                 "inspect" => Inspect(options),
                 "sweep" => Sweep(options),
                 "hold" => Hold(options),
+                "drive" => Drive(options),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -72,7 +76,7 @@ public static class Program
         return 2;
     }
 
-    private sealed record Built(EngineSimulation Sim, EcuTune Tune);
+    private sealed record Built(EngineSimulation Sim, EcuTune Tune, ContentDatabase Db, PartInstanceFactory Factory);
 
     /// <summary>Builds the stock engine with --swap/--add parts, --fuel and --tune applied.</summary>
     private static Built BuildEngine(CliOptions o)
@@ -104,7 +108,7 @@ public static class Program
         var tune = EcuTune.FromDocument(db.GetTune(o.Named.GetValueOrDefault("tune", engine.StockTune)));
         var config = EngineConfiguration.Build(assembly, fuel, new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa));
         foreach (var issue in config.Report.Issues.Where(i => i.Severity != IssueSeverity.Info)) Console.WriteLine(issue);
-        return new Built(new EngineSimulation(config.GetOrThrow(), tune, EngineState.Warm()), tune);
+        return new Built(new EngineSimulation(config.GetOrThrow(), tune, EngineState.Warm()), tune, db, factory);
     }
 
     private static double Num(CliOptions o, string key, double fallback) =>
@@ -112,7 +116,7 @@ public static class Program
 
     private static int Hold(CliOptions o)
     {
-        var (sim, _) = BuildEngine(o);
+        var (sim, _, _, _) = BuildEngine(o);
         double rpm = Num(o, "rpm", 6000), seconds = Num(o, "seconds", 30), throttle = Num(o, "throttle", 1.0);
         var input = new EngineInputs
         {
@@ -149,7 +153,7 @@ public static class Program
 
     private static int Sweep(CliOptions o)
     {
-        var (sim, _) = BuildEngine(o);
+        var (sim, _, _, _) = BuildEngine(o);
         double from = double.Parse(o.Named.GetValueOrDefault("from", "1000"), System.Globalization.CultureInfo.InvariantCulture);
         double to = double.Parse(o.Named.GetValueOrDefault("to", "8000"), System.Globalization.CultureInfo.InvariantCulture);
         double step = double.Parse(o.Named.GetValueOrDefault("step", "500"), System.Globalization.CultureInfo.InvariantCulture);
@@ -159,6 +163,71 @@ public static class Program
             Console.WriteLine($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2} {t.TurboRpm / 1000,10:F1} {t.CompressorPressureRatio,5:F2} {t.CompressorEfficiency,5:F2} {t.CompressorChokeRatio,5:F2} {t.WastegateOpening,4:F2} {Units.KToC(t.ChargeTemperature),6:F0}");
         }
         return 0;
+    }
+
+    private static IEnumerable<(string Key, string Value)> Pairs(CliOptions o, string option)
+    {
+        if (!o.Named.TryGetValue(option, out var list)) yield break;
+        foreach (var pair in list.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = pair.Split('=', 2);
+            if (kv.Length != 2) throw new ArgumentException($"Bad --{option} entry '{pair}', expected key=value.");
+            yield return (kv[0], kv[1]);
+        }
+    }
+
+    private static int Drive(CliOptions o)
+    {
+        var (engineSim, _, db, factory) = BuildEngine(o);
+        var engine = engineSim.Config.Assembly;
+        var vehicle = db.Vehicles.Values.FirstOrDefault(v => v.Engine == engine.Definition.Id)
+                      ?? throw new ArgumentException($"No car takes engine '{engine.Definition.Id}'.");
+        var chassis = CarSim.Core.Vehicles.VehicleAssembly.CreateStock(vehicle, db, factory);
+        foreach (var (slot, partId) in Pairs(o, "chassis"))
+        {
+            chassis.Remove(slot, out _);
+            var r = chassis.Install(slot, factory.Create(db.GetPart(partId)));
+            if (!r.Ok) throw new ArgumentException(r.Message);
+        }
+        foreach (var (slot, value) in Pairs(o, "wear"))
+        {
+            var part = chassis.PartIn(slot) ?? engine.PartIn(slot) ?? throw new ArgumentException($"Nothing installed in '{slot}'.");
+            part.Wear = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        var car = new CarSim.Core.Vehicles.VehicleConfiguration(vehicle, chassis, engine, db);
+        var sim = new CarSim.Core.Vehicles.VehicleSimulation(car, engineSim);
+        sim.StartIdling();
+        var session = new CarSim.Gameplay.DrivingSession(sim, CarSim.Core.Vehicles.TrackLayout.TestFacility()) { AutopilotEnabled = true };
+        int laps = (int)Num(o, "laps", 3);
+        Console.WriteLine($"{vehicle.Name}, {car.Mass:F0} kg — {laps} autopilot lap(s) after an out lap");
+        Console.WriteLine($"{"lap",4} {"time s",7} {"clutch°C",8} {"brakeF°C",8} {"brakeR°C",8} {"clutch%",7} {"pads%",6} {"tyreF%",6} {"tyreR%",6}  warnings");
+        var warnings = new SortedSet<string>();
+        double trace = Num(o, "trace", 0), nextTrace = 0;
+        double maxClutch = 0, maxFront = 0, maxRear = 0;
+        string W(string slot) => $"{chassis.PartIn(slot)!.Wear * 100,6:F1}";
+        while (session.Timer.Laps < laps && sim.State.Time < 200.0 * (laps + 1))
+        {
+            var step = session.Advance(0.1, default);
+            var t = session.Last!;
+            maxClutch = Math.Max(maxClutch, t.ClutchTemperatureC);
+            maxFront = Math.Max(maxFront, t.BrakeTemperatureFrontC);
+            maxRear = Math.Max(maxRear, t.BrakeTemperatureRearC);
+            foreach (var w in sim.Engine.Damage.Warnings.Concat(sim.Wear.Warnings)) warnings.Add(w.Code);
+            if (trace > 0 && sim.State.Time >= nextTrace)
+            {
+                nextTrace += trace;
+                Console.WriteLine($"  t={t.Time,6:F1} s={session.Track.DistanceAt(session.TrackIndex),6:F0}m off={session.LateralOffset,5:F1} {t.SpeedKmh,5:F0}km/h g{t.GearLabel} {t.EngineRpm,5:F0}rpm thr {t.Throttle:F2} brk {t.Brake:F2} steer {t.Steer * 57.3,5:F1}° clutch {t.Clutch:F2} slip {t.ClutchSlipRpm,5:F0} yaw {t.YawRate:F2} beta {t.BodySlipAngle * 57.3,5:F1}° {t.Engine.Torque,4:F0}Nm cap {t.ClutchCapacityNm:F0} {t.ClutchTemperatureC:F0}°C");
+            }
+            if (step.LapCompleted)
+            {
+                Console.WriteLine($"{session.Timer.Laps,4} {session.Timer.LastLap,7:F2} {maxClutch,8:F0} {maxFront,8:F0} {maxRear,8:F0} {W("clutch"),7} {W("brakes")} {W("tires_front")} {W("tires_rear")}  {string.Join(",", warnings)}");
+                warnings.Clear();
+                maxClutch = maxFront = maxRear = 0;
+            }
+            foreach (var f in step.NewFailures) { Console.WriteLine(); Console.WriteLine(f.ToText()); }
+            if (sim.Engine.Damage.Seized) break;
+        }
+        return session.Failures.Count > 0 ? 3 : 0;
     }
 
     private static void SwapPart(EngineAssembly a, string slot, PartDefinition part, PartInstanceFactory factory)

@@ -120,7 +120,9 @@ market are planned.
 Decision (2026-09-26): vehicle dynamics run **in the core**, not in Godot's physics engine. The test
 facility is flat, and a deterministic planar model with load transfer captures what the game is about
 (gearing, differential, tyres, suspension balance, weight, power) while staying unit-testable
-(0–100, braking distance, skidpad, LSD behaviour are all tested without Godot). Godot renders the
+(0–100, braking distance, skidpad, LSD behaviour are all tested without Godot). Friction parts
+(clutch, brakes, tyres) carry heat and wear in `ChassisWearModel`, which writes wear and failures to
+the same part instances and `FailureReport` type as the engine's damage model. Godot renders the
 car from the core's pose and handles presentation. If terrain, kerbs or collisions become important,
 the planned path is to add vertical dynamics per corner in the core and use Godot/Jolt only for
 collision queries (ray casts against the track mesh) feeding the core.

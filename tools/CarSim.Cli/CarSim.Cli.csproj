@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\CarSim.Core\CarSim.Core.csproj" />
+    <ProjectReference Include="..\..\src\CarSim.Gameplay\CarSim.Gameplay.csproj" />
   </ItemGroup>
 </Project>
