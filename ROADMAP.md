@@ -11,7 +11,7 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 474 automated tests (435 before the second engine family, 348 before the validation pass): simulation, content, damage, dyno, vehicle
+- 476 automated tests (435 before the second engine family, 348 before the validation pass): simulation, content, damage, dyno, vehicle
   dynamics, wear, gameplay, saves, mods, physical invariants, property sweeps, spec fuzzing and clamp-activation
   checks. CI runs them, a CLI content check and dyno sweep, and two headless Godot smoke tests (dyno pull;
   autopilot drive) on the official Godot 4.7.2 .NET build.
