@@ -22,6 +22,11 @@ The first milestone is intentionally small:
 - drivable test track
 - basic failure simulation
 
+Two engine families ship: the fictional Kestrel K20 four (the prototype's engine) and the Isar M54 straight six, a
+real engine (BMW M54B30, European E46 330i) authored purely as data to prove engine families are content — see
+PARTS_DATABASE.md ("Isar M54 reference engine") and SIMULATION_SPEC.md ("Second engine family") for its sources and
+how close the model gets.
+
 ## Repository docs
 - AGENTS.md — persistent coding-agent instructions
 - GAME_DESIGN.md — gameplay and simulation goals
@@ -53,13 +58,17 @@ Command-line tools (no Godot needed):
 
 ```
 dotnet run --project tools/CarSim.Cli -- validate                      # check all content
-dotnet run --project tools/CarSim.Cli -- inspect                       # stock engine build, geometry, compatibility
-dotnet run --project tools/CarSim.Cli -- sweep --swap exhaust=exhaust.race_76mm
-dotnet run --project tools/CarSim.Cli -- hold --rpm 6500 --sump-g 1.3  # abuse test: warnings, failure report, inspection
-dotnet run --project tools/CarSim.Cli -- drive --laps 5 --wear clutch=0.4 [--chassis clutch=clutch.sport] [--trace 1]
+dotnet run --project tools/CarSim.Cli -- inspect isar_m54              # stock engine build, geometry, compatibility
+dotnet run --project tools/CarSim.Cli -- sweep kestrel_k20 --swap exhaust=exhaust.race_76mm
+dotnet run --project tools/CarSim.Cli -- sweep isar_m54 --fuel gasoline_98
+dotnet run --project tools/CarSim.Cli -- hold kestrel_k20 --rpm 6500 --sump-g 1.3  # abuse test: warnings, failure report, inspection
+dotnet run --project tools/CarSim.Cli -- drive kestrel_k20 --laps 5 --wear clutch=0.4 [--chassis clutch=clutch.sport] [--trace 1]
                                                                        # autopilot laps: times, clutch/brake heat, wear, failures
-dotnet run --project tools/CarSim.Cli -- calibrate-ve --swap camshafts=k20.cams.sport [--hold 1]
+dotnet run --project tools/CarSim.Cli -- calibrate-ve kestrel_k20 --swap camshafts=k20.cams.sport [--hold 1]
                                                                        # measure a build's VE table (base map for a tune file)
+dotnet run --project tools/CarSim.Cli -- calibrate-cams isar_m54 --fuel gasoline_98   # cam-phaser base map
+dotnet run --project tools/CarSim.Cli -- calibrate-spark isar_m54 --fuel gasoline_98  # spark base map (MBT / knock margins)
+dotnet run --project tools/CarSim.Cli -- bench isar_m54                # step time and allocation, engine and car
 ```
 
 ### Driving
@@ -83,7 +92,8 @@ Missed shifts, over-revving, oil surge and overheating break parts exactly as on
 report appears on track and in the Reports tab.
 
 Development aids for the game (arguments after `--`): `--tab=dyno`, `--autorun`, `--select=pistons`,
-`--screenshot=out.png --frames=30`, `--smoke-test` (headless CI check); for the track: `--drive`
+`--screenshot=out.png --frames=30`, `--scenario=isar_c30_six` (start another scenario; the Garage tab's New game also
+offers every scenario), `--smoke-test` (headless CI check); for the track: `--drive`
 (start there), `--autodrive`, `--warp=20` (simulate 20 s ahead), `--camera=trackside`, and
 `--drive --smoke-test` (headless drive check).
 
@@ -93,8 +103,9 @@ engines, fuels, tunes, scenarios and cars, or redefine existing ones by id. See 
 ("Mods") and the example in `docs/example-mod/`. Limits: new parts in existing categories are data only, new
 categories need code, and an engine family must fit what the engine model represents (one part or set per
 category — no twin turbos, per-bank air paths, superchargers or dry sumps yet); anything else is rejected at load
-with a reason. Several constants are still fitted to the one shipped engine family (SIMULATION_SPEC.md, "Clamps,
-guards and calibration constants"), so a very different engine would need re-fitting.
+with a reason. A second, real engine family was added as data only (the one model abstraction it needed, cam timing,
+is now data too); the level-setting constants are still the K20's, which puts the M54 about 10 % under its published
+power (SIMULATION_SPEC.md, "Second engine family").
 
 ## Current status
 Early implementation. See ROADMAP.md for what exists and what is next.

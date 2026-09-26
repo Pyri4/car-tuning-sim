@@ -65,7 +65,7 @@ public class EngineAgnosticTests
         g.Tune.OffsetIgnition(-8, 90);
         g.Tune.RevLimitRpm -= 1000;
         (sim, _) = g.CreateSimulation();
-        Assert.True(SimFactory.At(sim!, 4000).Torque < pull.Single(p => p.Rpm == 4000).Torque * 0.98);
+        Assert.True(SimFactory.At(sim!, 4000).Torque < pull.Single(p => Math.Abs(p.Rpm - 4000) < 0.01).Torque * 0.98);
         (sim, _) = g.CreateSimulation();
         var shortRun = new DynoRunner(sim!, new DynoSettings { StartRpm = 2000, EndRpm = 9000 }).RunToCompletion();
         Assert.InRange(shortRun.Samples.Max(s => s.Rpm), g.Tune.RevLimitRpm - 300, g.Tune.RevLimitRpm + 50);

@@ -154,8 +154,10 @@ need Forward+.
 
 ### Tools
 - `tools/CarSim.Cli` – validate content, inspect assemblies, run a dyno sweep and print/CSV-export
-  results, and generate VE base maps (`calibrate-ve`). Used for development and as a regression
-  harness; unlike the game UI it may print model internals (best-torque timing, knock limit).
+  results, generate base maps for a tune (`calibrate-cams`, `calibrate-ve`, `calibrate-spark`) and measure the step
+  cost of any family (`bench`). Commands take an engine-family id (required once more than one family is loaded).
+  Used for development and as a regression harness; unlike the game UI it may print model internals (best-torque
+  timing, knock limit).
 - Dyno, telemetry and debugging views in the game UI. *(in progress)*
 
 ---
@@ -197,7 +199,8 @@ See SIMULATION_SPEC.md for equations and PARTS_DATABASE.md for the data schema.
 
 ## 6. Save/load
 Runtime state (inventory, part instances with wear/fatigue/failures, the assembly, tune, fuel, money,
-engine-in-car flag) serializes to versioned JSON (`SaveSystem`, version 4). Definitions are referenced
+engine-in-car flag, the scenario the game started from) serializes to versioned JSON (`SaveSystem`, version 4; the
+scenario id is optional display data, so older saves load without it and no version step was needed). Definitions are referenced
 by id, never embedded, so content updates flow into saves. Loading validates every reference and
 reports all missing content at once (e.g. a removed mod).
 
@@ -240,6 +243,11 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
   exhaust heat), an ECU fed the true air mass or the true fuel density, boost feedback from the compressor outlet,
   choke that removes compressor work, no boost anti-windup, a raised VE floor. A test that cannot fail on its bug is
   not counted as evidence.
+- **Second engine family** (2026-09-26): a real engine (BMW M54B30 reference) authored as data and tested against its
+  published figures with stated acceptance bands; both families through one gameplay pipeline; the family under
+  renamed ids bit-identical; a content-only variant (8 cylinders, other bore/stroke/CR/limit/cam) that the physics
+  follows; a source audit of `src/` for family tokens, content ids and size-specific branches; the first family's
+  output pinned to its pre-milestone value. The audit and identity tests were mutation-checked with injected hacks.
 - **Content tests** load every file under `content/` and validate references, ranges and that the
   stock engine assembles and runs.
 - **CLI**: CI runs `carsim validate` and a short `carsim sweep` after the tests.
@@ -289,3 +297,10 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
 | 2026-09-26 | Exhaust-port wall heat exchange (exact pipe law, constant UA from bore² × cylinders, sink = coolant) replaces the one-way motoring pickup; the in-cylinder coolant fraction goes 0.28 → 0.265 so the full-load coolant total is unchanged | Validation pass: routing pumping work into the exhaust (to close the energy balance) let a few g/s of overrun gas carry ~10 kW and leave at 1,500–4,500 °C; every lift-and-reapply burned the T28's turbine. The balance stays exact; the walls now bound the gas temperature. A big-turbo gearbox test had passed only because its harness never lifted between pulls |
 | 2026-09-26 | ECU calibration beliefs complete: fuel density and injector dead time are tune fields (injectors carry a real dead time); the boost PI closes on the ECU's MAP reading above 80 % pedal; the knock sensor reports a level, not degrees past the limit; the dyno's IAT channel is the manifold air | Validation pass: the ECU converted fuel mass to injector volume with the true fuel density, closed the boost loop on the true compressor-outlet pressure (a sensor it does not have, unclipped), and the dyno showed knock intensity (= advance − knock limit), so one knocking reading gave the knock limit away. Mutation tests (true air, true density, compressor-outlet feedback) are each caught |
 | 2026-09-26 | Not (yet) modelled: intake/exhaust volume filling dynamics, a blow-off valve part, tabulated compressor/turbine maps | Turbo lag is dominated by rotor inertia (modelled); the quasi-static air path is stable at the 2–5 ms steps used. Filling dynamics would need an implicit solver. Parametric maps are closed-form and authorable from four map numbers; tables are a later content feature |
+| 2026-09-26 | Second engine family (Isar M54 = BMW M54B30 reference) added as content only; no simulation code knows it | The test of whether families are data. The only generic model change it needed is the next row; everything else (geometry, six cylinders, ECU, damage, dyno, vehicle, saves) already worked from specs |
+| 2026-09-26 | Cam timing is data: optional installed lobe centrelines, an intake phaser range, `cam_phase_control` ECUs and an `intake_cam_advance_deg` tune table; the tuned-speed correlation gains the intake-closing shift (0.30 m/s per degree, from its own 0.15 per degree of duration) | The VE correlation silently assumed every cam at the K20's ≈ 112° centreline. The M54's true cams on it made 130 kW instead of 170 (A0); an "effective duration" would have been a false cam. Cams without centrelines are untouched (K20 bit-identical). Exhaust phasing, part-load EGR strategy and phaser oil pressure are not modelled |
+| 2026-09-26 | Level-setting constants (Otto realisation, FMEP, the new 112° reference) were **not** re-fitted for the second family | Re-fitting to hit the M54's published power would be exactly the hidden output correction the milestone forbids and would move the K20. The M54 lands at +1 % torque, −10 % power; documented as a generic high-piston-speed calibration question for both families |
+| 2026-09-26 | Base maps for new families come from dev calibrators (`calibrate-cams`, `calibrate-ve`, `calibrate-spark`) | The K20's spark map was hand-authored; a reproducible tool keeps a second (and third) family's calibration honest and reviewable |
+| 2026-09-26 | Parts with a mounting interface must declare it (K20 gaskets, oil pumps, flywheels gained `requires`); parts without one are universal | With two families, interface-less family parts bolted across (a K20 gasket passes the bore check on the 84 mm six) |
+| 2026-09-26 | Post-shift sync slip limited by the engagement controller is not a "clutch slipping" warning | A heavier flywheel and wider ratio step (the second family's car) made every upshift a Danger warning; the slip still heats and wears |
+| 2026-09-26 | The CLI requires an engine-family id when several families are loaded; the game picks scenarios (`--scenario=<id>` headless) | The first family in load order became the M54, so id-less CLI commands would silently have switched engines; the Garage tab titled every game after the first scenario |

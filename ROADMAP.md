@@ -1,15 +1,17 @@
 # Roadmap
 
 ## Current state (2026-09-26)
-**The first playable prototype is complete.** One car (Kestrel S2 coupe), one engine family (Kestrel
-K20), one garage, one engine dyno and one test track, and the whole required loop works in the game:
+**The first playable prototype is complete, and a second engine family validates that families are data.** Two
+cars (Kestrel S2 coupe, Isar C30 coupé), two engine families (the fictional Kestrel K20 four and the Isar M54 straight
+six, a real-engine reference: the BMW M54B30), one garage, one engine dyno and one test track, and the whole required
+loop works in the game for both:
 
 inspect → remove the engine → disassemble → replace parts → reassemble → start (dyno or car) →
 tune the ECU → dyno pull → drive the test track → break something through bad parts, builds or tuning
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 435 automated tests (348 before the validation pass): simulation, content, damage, dyno, vehicle
+- 474 automated tests (435 before the second engine family, 348 before the validation pass): simulation, content, damage, dyno, vehicle
   dynamics, wear, gameplay, saves, mods, physical invariants, property sweeps, spec fuzzing and clamp-activation
   checks. CI runs them, a CLI content check and dyno sweep, and two headless Godot smoke tests (dyno pull;
   autopilot drive) on the official Godot 4.7.2 .NET build.
@@ -17,11 +19,12 @@ tune the ECU → dyno pull → drive the test track → break something through 
   finding against independent evidence, found and fixed a regression the correction phase itself introduced
   (overrun exhaust heat burning turbines) and three remaining ECU oracles. See "Validation pass" for the status of
   every review issue.
-- Content: 77 parts, 1 engine family, 1 vehicle, 5 fuels, 2 base tunes, 1 scenario; mods load as extra
+- Content: 105 parts, 2 engine families, 2 vehicles, 5 fuels, 3 base tunes, 2 scenarios; mods load as extra
   content layers.
 - Reference numbers (re-measured after the validation pass): stock K20 ≈ 149 hp / 189 N·m (the worn project car
   ≈ 137 hp); T28 turbo build ≈ 238 hp / 293 N·m; stock car 0–100 km/h ≈ 8.8 s, ≈ 0.90 g skidpad (≈ 0.84 g on
-  kerb-grade roughness).
+  kerb-grade roughness). K20 output bit-identical after the second-family milestone. M54 (RON 98): 304 N·m (reference
+  300), 153 kW (reference 170: −10 %), 52.1 s laps in the Isar C30.
 
 ## Completed work
 ### Phase 0 — Architecture ✅
@@ -130,24 +133,57 @@ the implementation, and new regression tests were shown to fail on the bug they 
 | 20 | Allocations / step cost | **NOT FIXED (measured)** | NA 62–75 µs & 10.6 KB/step, turbo ≈ 85 µs & 13.9 KB, vehicle ≈ 80 µs; an allocation-free root finder halved allocations but ran ≈ 25 % slower on NA/vehicle steps under .NET 8 dynamic PGO, so it was not merged | See Technical debt |
 | 21 | Docs overclaimed (a "real compressor map", engine agnosticism) | **FIXED** | "Parametric", "game-engine-agnostic", modding limits in README, clamps/calibration section | — |
 
+### Second engine family — real-world validation ✅
+Question: can another engine family be added through data, or does the simulator hide engine-specific assumptions?
+- [x] Reference chosen and documented: BMW M54B30, European E46 330i/330Ci (2000–2006, MS43), 170 kW / 300 N·m on
+      RON 98, 10.2:1, 6,500 rpm (PARTS_DATABASE.md, "Isar M54 reference engine"; published vs measured vs estimated
+      per value)
+- [x] The engine as content through the existing specs: 11 bottom-end, 4 top-end, 2 manifold parts, 6 universal
+      (6-injector set, 68 mm throttle, twin exhaust, fuel pump, radiator, ECU), a tune from the calibrators; the Isar
+      C30 car with its own clutch, 5-speed, 3.07 diff, springs and brakes; a scenario
+- [x] Missing generic abstraction found and fixed generically: **cam timing** (the VE correlation assumed every cam at
+      the K20's ≈ 112° centreline; with its true cams the M54 lost 23 % of its power). Installed centrelines, an
+      intake phaser and an ECU cam map; K20 bit-identical
+- [x] Other generic gaps the second family exposed: interface-less K20 parts that bolted across families, the content
+      loader dropping new tune fields, post-shift sync slip flagged as clutch slip, the CLI's implicit first engine,
+      the Garage tab's first-scenario title and fixed new-game scenario
+- [x] Dev tools for new families: `calibrate-cams`, `calibrate-spark` (beside `calibrate-ve`), `bench`
+- [x] Tests: reference bands, same-pipeline matrix over both families, renamed-id identity, a content-only 8-cylinder
+      variant, source audit, K20 pinned; mutation-checked
+- [x] Godot: both scenarios' dyno and drive smoke tests headless in CI; scenario picker; cam map and phaser in the UI
+- Answer: **yes, primarily through data.** Generic simulation code gained one abstraction (cam timing) and no
+  engine-specific branch; see "Known issues" for what the M54 still cannot match.
+
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
 ## Next recommended tasks
 1. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
-   spring-rate swaps, aero parts; engine-side adjustments (cam gears, wastegate spring preload).
-2. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
+   spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are now a data change: an adjustable
+   `intake_centerline_deg`; wastegate spring preload).
+2. **Two-family calibration.** Re-fit the level-setting constants on both families at once (not per engine), make the
+   VE ceiling depend on the tuned speed, add an exhaust-opening term so exhaust phasing and scavenging mean something.
+3. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
    boost) using `VehicleSimulation`.
-3. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
+4. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
    record lap telemetry (speed/throttle/brake vs distance) and compare laps.
-4. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
+5. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
    market with seeded random condition, reputation and money loop.
-5. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
+6. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
    skim), per-cylinder state for the key failure modes.
-6. **Audio.** Engine sound from rpm/load/boost (presentation only).
-7. **Exported builds.** Godot export templates in CI and downloadable artifacts.
+7. **Audio.** Engine sound from rpm/load/boost (presentation only).
+8. **Exported builds.** Godot export templates in CI and downloadable artifacts.
 
 ## Known issues
+- Second engine family vs its reference: peak power −10 % (153 vs 170 kW) with torque +1 %; the model's torque plateau
+  runs from idle to ≈ 3,000 rpm and falls earlier than the M54's. With a cam phaser the VE shape reaches its ceiling at
+  any speed it is tuned to (real low-speed filling lacks ram), DISA's mid-range resonance is one effective runner, and
+  high-piston-speed losses cost both families about equally (the K20 sits ≈ 7 % under the real K20A3 it resembles).
+  Not modelled for the M54: exhaust VANOS (the model has no exhaust-opening effect), part-load VANOS/EGR strategy,
+  hot-film MAF metering (speed-density stands in), the returnless 3.5 bar fuel system (manifold-referenced regulator
+  stands in), the map-controlled thermostat, dual-mass-flywheel torsional isolation.
+- Idle manifold pressure is low for both families (K20 ≈ 21 kPa, M54 ≈ 15 kPa, real engines ≈ 30 kPa): no accessory
+  load (alternator, pumps, A/C) is modelled.
 - The vehicle model is planar. Road roughness acts through a frequency-domain ride model (grip and
   bottoming), but there is no time-domain wheel hop, kerb strike, roll-centre (geometric) load
   transfer, wall or collision. Leaving the track is punished by time, not damage.
@@ -185,10 +221,15 @@ the implementation, and new regression tests were shown to fail on the bug they 
 ## Technical debt
 - The engine model supports one part (or set) per modelled category: twin turbos, per-bank air paths,
   dry sumps and superchargers are rejected at load, not supported (`EngineTopology`).
-- Level-setting calibration is fitted to the K20 (Otto realisation 0.80, FMEP coefficients), and the crown
-  heat-flux and wave-tuning correlations are fitted on one family; a second engine family needs them re-fitted or
-  moved into engine data (SIMULATION_SPEC.md, "Clamps, guards and calibration constants"). The valvetrain and
-  thermal-conductance terms are size-aware since the validation pass.
+- Level-setting calibration is fitted to the K20 (Otto realisation 0.80, FMEP coefficients, the cam correlation's
+  112° reference centreline), and the crown heat-flux and wave-tuning correlations are fitted on one family. The second
+  family ran through them unchanged (+1 % torque, −10 % power against its reference); re-fitting on both families
+  together — not per engine — is the honest next step, and would move the K20's pinned numbers deliberately. The
+  valvetrain and thermal-conductance terms are size-aware since the validation pass.
+- The VE shape's ceiling does not depend on the speed it is tuned to, which only matters with a cam phaser (optimistic
+  low-speed torque); exhaust phasing has no effect to model until there is an exhaust-opening term.
+- Tunes are rebuilt field by field in two places (`ContentLoader.AddTune`, `SaveSystem.Migrate`): a new tune field
+  must be added to both (the cam map was silently dropped by the loader until caught).
 - The engine step allocates 10.6 KB (NA) / 13.9 KB (turbo), the vehicle step 11.9 KB: closures in the orifice root
   finds (≈ 5–8 KB) and live warning strings rebuilt every step (≈ 3 KB). An allocation-free root finder
   (struct-generic Brent, bit-identical) was measured ≈ 25 % slower on NA/vehicle steps under .NET 8's default
@@ -201,7 +242,7 @@ the implementation, and new regression tests were shown to fail on the bug they 
 - `TrackLayout.TestFacility()` is code, not content.
 - The CLI `Program.cs` has grown; split commands into classes.
 - UI views rebuild their subtrees on every change event (fine at this scale; revisit with more data).
-- The full test suite takes ≈ 55–65 s on this container (lap, wear, VE-calibration, fuzz and big-turbo gearbox
+- The full test suite takes ≈ 45–65 s depending on the container (lap, wear, VE-calibration, fuzz and big-turbo gearbox
   tests); tag the slow ones if it grows.
 
 ## Rule

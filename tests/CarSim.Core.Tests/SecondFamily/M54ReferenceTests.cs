@@ -149,15 +149,15 @@ public class M54ReferenceTests
         // Band: ±10 % of the published 300 N·m.
         Assert.InRange(peak.Torque, 0.9 * Reference.TorqueNm, 1.1 * Reference.TorqueNm);
         // At the published torque speed the curve is within 10 % of the rating as well.
-        Assert.InRange(curve.Single(p => p.Rpm == Reference.TorqueRpm).Torque, 0.9 * Reference.TorqueNm, 1.1 * Reference.TorqueNm);
+        Assert.InRange(curve.Single(p => Math.Abs(p.Rpm - Reference.TorqueRpm) < 0.01).Torque, 0.9 * Reference.TorqueNm, 1.1 * Reference.TorqueNm);
     }
 
     [Fact]
     public void PeakPowerIsWithinTheReferenceBand()
     {
         var peak = SimFactory.PeakPower(FullLoadCurve());
-        // Band: ±15 % of the published 170 kW (the same model sits ≈ 7 % under a comparable real K20 at high piston
-        // speed; SIMULATION_SPEC.md, "Second engine family"). The peak falls between the rated speed and the limit.
+        // Band: ±15 % of the published 170 kW: level-setting constants fitted on another engine (SIMULATION_SPEC.md,
+        // "Second engine family"). The peak falls between the rated speed and the limit.
         Assert.InRange(peak.PowerKw, 0.85 * Reference.PowerKw, 1.15 * Reference.PowerKw);
         Assert.InRange(peak.Rpm, 5500, Reference.RevLimitRpm);
     }

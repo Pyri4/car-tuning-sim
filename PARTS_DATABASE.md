@@ -125,6 +125,12 @@ follower + ⅓ spring), `valves_per_cylinder`, `material`.
 `intake_duration_deg`, `exhaust_duration_deg` (crank degrees at 1 mm lift), `intake_lift_mm`,
 `exhaust_lift_mm`, `lobe_separation_deg` (cam degrees). Overlap is derived.
 
+Cam timing (optional; see SIMULATION_SPEC.md, "Cam timing"): `intake_centerline_deg` (crank degrees ATDC) and
+`exhaust_centerline_deg` (crank degrees BTDC) state where the lobes sit as installed — a degreed-in pair, or the
+**park** position of cam phasers (intake fully retarded). Both or neither; without them the pair sits straight up
+on its lobe separation, as every K20 cam does. `intake_phaser_range_deg` (default 0) is how far an intake phaser can
+advance the intake cam from park; it needs the centrelines and an ECU with `cam_phase_control`.
+
 ### `valve_springs`
 `seat_force_n`, `open_force_n` (force at full lift; sets valve-float speed), `max_lift_mm` (coil bind
 / retainer clearance).
@@ -166,7 +172,9 @@ tuning, 0–0.15).
 
 ### `ecu`
 `map_sensor_max_kpa` (absolute; above this the ECU cannot see load), `boost_control`,
-`knock_control`, `max_rev_limit_rpm`, `tables_editable`.
+`knock_control`, `max_rev_limit_rpm`, `tables_editable`, `cam_phase_control` (default false: can drive an intake cam
+phaser from the tune's `intake_cam_advance_deg`; without it a phaser stays parked and the validator warns
+`cam_phaser_uncontrolled`).
 
 ### `turbocharger`
 `compressor_wheel_diameter_mm` (exducer; tip speed → pressure ratio), `compressor_choke_flow_kg_s`
@@ -257,12 +265,16 @@ relative to the MAP and intake air temperature the ECU reads, 0.05–3.0), `disp
 engine size the ECU assumes), `injector_flow_cc_min`, `injector_dead_time_ms`, `fuel_stoich_afr`,
 `fuel_density_kg_l` (the injector and fuel calibration: the ECU meters with these beliefs, never the installed
 injectors or the fuel in the tank), optional `boost_target_kpa[rpm]` (closed loop on the ECU's MAP sensor above
-80 % pedal), `rev_limit_rpm`, `idle_rpm`, `knock_control_enabled`.
+80 % pedal), optional `intake_cam_advance_deg[load][rpm]` (crank degrees of intake advance from the phaser's park
+position, 0–80, looked up at the MAP the ECU last read), `rev_limit_rpm`, `idle_rpm`, `knock_control_enabled`.
 
 The VE table, displacement, dead time and fuel density are required (saves older than version 4 get the
 installed injectors' dead time and their fuel's density on load). Generate a base table for the build the tune is meant
-for with `carsim calibrate-ve [build options]` (it prints the rows to paste); an engine whose
-breathing differs from that build runs off its target λ until the table is re-tuned.
+for with `carsim calibrate-ve <engine> [build options]` (it prints the rows to paste); an engine whose
+breathing differs from that build runs off its target λ until the table is re-tuned. For a new engine family the
+base maps come from three dev tools, in this order: `calibrate-cams` (a phaser's schedule: the advance that traps the
+most air at each point), `calibrate-ve`, `calibrate-spark` (`min(best-torque − 1°, knock limit − 1.5°)` on the fuel
+given), then `calibrate-ve` once more.
 
 ## Scenarios (`scenarios`)
 New-game starting points: `id`, `name`, `description`, `engine`, `vehicle` (optional car id; its
@@ -291,5 +303,65 @@ Two mechanisms, both validated by `AssemblyValidator`:
 
 Errors mean the engine cannot be started. Warnings mean it will run, with risk.
 
+## Isar M54 reference engine
+The second engine family is a real-engine validation target authored as data only: **the BMW M54B30 as fitted to the
+European E46 330i/330Ci (2000–2006, Siemens MS43 engine management, not the ZHP package)**. One variant only — the
+US rating (225 hp SAE) and the ZHP (175 kW, different cams, 6,800 rpm) are different specifications and are not
+mixed in. In the game it follows the project's fictional-marque convention (Kestrel K20 ↔ Honda K20): "Isar M54",
+content ids `isar_m54`, `m54.*`; the car is the Isar C30 coupé.
+
+| Published figure | Value | Source |
+|---|---|---|
+| Displacement | 2979 cc | Wikipedia "BMW M54"; BMW "E85 M54 Engine" technical training; automobile-catalog.com (2000 BMW 330i) |
+| Bore × stroke | 84.0 × 89.6 mm | same |
+| Cylinders / arrangement | 6, inline | same |
+| Valvetrain | DOHC, 4 valves per cylinder, double VANOS (intake and exhaust) | same |
+| Compression ratio | 10.2:1 | same |
+| Rated power | 170 kW (231 PS) at 5,900 rpm, on RON 98 | same; BMW Europe quotes rated output on RON 98 (owner's-manual fuel note, via PistonHeads/Whirlpool threads: 95 usable, 91 in emergencies) |
+| Rated torque | 300 N·m at 3,500 rpm | same |
+| Rev limit / redline | 6,500 rpm | E46 330i (non-ZHP) instrument redline and fuel cut |
+| Intake manifold | DISA two-stage resonance flap, closed below ≈ 3,750 rpm, open above ≈ 4,100 rpm | Pelican Parts / BimmerFest technical articles |
+| VANOS adjustment | intake centreline 74–134° ATDC, exhaust 76–136° BTDC (60° of crank each) | BMW repair instruction 11 31 505 (M52TU/M54/M56), as quoted by forum/blog summaries |
+| Engine mass | 130–171 kg depending on source and ancillaries | spec aggregators (130 kg) vs a BMW press figure quoted on BimmerFest (171 kg); no single reliable figure |
+
+These were gathered through web-search results; the development container could not open the pages themselves (its
+network policy blocked them), so every published figure above was accepted only where several independent results
+agreed. The secondary figures below are enthusiast measurements and are treated as such.
+
+Measured by enthusiasts (secondary sources, used where BMW publishes nothing): 135 mm rods, 22 mm pins, 60/45 mm main/rod
+journals and forged-steel crank (E46Fanatics "M54B30 specs and measurements", wersis.net service data), 211 mm deck
+height for the M52TU/M54 block (BimmerFest, R3VLimited), ≈ 34 cc chambers and ≈ 0.7 mm gasket (E46Fanatics), 313 g OEM
+piston with rings, 602 g rod with bearing, 30.5 mm exhaust valves (E46Fanatics), 68 mm throttle (BimmerWorld listing),
+≈ 215 cc/min injectors (Five-O / injector listings), 240°/228° advertised cam durations with 9.7/9.0 mm lift (forum
+measurements disagree on the lift point; the advertised event is taken as seat-to-seat), 6.5 L oil.
+
+How each authored value was set:
+
+| Kind | Values |
+|---|---|
+| Published, used exactly | bore, stroke, cylinders, rod length, pin and journal diameters, deck height, rev limit (tune), cam lifts |
+| Derived, never authored | displacement 2979.3 cc and compression 10.20:1 (from chamber 34 cc, gasket 85 mm × 0.7 mm, deck clearance 0.7 mm from a 30.5 mm compression height, and a 12.1 cc bowl solved so the volumes give the published 10.2 — the one fitted geometric value; the forum's 17.4 cc "below the deck" measurement gives 9.9) |
+| Converted | 1 mm cam durations 190°/179° from the advertised 240°/228° by the model's own harmonic lift profile (event = 1 mm duration + 50°); VANOS park centrelines 134° (intake, fully retarded) and 136° (exhaust) with 60° of intake phaser |
+| Estimated (no source) | port flows (valve curtain area × typical discharge coefficients: 226 CFM at 10 mm intake, 168 CFM exhaust), intake 680 CFM and runner 380 mm, manifolds 700 CFM, exhaust 600 CFM, spring forces (set for float ≈ 7,100 rpm), ratings (rods 32/90 kN, pistons 120 bar, block 150 bar, bearings), oil pump 16 cc/rev at 450 kPa, radiator 1,900 W/K, masses and inertias (dual-mass flywheel 0.13 kg·m²) |
+| Calibrated with the dev tools | stock tune: VANOS schedule (`calibrate-cams`), VE (`calibrate-ve`), spark (`calibrate-spark`, RON 98, 1.5° knock margin) — no table was edited by hand to reach the published output |
+
+Simplifications (the part descriptions say so where a player would notice): the **exhaust VANOS** is held at its park
+position (in this model an exhaust phase would only add overlap, which it treats purely as a filling cost — there is
+no exhaust-opening/blowdown term); **DISA** is one effective runner length (the model has one runner resonance);
+**MS43 meters air with a hot-film mass-air-flow meter**, represented here by the model's speed-density ECU with a
+calibrated VE table; the E46's **returnless 3.5 bar fuel system** is represented as the model's manifold-referenced
+regulator (equivalent to MS43's pressure-compensated injection); the map-controlled thermostat is a fixed 90 °C one;
+the **dual-mass flywheel** is one inertia (no torsional isolation). Results against the reference and the acceptance
+bands: SIMULATION_SPEC.md, "Second engine family".
+
+Compatibility: every M54 bottom-end and top-end part carries its own interface keys (`m54.deck`, `m54.cam_carrier`,
+`m54.intake_flange`, `m54.exhaust_flange`, `m54.sump_flange`, `m54.bellhousing`); K20 head gaskets, oil pumps and
+flywheels now require the K20 keys too (they had none, so they would have bolted onto the six). Parts with no
+mounting interface stay universal and fit both families: throttles, injector sets (the count must match), fuel pumps,
+radiators, ECUs and exhaust systems (`throttle.68mm`, `injectors.6x230cc`, `exhaust.twin_50mm`, `fuel_pump.m54_oem`,
+`radiator.m54_oem`, `ecu.m54_oem` are the M54's).
+
 ## Content strategy
-One coherent engine family first (Kestrel K20). Expand only after the schema and tooling are stable.
+Two engine families: the Kestrel K20 (fictional four, the prototype's engine) and the Isar M54 (a real engine used to
+validate that families are data, above). A new family should follow the M54's route: published geometry, estimated
+flows and ratings stated as estimates, base maps from the calibration tools, and no simulation code.
