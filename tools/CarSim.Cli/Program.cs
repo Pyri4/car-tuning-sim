@@ -23,7 +23,7 @@ public static class Program
           carsim hold [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
                                                         Hold an operating point; print warnings, failure reports and inspection.
                                                         (--air-speed uses the radiator instead of test-cell coolant control.)
-          carsim drive [--laps 3] [--chassis slot=part,...] [--wear slot=0.4,...] [--trace <s>] [build options]
+          carsim drive [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--trace <s>] [build options]
                                                         Autopilot laps of the test facility in the engine's car: lap times,
                                                         clutch/brake temperatures, wear, warnings and failure reports.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
@@ -194,6 +194,16 @@ public static class Program
             chassis.Remove(slot, out _);
             var r = chassis.Install(slot, factory.Create(db.GetPart(partId)));
             if (!r.Ok) throw new ArgumentException(r.Message);
+        }
+        foreach (var (key, value) in Pairs(o, "set"))
+        {
+            var dot = key.IndexOf('.');
+            if (dot < 0) throw new ArgumentException($"Bad --set entry '{key}', expected slot.field=value.");
+            string slot = key[..dot], field = key[(dot + 1)..];
+            var part = chassis.PartIn(slot) ?? engine.PartIn(slot) ?? throw new ArgumentException($"Nothing installed in '{slot}'.");
+            if (!part.Adjust(field, double.Parse(value, System.Globalization.CultureInfo.InvariantCulture)))
+                throw new ArgumentException($"{part.Definition.Name} has no '{field}' adjustment. It offers: {string.Join(", ", part.Definition.Adjustments.Select(a => a.Field))}.");
+            Console.WriteLine($"  {part.Definition.Name}: {field} = {part.SettingOf(field)}");
         }
         foreach (var (slot, value) in Pairs(o, "wear"))
         {

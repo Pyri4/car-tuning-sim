@@ -45,7 +45,7 @@ public sealed class EngineAssembly
     }
 
     /// <summary>Spec of the first installed part of <paramref name="category"/>, or null.</summary>
-    public T? SpecOf<T>(string category) where T : PartSpec => FindByCategory(category)?.Definition.Spec as T;
+    public T? SpecOf<T>(string category) where T : PartSpec => FindByCategory(category)?.EffectiveSpec as T;
 
     public IEnumerable<PartInstance> AllParts => Definition.Slots
         .Where(s => _installed.ContainsKey(s.Id)).Select(s => _installed[s.Id]);

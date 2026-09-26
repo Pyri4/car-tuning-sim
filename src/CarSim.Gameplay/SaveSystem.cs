@@ -48,6 +48,9 @@ public static class SaveSystem
         public double Wear { get; set; }
         public Dictionary<string, double> Fatigue { get; set; } = new();
         public FailureSave? Failure { get; set; }
+
+        /// <summary>Setup settings that differ from the part's defaults (spec field → value).</summary>
+        public Dictionary<string, double>? Settings { get; set; }
     }
 
     public sealed class FailureSave
@@ -86,6 +89,7 @@ public static class SaveSystem
         Failure = p.Damage.Failure is { } f
             ? new FailureSave { Mode = FailureModeNames.ToSnakeCase(f.Mode), Time = f.Time, Collateral = f.Collateral, Note = f.Note }
             : null,
+        Settings = p.Settings.Count == 0 ? null : p.Settings.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => kv.Value),
     };
 
     /// <summary>Restores a garage. Throws <see cref="InvalidDataException"/> listing every problem if the save does not match the content.</summary>
@@ -141,6 +145,8 @@ public static class SaveSystem
         if (ps.Failure != null && FailureModeNames.TryParse(ps.Failure.Mode, out var fm))
             failure = new PartFailure(fm, ps.Failure.Time, ps.Failure.Collateral, ps.Failure.Note);
         p.Damage.Restore(fatigue, failure);
+        // Settings the part no longer offers (content changed) are dropped; the rest are re-clamped to today's ranges.
+        foreach (var (field, value) in ps.Settings ?? new()) p.Adjust(field, value);
         return p;
     }
 }

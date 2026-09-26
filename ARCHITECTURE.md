@@ -243,3 +243,4 @@ reports all missing content at once (e.g. a removed mod).
 | 2026-09-26 | Friction parts (clutch, brakes, tyres) carry heat and energy-based wear; gearbox/differential use the engine's stress-ratio fatigue | Upgrades interact (a stronger clutch moves the weak link to the gearbox); wear persists on part instances |
 | 2026-09-26 | Automated clutch engages smoothly after shifts (engine torque + 80 N·m while syncing) | Full-throttle snap engagements put engine inertia through the gearbox on every shift, which no driver does |
 | 2026-09-26 | Mods are content layers after `base`, override by id | Mods can rebalance as well as add, without code; overrides are visible, not silent |
+| 2026-09-26 | Setup settings are adjustable spec fields declared by parts, stored on part instances; the sim reads an effective spec | One generic mechanism for pressures, camber, damping, bars, bias, preload; no per-setting code paths; settings travel with the part |

@@ -69,6 +69,25 @@ Field names carry their unit. The simulation converts to SI once, at load time.
 Pistons, connecting rods and injectors are sold and installed as a set (`count` must equal the
 engine's cylinder count). A set has one condition value. Per-cylinder state is future work.
 
+## Adjustable settings (`adjustable`)
+A part may declare which of its own numeric spec fields the owner can adjust once they have it (a
+setup setting), with a range and step:
+
+```json
+"adjustable": {
+  "front_camber_deg": { "min": -3.0, "max": 0, "step": 0.1, "label": "Front camber (camber plates)" },
+  "ride_height_offset_mm": { "min": -50, "max": -5, "step": 5, "label": "Ride height (vs factory)" }
+}
+```
+
+- Keys are spec field names; the part's authored value is the default and must lie in the range.
+- The loader builds the spec at both ends of the range and validates it like authored content.
+- Settings live on the part instance (they travel with the part and are saved); the simulation reads
+  the part's *effective* spec, so an adjustment changes exactly what the physics already uses.
+- Base content: tyre pressure (all tyres), front camber (OEM eccentric bolts; coilovers), ride height
+  and damping (coilovers), anti-roll bars and rear camber (track coilovers), brake balance (big brake
+  kit), LSD preload.
+
 ## Category specs
 
 ### `block`
@@ -173,11 +192,14 @@ Requires `boost.source`.
 - `tires` (a pair, one axle): `width_mm`, `aspect_ratio`, `rim_diameter_in`, `peak_friction`,
   `load_sensitivity`, `peak_slip_ratio`, `peak_slip_angle_deg`, `rolling_resistance`, `inertia_kg_m2`
   (per wheel), `compound`, `tread_life_mj` (sliding energy the pair absorbs before it is worn out;
-  softer compounds wear faster).
+  softer compounds wear faster), `pressure_kpa` (running pressure), `optimal_pressure_kpa`.
 - `suspension`: `front_spring_n_mm`, `rear_spring_n_mm` (wheel rates), `front_damper_ns_m`,
-  `rear_damper_ns_m` (per wheel), `front_arb_nm_deg`, `rear_arb_nm_deg`, `ride_height_offset_mm`.
+  `rear_damper_ns_m` (per wheel), `front_arb_nm_deg`, `rear_arb_nm_deg`, `ride_height_offset_mm`,
+  `front_camber_deg`, `rear_camber_deg` (static; negative = top in), `front_camber_gain`,
+  `rear_camber_gain` (fraction of body roll the geometry recovers).
 - `brakes`: `front_max_torque_nm`, `rear_max_torque_nm` (per wheel at full pedal), `fade_start_c`
-  (pad fade temperature; street ≈ 450, race ≈ 600), `pad_life_mj` (energy per axle at normal
+  (pad fade temperature; street ≈ 450, race ≈ 600), `rear_pressure_factor` (balance bar: rear line
+  pressure relative to the front), `pad_life_mj` (energy per axle at normal
   temperature), `front_heat_capacity_j_per_k`, `rear_heat_capacity_j_per_k` (disc thermal mass).
 
 ## Vehicles (`vehicles`)

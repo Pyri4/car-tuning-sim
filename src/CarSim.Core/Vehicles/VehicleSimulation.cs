@@ -112,13 +112,17 @@ public sealed class VehicleSimulation
         double ratio = Wear.DriveBroken ? 0.0 : c.OverallRatio(s.Gear);
         double eff = c.Gearbox.Efficiency;
         double clutchCapacity = Wear.ClutchCapacityNm;
-        double brakeFront = c.Brakes.FrontMaxTorqueNm * Wear.BrakeFactor(0), brakeRear = c.Brakes.RearMaxTorqueNm * Wear.BrakeFactor(1);
+        double brakeFront = c.Brakes.FrontMaxTorqueNm * Wear.BrakeFactor(0);
+        double brakeRear = c.Brakes.RearMaxTorqueNm * c.Brakes.RearPressureFactor * Wear.BrakeFactor(1);
+        double rollStiffness = c.RollStiffnessFront + c.RollStiffnessRear;
         _energy.Clear();
         double lastGearboxOmega = 0;
 
         for (int k = 0; k < Substeps; k++)
         {
             ComputeLoads();
+            // Body roll (positive when cornering left: the body leans right) changes each wheel's camber.
+            double rollDeg = s.LatTransfer / rollStiffness * 180.0 / Math.PI;
             double fxBody = 0, fyBody = 0, mz = 0;
             for (int w = 0; w < 4; w++)
             {
@@ -132,7 +136,7 @@ public sealed class VehicleSimulation
                 double denom = Math.Max(Math.Abs(ul), LowSpeedSlipReference);
                 _slipRatio[w] = (s.WheelOmega[w] * tire.Radius - ul) / denom;
                 _slipAngle[w] = Math.Atan2(vl, denom);
-                var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w]);
+                var (fx, fy) = TireModel.Forces(tire, _fz[w], _slipRatio[w], _slipAngle[w], WheelLeanLeftDeg(w, rollDeg));
                 double grip = _surfaceGrip[w] * Wear.GripFactor(w);
                 fx *= grip;
                 fy *= grip;
@@ -180,7 +184,7 @@ public sealed class VehicleSimulation
                 double footBrake = input.Brake * (w < 2 ? brakeFront : brakeRear);
                 double brakeTorque = footBrake
                                      + (w >= 2 ? input.Handbrake * HandbrakeTorqueNm : 0.0)
-                                     + _fz[w] * tire.RollingResistance * tire.Radius;
+                                     + _fz[w] * TireModel.RollingResistance(tire) * tire.Radius;
                 double net = _driveTorque[w] - _fx[w] * tire.Radius;
                 double omega = s.WheelOmega[w];
                 double predicted = omega + net / inertia * h;
@@ -230,6 +234,20 @@ public sealed class VehicleSimulation
         bool clutchCommanded = s.Clutch >= 0.999 && s.ShiftTimer <= 0 && s.Gear != 0;
         Wear.Update(dt, s.Time, _energy, speed, et.Torque, Units.RadPerSecToRpm(s.EngineOmega - lastGearboxOmega), clutchCommanded, s.Gear);
         return Last!;
+    }
+
+    /// <summary>
+    /// Camber of wheel <paramref name="w"/> relative to the road, as the lean of its top towards the car's
+    /// left (degrees): static camber plus body roll, less what the suspension geometry recovers.
+    /// </summary>
+    public double WheelLeanLeftDeg(int w, double rollDeg)
+    {
+        var susp = Config.Suspension;
+        bool front = w < 2;
+        double side = w == Wheel.FL || w == Wheel.RL ? 1.0 : -1.0;
+        double camber = (front ? susp.FrontCamberDeg : susp.RearCamberDeg)
+                        - side * rollDeg * (1.0 - (front ? susp.FrontCamberGain : susp.RearCamberGain));
+        return side * camber;
     }
 
     private void UpdateSurfaces()

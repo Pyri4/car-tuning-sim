@@ -113,6 +113,15 @@ public static class ContentLoader
         public List<string>? Requires { get; set; }
         public List<string>? Tags { get; set; }
         public JsonElement Spec { get; set; }
+        public Dictionary<string, AdjustmentDto>? Adjustable { get; set; }
+    }
+
+    private sealed class AdjustmentDto
+    {
+        public double Min { get; set; }
+        public double Max { get; set; }
+        public double Step { get; set; }
+        public string? Label { get; set; }
     }
 
     private sealed class SlotDto
@@ -267,6 +276,7 @@ public static class ContentLoader
             catch (JsonException ex) { Error(source, dto.Id, $"spec: {ex.Message}"); return; }
             if (spec == null) { Error(source, dto.Id, "spec is null."); return; }
             foreach (var problem in spec.Validate()) Error(source, dto.Id, $"spec: {problem}");
+            var adjustments = ParseAdjustments(source, dto.Id, spec, dto.Adjustable);
 
             if (!Claim("part", dto.Id, source)) return;
             _parts[dto.Id] = new PartDefinition
@@ -283,7 +293,32 @@ public static class ContentLoader
                 Tags = dto.Tags?.ToArray() ?? Array.Empty<string>(),
                 Source = source,
                 Spec = spec,
+                Adjustments = adjustments,
             };
+        }
+
+        private List<PartAdjustment> ParseAdjustments(string source, string id, PartSpec spec, Dictionary<string, AdjustmentDto>? dtos)
+        {
+            var list = new List<PartAdjustment>();
+            foreach (var (field, a) in dtos ?? new())
+            {
+                double? authored = SpecAdjuster.Read(spec, field);
+                if (authored is not double def) { Error(source, id, $"adjustable: '{field}' is not a numeric spec field of this part."); continue; }
+                if (!(a.Max > a.Min)) { Error(source, id, $"adjustable '{field}': max must be greater than min."); continue; }
+                if (!(a.Step > 0) || a.Step > a.Max - a.Min) { Error(source, id, $"adjustable '{field}': step must be > 0 and within the range."); continue; }
+                if (def < a.Min || def > a.Max) { Error(source, id, $"adjustable '{field}': the part's value {def} is outside [{a.Min}, {a.Max}]."); continue; }
+                bool valid = true;
+                foreach (double v in new[] { a.Min, a.Max })
+                {
+                    foreach (var problem in SpecAdjuster.With(spec, new Dictionary<string, double> { [field] = v }).Validate())
+                    {
+                        Error(source, id, $"adjustable '{field}' at {v}: {problem}");
+                        valid = false;
+                    }
+                }
+                if (valid) list.Add(new PartAdjustment(field, a.Label ?? field.Replace('_', ' '), a.Min, a.Max, a.Step, def));
+            }
+            return list;
         }
 
         private void AddEngine(string source, JsonElement element)

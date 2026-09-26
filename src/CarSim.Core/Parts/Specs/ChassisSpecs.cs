@@ -117,6 +117,10 @@ public sealed class TireSpec : PartSpec
     /// <summary>Friction work (sliding energy) the pair's tread absorbs before it is worn out.</summary>
     public double TreadLifeMj { get; init; } = 80;
 
+    /// <summary>Running (hot) pressure, and the pressure where this tyre grips best.</summary>
+    public double PressureKpa { get; init; } = 220;
+    public double OptimalPressureKpa { get; init; } = 220;
+
     [JsonIgnore] public double Radius => Units.MmToM(RimDiameterIn * 25.4 / 2.0 + WidthMm * AspectRatio / 100.0);
     [JsonIgnore] public double PeakSlipAngle => Units.DegToRad(PeakSlipAngleDeg);
 
@@ -132,6 +136,8 @@ public sealed class TireSpec : PartSpec
         check.Range("rolling_resistance", RollingResistance, 0.003, 0.05);
         check.Range("inertia_kg_m2", InertiaKgM2, 0.2, 5);
         check.Range("tread_life_mj", TreadLifeMj, 1, 10000);
+        check.Range("pressure_kpa", PressureKpa, 100, 400);
+        check.Range("optimal_pressure_kpa", OptimalPressureKpa, 100, 400);
     }
 }
 
@@ -151,6 +157,14 @@ public sealed class SuspensionSpec : PartSpec
     /// <summary>Change in ride height vs factory (negative = lowered); moves the centre of gravity.</summary>
     public double RideHeightOffsetMm { get; init; }
 
+    /// <summary>Static camber (negative = top of the wheel leaning in towards the car).</summary>
+    public double FrontCamberDeg { get; init; } = -0.5;
+    public double RearCamberDeg { get; init; } = -1.0;
+
+    /// <summary>Fraction of body roll the geometry turns into camber recovery (MacPherson ≈ 0.4, wishbones ≈ 0.7).</summary>
+    public double FrontCamberGain { get; init; } = 0.4;
+    public double RearCamberGain { get; init; } = 0.5;
+
     protected override void Validate(SpecChecker check)
     {
         check.Range("front_spring_n_mm", FrontSpringNMm, 5, 400);
@@ -160,6 +174,10 @@ public sealed class SuspensionSpec : PartSpec
         check.Range("front_arb_nm_deg", FrontArbNmDeg, 0, 5000);
         check.Range("rear_arb_nm_deg", RearArbNmDeg, 0, 5000);
         check.Range("ride_height_offset_mm", RideHeightOffsetMm, -100, 100);
+        check.Range("front_camber_deg", FrontCamberDeg, -6, 3);
+        check.Range("rear_camber_deg", RearCamberDeg, -6, 3);
+        check.Range("front_camber_gain", FrontCamberGain, 0, 1);
+        check.Range("rear_camber_gain", RearCamberGain, 0, 1);
     }
 }
 
@@ -171,6 +189,9 @@ public sealed class BrakeSpec : PartSpec
 
     /// <summary>Disc/pad temperature where the pads start to fade (street pads ≈ 450 °C, race pads ≈ 600 °C).</summary>
     public double FadeStartC { get; init; } = 450;
+
+    /// <summary>Rear line pressure relative to the front (balance bar / proportioning valve): moves brake bias.</summary>
+    public double RearPressureFactor { get; init; } = 1.0;
 
     /// <summary>Braking energy one axle's pads absorb over their life at normal temperatures.</summary>
     public double PadLifeMj { get; init; } = 200;
@@ -184,6 +205,7 @@ public sealed class BrakeSpec : PartSpec
         check.Range("front_max_torque_nm", FrontMaxTorqueNm, 200, 10000);
         check.Range("rear_max_torque_nm", RearMaxTorqueNm, 100, 10000);
         check.Range("fade_start_c", FadeStartC, 200, 1000);
+        check.Range("rear_pressure_factor", RearPressureFactor, 0.3, 2.0);
         check.Range("pad_life_mj", PadLifeMj, 1, 10000);
         check.Range("front_heat_capacity_j_per_k", FrontHeatCapacityJPerK, 500, 50000);
         check.Range("rear_heat_capacity_j_per_k", RearHeatCapacityJPerK, 500, 50000);

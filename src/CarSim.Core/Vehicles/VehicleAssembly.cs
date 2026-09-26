@@ -16,7 +16,7 @@ public sealed class VehicleAssembly
     public int Revision { get; private set; }
 
     public PartInstance? PartIn(string slotId) => _installed.GetValueOrDefault(slotId);
-    public T? SpecIn<T>(string slotId) where T : PartSpec => PartIn(slotId)?.Definition.Spec as T;
+    public T? SpecIn<T>(string slotId) where T : PartSpec => PartIn(slotId)?.EffectiveSpec as T;
 
     public AssemblyResult Install(string slotId, PartInstance part)
     {

@@ -265,6 +265,19 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
 - Slip: `κ = (ω·r − u_w)/max(|u_w|, 2 m/s)`, `α = atan2(v_w, max(|u_w|, 2 m/s))` (low-speed guard).
 - Rolling radius from the size (`rim/2 + width·aspect`).
 
+### Inflation and camber (`TireModel`, set-up)
+- Pressure error `e = (p − p_opt)/p_opt`: grip × `(1 − 0.8e²)`; peak slip angle × `(p_opt/p)^0.5` and
+  peak slip ratio × `(p_opt/p)^0.3` (a soft carcass needs more slip: lazier response); rolling resistance
+  × `(p_opt/p)^0.6`; tread wear × `(1 + 3e²)`.
+- Camber relative to the road for each wheel = static camber − side × roll × (1 − camber gain), roll =
+  lateral load-transfer moment / total roll stiffness. The lateral force is multiplied by
+  `(1 − L(Δ))/(1 − L(2.5°))` with `L(Δ) = 0.08·(1 − exp(−(Δ/2.5°)²))` and Δ the distance from the
+  optimum (leaning 2° into the force). The reference offset keeps a typical road alignment at the
+  authored grip; a good alignment gains up to ≈ 5 %, leaning out of the corner loses. Longitudinal force
+  × `(1 − 0.012·|camber|)/(1 − 0.006)`; tread wear × `(1 + 0.08·max(0, |static camber| − 1°))`.
+- Brakes: rear torque × `rear_pressure_factor` (balance bar). With the big brake kit the rears lock
+  first above ≈ 1.5.
+
 ### Chassis
 - Mass = curb mass + (fitted engine parts − factory engine parts) + (fitted chassis parts − factory);
   engine mass changes act on the front axle. CG height moves with ride height (×0.8).

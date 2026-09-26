@@ -221,8 +221,8 @@ public sealed class ChassisWearModel
             warnings.Add(new EngineWarning("brake_fade", WarningLevel.Caution, $"Brakes fading ({hottest:F0} °C): stopping power down {100 * (1 - Math.Min(BrakeFactor(0), BrakeFactor(1))):F0} %."));
 
         // Tyres: sliding energy wears the tread.
-        WearTyres(_tyresFront, _c.TiresFront, e.Tyre[Wheel.FL] + e.Tyre[Wheel.FR], "tires_front", time, warnings);
-        WearTyres(_tyresRear, _c.TiresRear, e.Tyre[Wheel.RL] + e.Tyre[Wheel.RR], "tires_rear", time, warnings);
+        WearTyres(_tyresFront, _c.TiresFront, (e.Tyre[Wheel.FL] + e.Tyre[Wheel.FR]) * TyreWearFactor(_c.TiresFront, _c.Suspension.FrontCamberDeg), "tires_front", time, warnings);
+        WearTyres(_tyresRear, _c.TiresRear, (e.Tyre[Wheel.RL] + e.Tyre[Wheel.RR]) * TyreWearFactor(_c.TiresRear, _c.Suspension.RearCamberDeg), "tires_rear", time, warnings);
 
         Warnings = warnings;
     }
@@ -276,6 +276,16 @@ public sealed class ChassisWearModel
             "A clutch that is much stronger than the driveline turns launches and missed shifts into broken parts; match them.",
         };
         Report(part, slot, mode, time, measured, factors, recommendations);
+    }
+
+    /// <summary>
+    /// Wear multiplier from set-up: a tyre off its pressure works one part of the tread (the shoulders
+    /// when soft, the centre when hard); strong static camber wears the inner edge.
+    /// </summary>
+    public static double TyreWearFactor(TireSpec tyre, double staticCamberDeg)
+    {
+        double dp = (tyre.PressureKpa - tyre.OptimalPressureKpa) / tyre.OptimalPressureKpa;
+        return (1.0 + 3.0 * dp * dp) * (1.0 + 0.08 * Math.Max(0.0, Math.Abs(staticCamberDeg) - 1.0));
     }
 
     private void WearTyres(PartInstance? tyres, TireSpec spec, double energy, string slot, double time, List<EngineWarning> warnings)
@@ -349,7 +359,7 @@ public sealed class ChassisWearModel
 
     private void FailTyres(PartInstance tyres, string slot, double time)
     {
-        var spec = tyres.Definition.Spec as TireSpec;
+        var spec = tyres.EffectiveSpec as TireSpec;
         var measured = new List<ReportLine> { new("Tread life", $"{spec?.TreadLifeMj:F0} MJ of sliding energy ({spec?.Compound} compound)") };
         var factors = new List<string> { "Sliding (wheelspin, locked brakes, drifting, scrubbing through corners) wore the tread through." };
         Report(tyres, slot, FailureMode.TyresWornOut, time, measured, factors, new List<string>

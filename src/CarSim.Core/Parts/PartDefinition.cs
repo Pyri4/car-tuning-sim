@@ -32,6 +32,11 @@ public sealed class PartDefinition
 
     public required PartSpec Spec { get; init; }
 
+    /// <summary>Spec fields the owner may adjust on this part, with their ranges (setup settings).</summary>
+    public IReadOnlyList<PartAdjustment> Adjustments { get; init; } = Array.Empty<PartAdjustment>();
+
+    public PartAdjustment? FindAdjustment(string field) => Adjustments.FirstOrDefault(a => a.Field == field);
+
     public T GetSpec<T>() where T : PartSpec =>
         Spec as T ?? throw new InvalidOperationException(
             $"Part '{Id}' (category '{Category}') has spec {Spec.GetType().Name}, not {typeof(T).Name}.");

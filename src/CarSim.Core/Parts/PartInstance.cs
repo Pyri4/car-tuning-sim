@@ -38,7 +38,37 @@ public sealed class PartInstance
 
     public bool IsFailed => Damage.IsFailed;
 
-    public T Spec<T>() where T : PartSpec => Definition.GetSpec<T>();
+    private readonly Dictionary<string, double> _settings = new(StringComparer.Ordinal);
+    private PartSpec? _effectiveSpec;
+
+    /// <summary>Setup settings that differ from the part's defaults (field → value).</summary>
+    public IReadOnlyDictionary<string, double> Settings => _settings;
+
+    /// <summary>The spec the simulation uses: the definition's, with this part's settings applied.</summary>
+    public PartSpec EffectiveSpec => _effectiveSpec ??= _settings.Count == 0 ? Definition.Spec : SpecAdjuster.With(Definition.Spec, _settings);
+
+    /// <summary>Current value of an adjustable field (its default unless changed).</summary>
+    public double SettingOf(string field) =>
+        _settings.TryGetValue(field, out var v) ? v
+        : Definition.FindAdjustment(field)?.Default ?? throw new ArgumentException($"{Definition.Name} has no adjustment '{field}'.");
+
+    /// <summary>
+    /// Sets an adjustable field (clamped to its range and snapped to its step). Returns false if the part
+    /// has no such adjustment.
+    /// </summary>
+    public bool Adjust(string field, double value)
+    {
+        var adjustment = Definition.FindAdjustment(field);
+        if (adjustment == null) return false;
+        double v = adjustment.Snap(value);
+        if (Math.Abs(v - adjustment.Default) < 1e-9) _settings.Remove(field);
+        else _settings[field] = v;
+        _effectiveSpec = null;
+        return true;
+    }
+
+    public T Spec<T>() where T : PartSpec =>
+        EffectiveSpec as T ?? throw new InvalidOperationException($"Part '{Definition.Id}' has spec {EffectiveSpec.GetType().Name}, not {typeof(T).Name}.");
 
     public override string ToString() => $"{Definition.Name} #{InstanceId} (condition {Condition:P0})";
 }

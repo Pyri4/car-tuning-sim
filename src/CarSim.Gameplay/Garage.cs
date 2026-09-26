@@ -193,6 +193,23 @@ public sealed class Garage
 
     public PartInstance? PartIn(string slotId) => IsChassisSlot(slotId) ? Chassis!.PartIn(slotId) : Engine.PartIn(slotId);
 
+    // ---- Setup --------------------------------------------------------------------------------
+
+    /// <summary>Changes a setup setting (an adjustable spec field) of the part installed in <paramref name="slotId"/>.</summary>
+    public ActionResult Adjust(string slotId, string field, double value)
+    {
+        var part = PartIn(slotId);
+        if (part == null) return ActionResult.Fail($"Nothing is installed in '{slotId}'.");
+        if (!CanAccess(slotId)) return ActionResult.Fail($"{part.Definition.Name} cannot be reached with the engine in the car.");
+        var adjustment = part.Definition.FindAdjustment(field);
+        if (adjustment == null) return ActionResult.Fail($"{part.Definition.Name} has no '{field}' adjustment.");
+        double before = part.SettingOf(field);
+        part.Adjust(field, value);
+        double after = part.SettingOf(field);
+        if (Math.Abs(after - before) > 1e-9) Note($"{part.Definition.Name}: {adjustment.Label} {before:0.##} → {after:0.##}.");
+        return ActionResult.Success($"{adjustment.Label}: {after:0.##}");
+    }
+
     // ---- Economy ------------------------------------------------------------------------------
 
     public static double SellPrice(PartInstance part) =>
