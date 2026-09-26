@@ -66,6 +66,51 @@ public class KnockModelTests
     }
 
     [Fact]
+    public void EveryFactorMovesTheKnockLimitTheSameWayAcrossTheWholeEnvelope()
+    {
+        // Not one operating point: a grid of speeds, loads and charge temperatures. Each factor must move the
+        // knock-limited advance the same way everywhere the end gas can knock.
+        double KL(CombustionModel.KnockConditions c) => KnockModel.KnockLimitedAdvance(c, 20);
+        foreach (double rpm in new[] { 1500.0, 3000, 5000, 7000 })
+            foreach (double map in new[] { 90_000.0, 150_000, 220_000 })
+                foreach (double iat in new[] { 300.0, 330, 360 })
+                {
+                    var c = new CombustionModel.KnockConditions(rpm, 95, 10.0, map, iat, 363.15, 0.9, 1.0, 1.05, 10);
+                    double k = KL(c);
+                    if (!double.IsFinite(k)) continue;
+                    string at = $"{rpm} rpm, {map / 1000} kPa, {iat} K";
+                    Assert.True(KL(c with { CompressionRatio = 11.0 }) < k, $"compression, {at}");
+                    Assert.True(KL(c with { Octane = 98 }) > k, $"octane, {at}");
+                    Assert.True(KL(c with { ChargeTemperatureK = iat + 20 }) < k, $"charge temperature, {at}");
+                    Assert.True(KL(c with { PortPressurePa = map * 1.1 }) < k, $"boost, {at}");
+                    Assert.True(KL(c with { Lambda = 0.8 }) > k, $"richer, {at}");
+                    Assert.True(KL(c with { Rpm = rpm * 1.2 }) > k, $"speed, {at}");
+                    Assert.True(KL(c with { CoolantTemperatureK = 385 }) < k, $"hot coolant, {at}");
+                }
+    }
+
+    [Fact]
+    public void HigherCompressionWidensAndHigherOctaneNarrowsTheKnockLimitedRange()
+    {
+        // End to end on the real engine at full throttle: the rpm below which timing is knock-limited (limit under
+        // best-torque timing) rises with compression and falls with octane.
+        double Crossover(string pistons, string fuel)
+        {
+            for (double rpm = 1500; rpm <= 7000; rpm += 250)
+            {
+                var t = SimFactory.At(SimFactory.Create(SimFactory.Assembly(("pistons", pistons)), fuel), rpm, 1.0, 0.6);
+                if (t.KnockLimitAdvance >= t.MbtAdvance) return rpm;
+            }
+            return double.PositiveInfinity;
+        }
+        double oem95 = Crossover("k20.pistons.oem", "gasoline_95");
+        Assert.True(Crossover("k20.pistons.forged_hc", "gasoline_95") > oem95, "11.5:1 knock-limits higher up the rev range");
+        Assert.True(Crossover("k20.pistons.oem", "gasoline_98") < oem95, "RON 98 frees it lower down");
+        Assert.True(Crossover("k20.pistons.oem", "gasoline_91") > oem95, "RON 91 limits it further");
+        Assert.InRange(oem95, 2000, 4500);
+    }
+
+    [Fact]
     public void LightLoadCannotKnockWithoutAnySpecialCase()
     {
         // Overrun at 20 kPa with 45° of part-load advance: the end gas never gets hot and dense enough.

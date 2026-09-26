@@ -27,6 +27,50 @@ public class FatigueLawTests
     }
 
     [Fact]
+    public void DamageAddsUpAcrossSessionsAndSavesNeverResetIt()
+    {
+        // Miner's rule across sessions: two identical 15 s runs with a save and load between them each add exactly the
+        // same fatigue — nothing heals on load and the second session's model starts from the saved fatigue. (A single
+        // 30 s run adds at least as much: each session restarts the engine's thermal state warm, not hot, so a piston
+        // crown spends its first ~10 s heating up — the documented "engine state resets each session" limitation.)
+        static Dictionary<(string, FailureMode), double> Fatigue(CarSim.Gameplay.Garage g) =>
+            g.Engine.AllParts.SelectMany(p => p.Damage.Fatigue.Select(kv => (Key: (p.Definition.Category, kv.Key), kv.Value)))
+                .ToDictionary(x => x.Key, x => x.Value);
+        static void Run(CarSim.Gameplay.Garage g, double seconds)
+        {
+            var (sim, report) = g.CreateSimulation();
+            Assert.True(report.CanRun);
+            var input = new EngineInputs { Throttle = 1, SpeedMode = SpeedMode.Held, HeldRpm = 7550, CoolantTemperatureOverride = 363.15 };
+            for (int i = 0; i < seconds / 0.005; i++) sim!.Step(0.005, input);
+            Assert.Empty(sim!.Damage.Failures);
+        }
+        var content = TestContent.Database;
+        var start = Fatigue(CarSim.Gameplay.Garage.NewGame(content, "project_car"));
+
+        var split = CarSim.Gameplay.Garage.NewGame(content, "project_car");
+        Run(split, 15);
+        var half = Fatigue(split);
+        split = CarSim.Gameplay.SaveSystem.Deserialize(CarSim.Gameplay.SaveSystem.Serialize(split), content);
+        Assert.Equal(half, Fatigue(split));
+        Run(split, 15);
+        var twice = Fatigue(split);
+        var continuous = CarSim.Gameplay.Garage.NewGame(content, "project_car");
+        Run(continuous, 30);
+        var once = Fatigue(continuous);
+
+        var grown = half.Where(kv => kv.Value > start.GetValueOrDefault(kv.Key) + 1e-9).Select(kv => kv.Key).ToList();
+        Assert.NotEmpty(grown);
+        foreach (var key in grown)
+        {
+            double first = half[key] - start.GetValueOrDefault(key), second = twice[key] - half[key];
+            // Equal to 1e-4: the first session also wore the rings and bearings a hair (normal wear), which is all
+            // that differs between them.
+            Assert.InRange(second / first, 1 - 1e-4, 1 + 1e-4);
+            Assert.True(once[key] - start.GetValueOrDefault(key) >= first + second - 1e-12, $"{key}");
+        }
+    }
+
+    [Fact]
     public void DamageIsCountedPerLoadCycle()
     {
         // Same load, twice the speed: twice the cycles per second, half the running time to failure.

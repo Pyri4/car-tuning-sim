@@ -340,7 +340,13 @@ laws (`FailureModeInfo`, `DamageLaw`):
   (`rpm/120 · cylinders`: crank torque, `N = 1.2·10⁵`), per revolution (bearings, crank speed,
   flywheel `N = 10⁵`; gear teeth per input-shaft / pinion revolution `N = 2·10⁵`, `e` 0.9, instant at
   2×). Rods at the rating last ≈ 9 min at 7000 rpm, at 90 % ≈ 9 h, at 110 % ≈ 45 s; running the
-  same load at twice the speed halves the running time to failure.
+  same load at twice the speed halves the running time to failure. **Deliberate simplification:** the
+  exponent acts on the overstress past the endurance limit, not on `s` itself, so the curve is much
+  steeper near the rating than a plain Basquin `s^−6` (life ratio 100 % → 110 %: rods ≈ 11×, gasket and
+  gearbox ≈ 64×, turbo overspeed with speed² stress ≈ 900×, against 1.8× for `s^6`). Lives are
+  game-compressed (minutes at the rating, not 10⁶–10⁷ cycles). Identical sessions add identical damage
+  (tested across a save/load); the engine's thermal state restarts warm each session, so thermally
+  activated damage in split sessions is slightly lower than in one long run.
 - Parts **rated in rpm** (crankshaft, flywheel, turbo) are stressed with the square of speed
   (centrifugal/inertia stress ∝ ω²): `s = (rpm/rating)²`, so a flywheel bursts at 114 % of its rated
   speed (stress 1.3). The crank's speed rating is a fatigue limit (instant only at stress 1.6).
@@ -505,8 +511,10 @@ instances (persists in the garage and saves).
   stress-ratio law with endurance 0.9, 300 s to failure at the rating, instant failure at 2×. A broken
   gearbox or differential means no drive. Traction limits what reaches them in the low gears (a clutch
   dump on street tyres just spins the wheels); the realistic overload is engine torque above the rating
-  (a T35 on E85 at 300 kPa, ≈ 475 N·m once spooled, breaks the 400 N·m stock box in a few pulls; the 550 N·m dog box
-  survives). The report names engine torque vs rating, and clutch capacity vs rating when the clutch
+  (a T35 on E85 at 300 kPa puts ≈ 445 N·m through the 400 N·m stock box near peak torque: ≈ 0.8 % of its life per
+  fourth-gear pull, about a hundred hard pulls; a 360 N·m box breaks in ≈ 7; the 550 N·m dog box takes no damage).
+  Until the validation pass a test claimed "a few pulls" for the stock box — true only because its harness never
+  lifted between pulls, so the turbo met 4,400 rpm at full shaft speed and over-boosted. The report names engine torque vs rating, and clutch capacity vs rating when the clutch
   could pass more than the gearbox can take.
 - Reference: the stock car at the test driver's pace runs its front brakes at ≈ 240 °C and wears
   ≈ 0.3 % of the pads and ≈ 0.25 % of the tyres per lap. The T28 turbo build (≈ 300 N·m) slips the OEM
