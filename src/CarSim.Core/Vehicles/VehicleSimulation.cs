@@ -16,6 +16,15 @@ public sealed class VehicleSimulation
     public const double LowSpeedSlipReference = 2.0;
     public const double HandbrakeTorqueNm = 1500.0;
 
+    /// <summary>
+    /// While the automated clutch re-engages after a gear change it lets through at most the engine's
+    /// torque plus this much (a smooth engagement, like a good driver), so shifts do not shock the
+    /// gearbox. Launches from rest are not limited: dumping a sticky clutch at high revs still can.
+    /// </summary>
+    public const double ShiftSyncTorqueMarginNm = 80.0;
+
+    private bool _syncingAfterShift;
+
     private readonly double[] _wheelX = new double[4];
     private readonly double[] _wheelY = new double[4];
     private readonly double[] _fz = new double[4];
@@ -44,7 +53,7 @@ public sealed class VehicleSimulation
     /// <summary>Heat and wear of the clutch, brakes and tyres (and their failures).</summary>
     public ChassisWearModel Wear { get; }
 
-    private readonly FrictionEnergy _energy = new();
+    private readonly ChassisLoads _energy = new();
 
     /// <summary>Optional circuit: provides surface grip under each wheel (asphalt, kerb, grass).</summary>
     public TrackLayout? Track { get; set; }
@@ -100,7 +109,7 @@ public sealed class VehicleSimulation
         double steerTarget = Math.Clamp(input.Steer, -1, 1) * c.MaxSteer;
         s.SteerAngle += (steerTarget - s.SteerAngle) * MathUtil.LagFactor(dt, 0.05);
         double ieng = Engine.Config.RotatingInertia;
-        double ratio = c.OverallRatio(s.Gear);
+        double ratio = Wear.DriveBroken ? 0.0 : c.OverallRatio(s.Gear);
         double eff = c.Gearbox.Efficiency;
         double clutchCapacity = Wear.ClutchCapacityNm;
         double brakeFront = c.Brakes.FrontMaxTorqueNm * Wear.BrakeFactor(0), brakeRear = c.Brakes.RearMaxTorqueNm * Wear.BrakeFactor(1);
@@ -150,11 +159,14 @@ public sealed class VehicleSimulation
                 double reduced = seized ? iDrive : ieng * iDrive / (ieng + iDrive);
                 double kc = 0.8 * reduced / h;
                 double capacity = s.Clutch * clutchCapacity;
+                if (_syncingAfterShift) capacity = Math.Min(capacity, Math.Abs(engineTorque) + ShiftSyncTorqueMarginNm);
                 clutchTorque = Math.Clamp(kc * (s.EngineOmega - gearboxOmega), -capacity, capacity);
                 _energy.Clutch += Math.Abs(clutchTorque * (s.EngineOmega - gearboxOmega)) * h;
             }
             lastGearboxOmega = gearboxOmega;
             double carrierTorque = clutchTorque * ratio * (clutchTorque * ratio >= 0 ? eff : 1.0 / eff);
+            _energy.GearboxTorque = Math.Max(_energy.GearboxTorque, Math.Abs(clutchTorque));
+            _energy.DifferentialTorque = Math.Max(_energy.DifferentialTorque, Math.Abs(carrierTorque) / c.Differential.FinalDriveRatio);
             double bias = DifferentialBias(carrierTorque, s.WheelOmega[d0], s.WheelOmega[d1], h);
             for (int w = 0; w < 4; w++) _driveTorque[w] = 0.0;
             _driveTorque[d0] = 0.5 * carrierTorque + 0.5 * bias;
@@ -213,8 +225,10 @@ public sealed class VehicleSimulation
             }
         }
         s.Time += dt;
+        if (_syncingAfterShift && (ratio == 0.0 || (s.Clutch > 0.99 && Math.Abs(s.EngineOmega - lastGearboxOmega) < Units.RpmToRadPerSec(50))))
+            _syncingAfterShift = false;
         bool clutchCommanded = s.Clutch >= 0.999 && s.ShiftTimer <= 0 && s.Gear != 0;
-        Wear.Update(dt, s.Time, _energy, speed, et.Torque, Units.RadPerSecToRpm(s.EngineOmega - lastGearboxOmega), clutchCommanded);
+        Wear.Update(dt, s.Time, _energy, speed, et.Torque, Units.RadPerSecToRpm(s.EngineOmega - lastGearboxOmega), clutchCommanded, s.Gear);
         return Last!;
     }
 
@@ -295,7 +309,12 @@ public sealed class VehicleSimulation
         {
             double before = s.ShiftTimer;
             s.ShiftTimer = Math.Max(0, s.ShiftTimer - dt);
-            if (before > Config.Gearbox.ShiftTimeS / 2 && s.ShiftTimer <= Config.Gearbox.ShiftTimeS / 2) s.Gear = s.PendingGear;
+            if (before > Config.Gearbox.ShiftTimeS / 2 && s.ShiftTimer <= Config.Gearbox.ShiftTimeS / 2)
+            {
+                s.Gear = s.PendingGear;
+                // Moving: a shift, engaged smoothly. At rest: a launch, which is the driver's business.
+                _syncingAfterShift = s.Gear != 0 && Math.Abs(s.U) > 2.0;
+            }
         }
     }
 

@@ -6,16 +6,21 @@ using CarSim.Core.Parts.Specs;
 
 namespace CarSim.Core.Vehicles;
 
-/// <summary>Energy dissipated in one vehicle step by the parts that wear by friction (J).</summary>
-public sealed class FrictionEnergy
+/// <summary>
+/// What the drivetrain went through in one vehicle step: energy dissipated by the friction parts (J)
+/// and the torque carried by the gearbox input and the differential (N·m, largest over the substeps).
+/// </summary>
+public sealed class ChassisLoads
 {
     public double Clutch;
     public readonly double[] BrakeAxle = new double[2];
     public readonly double[] Tyre = new double[4];
+    public double GearboxTorque;
+    public double DifferentialTorque;
 
     public void Clear()
     {
-        Clutch = 0;
+        Clutch = GearboxTorque = DifferentialTorque = 0;
         BrakeAxle[0] = BrakeAxle[1] = 0;
         for (int w = 0; w < 4; w++) Tyre[w] = 0;
     }
@@ -60,11 +65,17 @@ public sealed class ChassisWearModel
     /// <summary>Grip lost as the tread wears (hardened, thin tyres); worn to the cords loses much more.</summary>
     public const double TyreWearGripLoss = 0.10, WornOutGripFactor = 0.75;
 
+    /// <summary>
+    /// Time constant of the torque that fatigues gear teeth: a spike shorter than this is shared by
+    /// several teeth and the shafts' wind-up; a dumped clutch or sustained overload is not.
+    /// </summary>
+    public const double DrivelineLoadTimeConstant = 0.05;
+
     /// <summary>Clutch capacity left once the facings are gone.</summary>
     public const double BurntClutchCapacityFactor = 0.08;
 
     private readonly VehicleConfiguration _c;
-    private readonly PartInstance? _clutch, _brakes, _tyresFront, _tyresRear;
+    private readonly PartInstance? _clutch, _brakes, _tyresFront, _tyresRear, _gearbox, _differential;
     private readonly List<FailureReport> _failures = new();
     private double _maxClutchC, _maxBrakeC;
     private double _clutchSlipSeconds;
@@ -78,6 +89,8 @@ public sealed class ChassisWearModel
         _brakes = config.Chassis.PartIn("brakes");
         _tyresFront = config.Chassis.PartIn("tires_front");
         _tyresRear = config.Chassis.PartIn("tires_rear");
+        _gearbox = config.Chassis.PartIn("gearbox");
+        _differential = config.Chassis.PartIn("differential");
         ClutchTemperature = AmbientK + 20;
         BrakeTemperature[0] = BrakeTemperature[1] = AmbientK + 20;
         _maxClutchC = Units.KToC(ClutchTemperature);
@@ -95,6 +108,15 @@ public sealed class ChassisWearModel
     public double ClutchTemperatureC => Units.KToC(ClutchTemperature);
 
     public IReadOnlyList<FailureReport> Failures => _failures;
+
+    /// <summary>Gearbox input torque, filtered over <see cref="DrivelineLoadTimeConstant"/> (N·m).</summary>
+    public double GearboxLoadNm { get; private set; }
+
+    /// <summary>Differential pinion torque, filtered likewise (N·m).</summary>
+    public double DifferentialLoadNm { get; private set; }
+
+    /// <summary>A broken gearbox or differential: the engine can no longer drive the wheels.</summary>
+    public bool DriveBroken => Enabled && (_gearbox?.IsFailed == true || _differential?.IsFailed == true);
     public IReadOnlyList<EngineWarning> Warnings { get; private set; } = Array.Empty<EngineWarning>();
 
     private static double Wear(PartInstance? p) => p?.Wear ?? 0.0;
@@ -135,10 +157,18 @@ public sealed class ChassisWearModel
     /// <paramref name="clutchSlipRpm"/> explain a clutch failure; <paramref name="clutchCommanded"/> is
     /// whether the clutch was meant to be fully engaged (slip then means it cannot hold the torque).
     /// </summary>
-    public void Update(double dt, double time, FrictionEnergy e, double speed, double engineTorque, double clutchSlipRpm, bool clutchCommanded)
+    public void Update(double dt, double time, ChassisLoads e, double speed, double engineTorque, double clutchSlipRpm, bool clutchCommanded, int gear = 0)
     {
         if (!Enabled) { Warnings = Array.Empty<EngineWarning>(); return; }
         var warnings = new List<EngineWarning>();
+        _peakEngineTorque = Math.Max(_peakEngineTorque, engineTorque);
+
+        // Gearbox and differential: overload fatigue on the filtered torque, like the engine's parts.
+        double a = 1.0 - Math.Exp(-dt / DrivelineLoadTimeConstant);
+        GearboxLoadNm += (e.GearboxTorque - GearboxLoadNm) * a;
+        DifferentialLoadNm += (e.DifferentialTorque - DifferentialLoadNm) * a;
+        Overload(_gearbox, "gearbox", FailureMode.GearboxOverload, GearboxLoadNm, _c.Gearbox.MaxTorqueNm, ref _peakGearboxLoad, gear, dt, time, warnings);
+        Overload(_differential, "differential", FailureMode.DifferentialOverload, DifferentialLoadNm, _c.Differential.MaxTorqueNm, ref _peakDifferentialLoad, gear, dt, time, warnings);
 
         // Clutch.
         var cs = _c.Clutch;
@@ -195,6 +225,57 @@ public sealed class ChassisWearModel
         WearTyres(_tyresRear, _c.TiresRear, e.Tyre[Wheel.RL] + e.Tyre[Wheel.RR], "tires_rear", time, warnings);
 
         Warnings = warnings;
+    }
+
+    private double _peakEngineTorque, _peakGearboxLoad, _peakDifferentialLoad;
+
+    private void Overload(PartInstance? part, string slot, FailureMode mode, double load, double rating, ref double peak, int gear,
+        double dt, double time, List<EngineWarning> warnings)
+    {
+        if (part == null || part.IsFailed || rating <= 0) return;
+        var info = FailureModeInfo.Of(mode);
+        double r = load / rating;
+        peak = Math.Max(peak, load);
+        if (r > info.Endurance)
+            warnings.Add(new EngineWarning($"{slot}_overload", r > 1.0 ? WarningLevel.Danger : WarningLevel.Caution,
+                $"{Label(slot)} overloaded: {load:F0} N·m against a {rating:F0} N·m rating."));
+        if (r >= info.InstantRatio || part.Damage.Accumulate(mode, info.FatigueRate(r) * dt))
+            FailDriveline(part, slot, mode, load, rating, gear, time);
+    }
+
+    private void FailDriveline(PartInstance part, string slot, FailureMode mode, double load, double rating, int gear, double time)
+    {
+        bool gearbox = mode == FailureMode.GearboxOverload;
+        double peak = gearbox ? _peakGearboxLoad : _peakDifferentialLoad;
+        double clutchCapacity = _c.Clutch.MaxTorqueNm;
+        double gearRatio = gear > 0 && gear <= _c.Gearbox.Ratios.Count ? _c.Gearbox.Ratios[gear - 1] : 1.0;
+        var measured = new List<ReportLine>
+        {
+            new(gearbox ? "Gearbox input torque at failure" : "Pinion torque at failure", $"{load:F0} N·m ({100 * load / rating:F0} % of the {rating:F0} N·m rating)"),
+            new("Highest load this run", $"{peak:F0} N·m"),
+            new("Gear", gear switch { 0 => "neutral", < 0 => "reverse", _ => gear.ToString(System.Globalization.CultureInfo.InvariantCulture) }),
+            new("Peak engine torque", $"{_peakEngineTorque:F0} N·m"),
+            new("Clutch rating", $"{clutchCapacity:F0} N·m"),
+        };
+        var factors = new List<string>();
+        double clutchLimit = gearbox ? clutchCapacity : clutchCapacity * gearRatio * _c.Gearbox.Efficiency;
+        if (clutchLimit > rating * 1.05)
+            factors.Add(gearbox
+                ? $"The {_c.Chassis.PartIn("clutch")?.Definition.Name ?? "clutch"} can pass {clutchCapacity:F0} N·m, more than the gearbox's {rating:F0} N·m: shock loads (launches, fast engagements, downshifts) reached the gear teeth instead of slipping the clutch."
+                : $"In gear {gear} the clutch can put {clutchLimit:F0} N·m into the differential, more than its {rating:F0} N·m rating: shock loads reached the crown wheel instead of slipping the clutch.");
+        double engineLimit = gearbox ? _peakEngineTorque : _peakEngineTorque * gearRatio * _c.Gearbox.Efficiency;
+        if (engineLimit > rating * FailureModeInfo.Of(mode).Endurance)
+            factors.Add(gearbox
+                ? $"The engine makes {_peakEngineTorque:F0} N·m, close to or above what the gearbox is built for."
+                : $"The engine's {_peakEngineTorque:F0} N·m multiplied by gear {gear} ({gearRatio:F2}:1) is {engineLimit:F0} N·m at the pinion.");
+        if (factors.Count == 0) factors.Add("Repeated overloads fatigued the teeth until they sheared.");
+        var recommendations = new List<string>
+        {
+            gearbox ? "Fit a gearbox rated above the torque it will see (engine torque, and the clutch's capacity in shock)."
+                    : "Fit a stronger differential, or keep the torque in the low gears down.",
+            "A clutch that is much stronger than the driveline turns launches and missed shifts into broken parts; match them.",
+        };
+        Report(part, slot, mode, time, measured, factors, recommendations);
     }
 
     private void WearTyres(PartInstance? tyres, TireSpec spec, double energy, string slot, double time, List<EngineWarning> warnings)

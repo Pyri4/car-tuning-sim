@@ -27,6 +27,8 @@ public enum FailureMode
     ClutchBurnout,
     BrakePadsWornOut,
     TyresWornOut,
+    GearboxOverload,
+    DifferentialOverload,
 }
 
 public static class FailureModeNames
@@ -116,6 +118,11 @@ public sealed record FailureModeInfo(
             "Brake pads worn out", "The pads wore down to their backing plates"),
         new FailureModeInfo(FailureMode.TyresWornOut, PartCategory.Tires, 0.0, 60, FailureSeverity.Degraded,
             "Tyres worn out", "The tread wore down to the cords"),
+        // Gear teeth and crown wheels take brief shock loads well above their continuous rating.
+        new FailureModeInfo(FailureMode.GearboxOverload, PartCategory.Gearbox, 0.9, 300, FailureSeverity.Degraded,
+            "Broken gearbox", "Gear teeth sheared: more torque went through the gearbox than it is built for", InstantRatio: 2.0),
+        new FailureModeInfo(FailureMode.DifferentialOverload, PartCategory.Differential, 0.9, 300, FailureSeverity.Degraded,
+            "Broken differential", "Crown wheel and pinion teeth sheared: more torque than the differential is built for", InstantRatio: 2.0),
     }.ToDictionary(i => i.Mode);
 
     public static FailureModeInfo Of(FailureMode mode) => All[mode];

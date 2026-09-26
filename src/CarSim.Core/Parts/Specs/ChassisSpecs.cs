@@ -74,7 +74,8 @@ public sealed class DifferentialSpec : PartSpec
     /// <summary>Clutch-LSD locking torque as a fraction of input torque on overrun (0–1).</summary>
     public double LockingDecel { get; init; }
 
-    public double MaxTorqueNm { get; init; } = 2500;
+    /// <summary>Pinion (input) torque the crown wheel and pinion are built for.</summary>
+    public double MaxTorqueNm { get; init; } = 1200;
 
     protected override void Validate(SpecChecker check)
     {

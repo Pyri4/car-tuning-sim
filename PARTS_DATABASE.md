@@ -152,10 +152,10 @@ Requires `boost.source`.
 - `clutch`: `max_torque_nm` (new, cold), `fade_start_c` (facing temperature where friction fades and
   wear accelerates; organic ≈ 250, cerametallic ≈ 450), `life_mj` (slip energy the facings absorb at
   normal temperature), `heat_capacity_j_per_k`.
-- `gearbox`: `ratios` (forward, first gear first), `reverse_ratio`, `efficiency`, `max_torque_nm`,
+- `gearbox`: `ratios` (forward, first gear first), `reverse_ratio`, `efficiency`, `max_torque_nm` (input),
   `shift_time_s`, `input_inertia_kg_m2`.
 - `differential`: `final_drive_ratio`, `type` (`open` | `clutch_lsd` | `locked`), `preload_nm`,
-  `locking_accel`, `locking_decel` (0–1), `max_torque_nm`.
+  `locking_accel`, `locking_decel` (0–1), `max_torque_nm` (pinion/input torque rating; default 1200).
 - `tires` (a pair, one axle): `width_mm`, `aspect_ratio`, `rim_diameter_in`, `peak_friction`,
   `load_sensitivity`, `peak_slip_ratio`, `peak_slip_angle_deg`, `rolling_resistance`, `inertia_kg_m2`
   (per wheel), `compound`, `tread_life_mj` (sliding energy the pair absorbs before it is worn out;

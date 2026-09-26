@@ -200,10 +200,10 @@ public static class Program
         var session = new CarSim.Gameplay.DrivingSession(sim, CarSim.Core.Vehicles.TrackLayout.TestFacility()) { AutopilotEnabled = true };
         int laps = (int)Num(o, "laps", 3);
         Console.WriteLine($"{vehicle.Name}, {car.Mass:F0} kg — {laps} autopilot lap(s) after an out lap");
-        Console.WriteLine($"{"lap",4} {"time s",7} {"clutch°C",8} {"brakeF°C",8} {"brakeR°C",8} {"clutch%",7} {"pads%",6} {"tyreF%",6} {"tyreR%",6}  warnings");
+        Console.WriteLine($"{"lap",4} {"time s",7} {"clutch°C",8} {"brakeF°C",8} {"brakeR°C",8} {"clutch%",7} {"pads%",6} {"tyreF%",6} {"tyreR%",6} {"gbxNm",6} {"diffNm",6}  warnings");
         var warnings = new SortedSet<string>();
         double trace = Num(o, "trace", 0), nextTrace = 0;
-        double maxClutch = 0, maxFront = 0, maxRear = 0;
+        double maxClutch = 0, maxFront = 0, maxRear = 0, maxGearbox = 0, maxDiff = 0;
         string W(string slot) => $"{chassis.PartIn(slot)!.Wear * 100,6:F1}";
         while (session.Timer.Laps < laps && sim.State.Time < 200.0 * (laps + 1))
         {
@@ -212,6 +212,8 @@ public static class Program
             maxClutch = Math.Max(maxClutch, t.ClutchTemperatureC);
             maxFront = Math.Max(maxFront, t.BrakeTemperatureFrontC);
             maxRear = Math.Max(maxRear, t.BrakeTemperatureRearC);
+            maxGearbox = Math.Max(maxGearbox, sim.Wear.GearboxLoadNm);
+            maxDiff = Math.Max(maxDiff, sim.Wear.DifferentialLoadNm);
             foreach (var w in sim.Engine.Damage.Warnings.Concat(sim.Wear.Warnings)) warnings.Add(w.Code);
             if (trace > 0 && sim.State.Time >= nextTrace)
             {
@@ -220,9 +222,9 @@ public static class Program
             }
             if (step.LapCompleted)
             {
-                Console.WriteLine($"{session.Timer.Laps,4} {session.Timer.LastLap,7:F2} {maxClutch,8:F0} {maxFront,8:F0} {maxRear,8:F0} {W("clutch"),7} {W("brakes")} {W("tires_front")} {W("tires_rear")}  {string.Join(",", warnings)}");
+                Console.WriteLine($"{session.Timer.Laps,4} {session.Timer.LastLap,7:F2} {maxClutch,8:F0} {maxFront,8:F0} {maxRear,8:F0} {W("clutch"),7} {W("brakes")} {W("tires_front")} {W("tires_rear")} {maxGearbox,6:F0} {maxDiff,6:F0}  {string.Join(",", warnings)}");
                 warnings.Clear();
-                maxClutch = maxFront = maxRear = 0;
+                maxClutch = maxFront = maxRear = maxGearbox = maxDiff = 0;
             }
             foreach (var f in step.NewFailures) { Console.WriteLine(); Console.WriteLine(f.ToText()); }
             if (sim.Engine.Damage.Seized) break;

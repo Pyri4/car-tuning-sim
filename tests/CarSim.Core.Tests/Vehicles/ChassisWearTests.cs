@@ -142,6 +142,87 @@ public class ChassisWearTests
         Assert.True(rear > 0);
     }
 
+    /// <summary>
+    /// A T35 on E85 at 265 kPa: about 470 N·m, more than the stock gearbox is rated for (and the OEM
+    /// crankshaft, which is why this build has a forged one and race bearings).
+    /// </summary>
+    private static VehicleSimulation BigTurboCar(params (string slot, string part)[] chassisSwaps)
+    {
+        var db = TestContent.Database;
+        var a = SimFactory.Assembly(("crankshaft", "k20.crankshaft.forged"), ("main_bearings", "k20.main_bearings.race"), ("rod_bearings", "k20.rod_bearings.race"),
+            ("pistons", "k20.pistons.forged_lc"), ("connecting_rods", "k20.rods.forged_h"), ("head_gasket", "k20.head_gasket.race"),
+            ("injectors", "injectors.1000cc"), ("fuel_pump", "fuel_pump.hf_330"), ("ecu", "ecu.standalone"), ("exhaust", "exhaust.race_76mm"),
+            ("exhaust_manifold", "k20.exhaust_manifold.turbo_t3_tubular"));
+        var f = new CarSim.Core.Parts.PartInstanceFactory(6_000_000);
+        Assert.True(a.Install("turbocharger", f.Create(db.GetPart("turbo.t35_big"))).Ok);
+        Assert.True(a.Install("intercooler", f.Create(db.GetPart("intercooler.fmic_race"))).Ok);
+        var tune = EcuTune.FromDocument(db.GetTune("k20.turbo_base"));
+        for (int c = 0; c < tune.BoostTarget!.Columns; c++) if (tune.BoostTarget[0, c] >= 170) tune.BoostTarget[0, c] = 265;
+        tune.InjectorFlowCcMin = 1000;
+        tune.FuelStoichAfr = db.GetFuel("e85").StoichiometricAfr;
+        return Car.Create(a, tune, "e85", chassisSwaps);
+    }
+
+    /// <summary>Full-throttle pulls in fourth from 110 km/h to the limiter until something in the driveline breaks.</summary>
+    private static int PullsUntilBroken(VehicleSimulation sim, int maxPulls)
+    {
+        for (int pull = 1; pull <= maxPulls; pull++)
+        {
+            Car.Rolling(sim, 110, 4);
+            var input = new VehicleInputs { Throttle = 1 };
+            for (int i = 0; i < 8.0 / Car.Dt; i++)
+                if (sim.Step(Car.Dt, input).EngineRpm > 7300) break;
+            if (sim.Wear.DriveBroken) return pull;
+        }
+        return int.MaxValue;
+    }
+
+    [Fact]
+    public void TorqueAboveTheGearboxRatingBreaksItAndTheDogBoxSurvives()
+    {
+        var stockBox = BigTurboCar(("clutch", "clutch.race_twin"));
+        int pulls = PullsUntilBroken(stockBox, 30);
+        Assert.InRange(pulls, 2, 30);
+        Assert.Empty(stockBox.Engine.Damage.Failures);
+        var report = Assert.Single(stockBox.Wear.Failures);
+        Assert.Equal(FailureMode.GearboxOverload, report.Mode);
+        Assert.Contains(report.ContributingFactors, f => f.Contains("close to or above what the gearbox is built for"));
+        // No drive: full throttle goes nowhere.
+        double speed = stockBox.Last!.Speed;
+        for (int i = 0; i < 1.0 / Car.Dt; i++) stockBox.Step(Car.Dt, new VehicleInputs { Throttle = 1 });
+        Assert.True(stockBox.Last!.Speed <= speed + 0.1);
+
+        var dogBox = BigTurboCar(("clutch", "clutch.race_twin"), ("gearbox", "gearbox.close_ratio_6mt"));
+        Assert.Equal(int.MaxValue, PullsUntilBroken(dogBox, pulls + 2));
+    }
+
+    [Fact]
+    public void WheelspinProtectsTheDrivelineOnAClutchDump()
+    {
+        // Rev it in neutral and drop it into first: on street tyres the wheels spin before the gearbox sees much.
+        var sim = TurboCar(("clutch", "clutch.race_twin"));
+        var input = new VehicleInputs { Throttle = 1 };
+        for (int i = 0; i < 1.0 / Car.Dt; i++) sim.Step(Car.Dt, input);
+        input.ShiftUp = true;
+        sim.Step(Car.Dt, input);
+        input.ShiftUp = false;
+        double peak = 0;
+        for (int i = 0; i < 2.0 / Car.Dt; i++) { sim.Step(Car.Dt, input); peak = Math.Max(peak, sim.Wear.GearboxLoadNm); }
+        Assert.Empty(sim.Wear.Failures);
+        Assert.True(peak < sim.Config.Gearbox.MaxTorqueNm, $"peak {peak:F0} N·m");
+        Assert.True(sim.Last!.SpeedKmh > 20);
+    }
+
+    [Fact]
+    public void HardShiftingThroughTheGearsDoesNotHurtTheGearbox()
+    {
+        var sim = TurboCar(("clutch", "clutch.race_twin"));
+        Assert.True(Car.Accelerate(sim, 170) < 30);
+        var gearbox = sim.Config.Chassis.PartIn("gearbox")!;
+        Assert.False(gearbox.IsFailed);
+        Assert.True(gearbox.Damage.MaxFatigue < 0.01, $"fatigue {gearbox.Damage.MaxFatigue:F4}");
+    }
+
     [Fact]
     public void WearCanBeSwitchedOffForIsolatedTests()
     {

@@ -247,6 +247,8 @@ public sealed class Garage
         if (!EngineInCar) return (null, "The engine is on the stand. Install it in the car first.");
         var missing = Chassis.MissingRequiredSlots();
         if (missing.Count > 0) return (null, $"The car is missing: {string.Join(", ", missing.Select(s => s.Label))}.");
+        var brokenChassis = Chassis.Installed.Values.Where(p => p.IsFailed).Select(p => p.Definition.Name).ToList();
+        if (brokenChassis.Count > 0) return (null, $"Replace the broken parts first: {string.Join(", ", brokenChassis)}.");
         var (engineSim, report) = CreateSimulation();
         if (engineSim == null) return (null, "The engine cannot run: " + string.Join(" ", report.Errors.Select(e => e.Message)));
         if (engineSim.Damage.Seized) return (null, "The engine is seized. Replace the broken parts first.");

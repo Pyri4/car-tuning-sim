@@ -279,7 +279,10 @@ once, speed-held at the current crank speed, then 8 driveline/chassis substeps.
 - Clutch: torque `clamp(K·(ω_engine − ω_gearbox), ±engagement·capacity)`, K = 0.8 × reduced inertia /
   substep (stiff but stable). The engine is integrated on its side of the clutch with its rotating inertia.
 - Automatic clutch with manual gears: open in neutral and during shifts (shift time per gearbox, throttle
-  cut), slips to launch from rest (engagement rises with engine speed), opens to avoid stalling.
+  cut), slips to launch from rest (engagement rises with engine speed), opens to avoid stalling. After a
+  gear change on the move it re-engages smoothly: until engine and gearbox are within 50 rpm it passes at
+  most |engine torque| + 80 N·m (a good driver's engagement), so shifts do not shock the gearbox.
+  Launches from rest are not limited.
 - Gearbox efficiency applied to drive torque; gearbox input inertia reflected onto the driven wheels.
 - Differential: open (equal torque), clutch LSD (locking torque = preload + locking fraction × input
   torque, accel/decel separately) or locked; implemented as a clamped coupling between the two wheels.
@@ -301,6 +304,15 @@ instances (persists in the garage and saves).
   `= Σ P·(1 + max(0, T − T_fade)/100 K)² / (2·pad_life)`; worn out → 40 % torque.
 - Tyres (per axle pair): grip `× (1 − 0.10·wear)`, wear `= Σ P / tread_life`; worn out → grip × 0.75.
 - Warnings: clutch slipping (> 0.3 s), clutch above its fade temperature, brakes fading, tyres > 85 %.
+- Gearbox and differential overload: gearbox input torque (= clutch torque) and differential pinion
+  torque (= axle torque / final drive) are low-passed (50 ms: shorter spikes are shared by several teeth
+  and the shafts' wind-up) and compared with the part's `max_torque_nm`. Fatigue uses the engine's
+  stress-ratio law with endurance 0.9, 300 s to failure at the rating, instant failure at 2×. A broken
+  gearbox or differential means no drive. Traction limits what reaches them in the low gears (a clutch
+  dump on street tyres just spins the wheels); the realistic overload is engine torque above the rating
+  (a T35 on E85 at 265 kPa, ≈ 470 N·m, breaks the 400 N·m stock box in a few pulls; the 550 N·m dog box
+  survives). The report names engine torque vs rating, and clutch capacity vs rating when the clutch
+  could pass more than the gearbox can take.
 - Reference: the stock car at the test driver's pace runs its front brakes at ≈ 240 °C and wears
   ≈ 0.3 % of the pads and ≈ 0.25 % of the tyres per lap. The T28 turbo build (≈ 300 N·m) slips the OEM
   clutch (280 N·m new) a little; on the project car's 40 %-worn clutch (224 N·m) it slips, passes 250 °C
