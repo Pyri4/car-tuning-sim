@@ -43,10 +43,13 @@ public partial class DynoView : HSplitContainer
 
     public override void _Ready()
     {
-        SplitOffsets = new[] { 1110 };
+        SplitOffsets = new[] { 1150 };
         var main = Ui.VBox(8);
 
-        var controls = Ui.HBox(10);
+        // Wraps onto a second line on narrow windows instead of pushing the telemetry column off-screen.
+        var controls = new HFlowContainer();
+        controls.AddThemeConstantOverride("h_separation", 10);
+        controls.AddThemeConstantOverride("v_separation", 6);
         _mode = new OptionButton();
         _mode.AddItem("Sweep (ramp)");
         _mode.AddItem("Steady state");
