@@ -57,7 +57,10 @@ cylinder → exhaust port → exhaust manifold → exhaust system → ambient.
 - **Solve**: engine demand `ṁ_eng = VE_dyn · f_res · ρ_port · V_d · n · rpm/120`. The through-flow
   is the root of `ṁ_eng(ṁ) − ṁ = 0` (Brent's method); this is monotonic because every restriction's
   drop grows with ṁ.
-- **Charge temperature**: `T_man + 0.12·(T_coolant − T_man) − 5 K · charge_cooling_factor · (F/A)/(F/A)_stoich`.
+- **Charge temperature**: `T_man + 0.12·(T_coolant − T_man) − ΔT_evap`, with
+  `ΔT_evap = 0.2·(F/A)·h_vap/c_p` (20 % of port-injected fuel evaporates from the air before the inlet
+  valve closes): ≈ 5 K for gasoline at λ 1, ≈ 17 K for E85. Latent heat per kg of fuel is derived from
+  the fuel's `charge_cooling_factor`: `h_vap = 350 kJ/kg · factor · AFR_stoich/14.7`.
 
 ### Volumetric efficiency (tuning component)
 - Tuned mean piston speed `v = 15 + 0.15 · (intake_duration − 220°)` m/s → `rpm_cam = v·60/(2S)`.
@@ -123,10 +126,19 @@ Harmonic lift profile over the advertised event (duration@1mm + 50°):
 - `BMEP = IMEP − PMEP − FMEP`, torque `T = BMEP · V / (4π)`, power `P = T · ω`.
 
 ## Heat and temperatures
-- Coolant fraction of burned-fuel energy `0.28 − 0.06·clamp(rpm/7000, 0, 1.4) + 0.01·KI`;
-  oil fraction 0.03; friction heat 35 % to oil, 65 % to coolant.
-- Exhaust gas temperature `= T_charge + E_exhaust/(ṁ_exh·c_p) − 300 K·max(0, 1 − λ)`, where
-  `E_exhaust = fuel power − indicated power − coolant/oil shares`. Lag 0.2 s (gas), 1.5 s (sensor).
+- **Energy balance (exact every step):** `fuel power = brake power + heat to coolant + heat to oil +
+  exhaust heat`. Released fuel power = burned fuel · LHV · `f_rich(λ)`, where for λ < 1 the oxygen is
+  shared across the excess fuel and CO/H₂ leave with their heating value:
+  `f_rich = (525 − 119/λ)/406` (406 kJ released per mol O₂ by full oxidation — Thornton's rule — and
+  525 kJ per mol O₂ of deficit left in CO/H₂): 96 % at λ 0.88, 90 % at λ 0.75. `CombustionModel.SplitHeat`
+  divides the released power into indicated work, coolant (`0.28 − 0.06·clamp(rpm/7000, 0, 1.4) + 0.01·KI`,
+  × 1.3 with a blown head gasket), oil (0.03) and exhaust (the remainder, so the split cannot create
+  energy). Pumping work leaves with the exhaust gas; friction heat goes 35 % to oil, 65 % to coolant.
+  Motoring (fuel cut, ignition off), the gas picks up 30 % of the coolant-to-charge temperature
+  difference from the chamber walls at the coolant's expense.
+- Exhaust gas temperature `= T_charge + (exhaust heat − latent heat of the excess fuel)/(ṁ_exh·c_p)`
+  (80 % of the unburned fuel's latent heat is absorbed in the cylinder). Richer mixtures run cooler
+  from these two effects alone. Lag 0.2 s (gas), 1.5 s (sensor).
 - Piston crown temperature `= T_coolant + 150 K·(q/14.2 MW/m²)^0.7·(1 + 1.5·max(0, λ − 0.9)) + 8 K·KI`,
   q = burned-fuel power per piston area. Lag 3 s.
 - Coolant: capacity = coolant (1.05 kg/L, 3600 J/kgK) + half of block and head metal (900 J/kgK).

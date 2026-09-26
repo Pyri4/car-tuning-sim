@@ -161,7 +161,19 @@ public sealed record EngineTelemetry
     public double OilPressureRequired { get; init; }
     public double ExhaustGasTemperature { get; init; }
     public double PistonCrownTemperature { get; init; }
+    /// <summary>Chemical power released by the fuel that burns, W.</summary>
+    public double FuelPower { get; init; }
+
+    /// <summary>Net heat into the coolant, W (negative while motoring: the gas picks heat up from the walls).</summary>
     public double HeatToCoolant { get; init; }
+
+    public double HeatToOil { get; init; }
+
+    /// <summary>
+    /// Enthalpy the exhaust gas carries away relative to the charge temperature, W (including the latent
+    /// heat absorbed by unburned fuel). FuelPower = Power + HeatToCoolant + HeatToOil + ExhaustHeat.
+    /// </summary>
+    public double ExhaustHeat { get; init; }
     public double RadiatorHeatRejection { get; init; }
 
     // Forced induction (zero for naturally aspirated builds).

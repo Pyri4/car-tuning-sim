@@ -226,7 +226,7 @@ The `install_after` graph must be acyclic. A slot can be filled only when all of
 
 ## Fuels (`fuels`)
 `id`, `name`, `octane_ron`, `stoichiometric_afr`, `lower_heating_value_mj_kg`, `density_kg_l`,
-`charge_cooling_factor` (evaporative cooling relative to gasoline = 1.0), `description`.
+`charge_cooling_factor` (evaporative cooling per kg of stoichiometric charge relative to gasoline = 1.0; sets the latent heat `350 kJ/kg · factor · AFR/14.7`), `description`.
 
 ## Tunes (`tunes`)
 See SIMULATION_SPEC.md (ECU section) — `rpm_axis`, `load_axis_kpa`, `target_lambda[load][rpm]`,

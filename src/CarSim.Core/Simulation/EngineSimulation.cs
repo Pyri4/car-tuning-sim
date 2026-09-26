@@ -173,7 +173,7 @@ public sealed class EngineSimulation
 
         // ---- Air path ----
         double floatRpm = ValveFloatRpm();
-        double evapCooling = 5.0 * fuel.ChargeCoolingFactor * s.LastFuelAirRatio * fuel.StoichiometricAfr;
+        double evapCooling = CombustionModel.EvaporativeCooling(s.LastFuelAirRatio, fuel.LatentHeat);
         var air = _airPath.Solve(new AirPathConditions(rpm, throttleArea, input.AmbientPressure, input.AmbientTemperature,
             s.ExhaustGasTemperature, s.CoolantTemperature, s.LastFuelAirRatio, evapCooling, floatRpm,
             s.TurboOmega, s.WastegateOpening, input.CoolingAirSpeed, s.TurbineOutletTemperature));
@@ -230,23 +230,37 @@ public sealed class EngineSimulation
         double torque = rpm > 1 ? bmep * g.Displacement / (4.0 * Math.PI) : 0.0;
         double power = torque * omega;
 
-        // ---- Heat flows ----
+        // ---- Heat flows (energy-conserving: fuel = brake + coolant + oil + exhaust) ----
         double cyclesPerSecond = rpm / 120.0 * g.Cylinders;
-        double fuelPower = burnedFuel * fuel.LowerHeatingValue * cyclesPerSecond;
+        // Released chemical power: a rich mixture leaves CO and H₂ unburned (see RichHeatRelease).
+        double fuelPower = firing ? burnedFuel * fuel.LowerHeatingValue * CombustionModel.RichHeatRelease(lambda) * cyclesPerSecond : 0.0;
         double indicatedPower = grossWork * cyclesPerSecond;
-        double frictionPower = Math.Max(0.0, fmep * g.Displacement / (4.0 * Math.PI) * omega);
-        double coolantFraction = CombustionModel.CoolantHeatFraction(rpm, knock);
-        double heatToCoolant = fuelPower * coolantFraction * (Damage.HasFailure(FailureMode.HeadGasketBreach) ? 1.3 : 1.0)
-                               + (1.0 - CombustionModel.FrictionHeatToOil) * frictionPower;
-        double heatToOil = fuelPower * CombustionModel.OilHeatFraction + CombustionModel.FrictionHeatToOil * frictionPower;
+        double meanEffectiveToPower = g.Displacement / (4.0 * Math.PI) * omega;
+        double frictionPower = fmep * meanEffectiveToPower;
+        double pumpingPower = pmep * meanEffectiveToPower;
+        double coolantFraction = CombustionModel.CoolantHeatFraction(rpm, knock)
+                                 * (Damage.HasFailure(FailureMode.HeadGasketBreach) ? 1.3 : 1.0);
+        var heat = CombustionModel.SplitHeat(fuelPower, indicatedPower, coolantFraction, CombustionModel.OilHeatFraction);
         double exhaustFlow = air.MassFlow + (firing ? fuelPerCycle * cyclesPerSecond : 0.0);
-        double exhaustEnergy = Math.Max(0.0, fuelPower - indicatedPower - fuelPower * (coolantFraction + CombustionModel.OilHeatFraction));
-        double egtTarget = air.ChargeTemperature + 50.0;
-        if (firing && exhaustFlow > 0)
+        // Pumping work is done on the gas and leaves with it; friction heats coolant and oil.
+        double exhaustHeat = heat.ToExhaust + pumpingPower;
+        double heatToCoolant = heat.ToCoolant + (1.0 - CombustionModel.FrictionHeatToOil) * frictionPower;
+        double heatToOil = heat.ToOil + CombustionModel.FrictionHeatToOil * frictionPower;
+        if (!firing && exhaustFlow > 0)
         {
-            egtTarget = air.ChargeTemperature + exhaustEnergy / (exhaustFlow * PhysicalConstants.ExhaustCp)
-                        - 300.0 * Math.Max(0.0, 1.0 - lambda);
+            // Motoring: the gas picks up heat from the chamber walls, cooling the engine.
+            double pickup = CombustionModel.MotoringWallHeatPickup * exhaustFlow * PhysicalConstants.ExhaustCp
+                            * (s.CoolantTemperature - air.ChargeTemperature);
+            exhaustHeat += pickup;
+            heatToCoolant -= pickup;
         }
+        // Unburned (excess) fuel still has to evaporate: its latent heat comes out of the exhaust gas. The
+        // share that evaporated in the intake was already taken from the charge temperature.
+        double excessFuelFlow = firing ? Math.Max(0.0, fuelPerCycle - burnedFuel) * cyclesPerSecond : 0.0;
+        double latentHeat = (1.0 - CombustionModel.EvaporatedBeforeInletValveCloses) * excessFuelFlow * fuel.LatentHeat;
+        double egtTarget = exhaustFlow > 0
+            ? air.ChargeTemperature + (exhaustHeat - latentHeat) / (exhaustFlow * PhysicalConstants.ExhaustCp)
+            : air.ChargeTemperature;
 
         // Piston crown temperature (quasi-steady target, lagged).
         double heatFlux = fuelPower / (g.Cylinders * g.PistonArea);
@@ -363,7 +377,10 @@ public sealed class EngineSimulation
             OilPressureRequired = RequiredOilPressure(rpm),
             ExhaustGasTemperature = s.EgtSensor,
             PistonCrownTemperature = s.PistonCrownTemperature,
+            FuelPower = fuelPower,
             HeatToCoolant = heatToCoolant,
+            HeatToOil = heatToOil,
+            ExhaustHeat = exhaustHeat,
             RadiatorHeatRejection = radiatorHeat,
             TurboRpm = Units.RadPerSecToRpm(s.TurboOmega),
             CompressorPressureRatio = c.Turbo != null ? air.Compressor.PressureRatio : 1.0,
