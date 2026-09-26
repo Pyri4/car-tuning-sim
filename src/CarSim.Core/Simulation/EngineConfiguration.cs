@@ -30,6 +30,27 @@ public sealed class EngineConfiguration
     /// <summary>Additional tuned mean piston speed per degree of intake duration above 220°, m/s.</summary>
     public const double TunedPistonSpeedPerDeg = 0.15;
 
+    /// <summary>
+    /// Intake centreline (crank degrees ATDC) the duration correlation above was fitted at: straight-up cams on the
+    /// K20's 108–114° separations, pinned by its 112° OEM pair. The correlation reads duration as a stand-in for
+    /// intake closing, so it holds for cams installed there; a cam that states its centreline (degreed in, or on a
+    /// phaser) closes the intake earlier or later by its distance from this reference.
+    /// </summary>
+    public const double ReferenceIntakeCenterlineDeg = 112.0;
+
+    /// <summary>
+    /// Tuned mean piston speed per crank degree the intake closes later, m/s: duration moves the closing by half a
+    /// degree per degree (0.15 m/s), a centreline shift by a whole degree.
+    /// </summary>
+    public const double TunedPistonSpeedPerCenterlineDeg = 2.0 * TunedPistonSpeedPerDeg;
+
+    /// <summary>
+    /// Guard on the correlation, m/s: a very early intake closing would extrapolate it to zero or negative speed.
+    /// Below it the VE peak sits at a few hundred rpm (under any idle), where the engine already breathes badly at
+    /// speed. Tested not to act on shipped cams and calibrations (<c>CamTuningFloorActive</c>).
+    /// </summary>
+    public const double MinTunedPistonSpeed = 2.0;
+
     /// <summary>Header tuning constant: tuned rpm ≈ K / primary length (mm).</summary>
     public const double HeaderTuningConstant = 5.2e6;
 
@@ -95,9 +116,10 @@ public sealed class EngineConfiguration
         ExhaustEventFraction = Math.Min(1.0, (Cams.ExhaustDurationDeg + ValveEventRampDeg) / 720.0);
 
         // Volumetric-efficiency tuning.
-        double tunedPistonSpeed = BaseTunedPistonSpeed + (Cams.IntakeDurationDeg - 220.0) * TunedPistonSpeedPerDeg;
-        double camPeakRpm = tunedPistonSpeed * 60.0 / (2.0 * geometry.Stroke);
-        VePeakRpm = camPeakRpm * Math.Pow(ReferenceRunnerLength / Intake.RunnerLength, 0.25);
+        _durationTunedPistonSpeed = BaseTunedPistonSpeed + (Cams.IntakeDurationDeg - 220.0) * TunedPistonSpeedPerDeg;
+        _runnerTuning = Math.Pow(ReferenceRunnerLength / Intake.RunnerLength, 0.25);
+        IntakePhaserRange = Ecu.CamPhaseControl ? Cams.IntakePhaserRangeDeg : 0.0;
+        VePeakRpm = VePeakRpmAt(0.0);
         OverlapDeg = Cams.OverlapDeg;
         ScavengingRpm = HeaderTuningConstant / ExhaustManifold.PrimaryLengthMm;
         ScavengingGain = ExhaustManifold.ScavengingGain;
@@ -168,8 +190,42 @@ public sealed class EngineConfiguration
     public double IntakeEventFraction { get; }
     public double ExhaustEventFraction { get; }
 
+    /// <summary>Speed of peak cam/runner filling with the cams at their installed (park) position, rpm.</summary>
     public double VePeakRpm { get; }
+
+    /// <summary>Valve overlap with the cams at their installed (park) position, crank degrees.</summary>
     public double OverlapDeg { get; }
+
+    /// <summary>
+    /// How far the ECU can advance the intake cam, crank degrees: the phaser's range when the ECU can drive it,
+    /// otherwise 0 (fixed cams, or a phaser the ECU cannot control, stay at their installed position).
+    /// </summary>
+    public double IntakePhaserRange { get; }
+
+    private readonly double _durationTunedPistonSpeed, _runnerTuning;
+
+    /// <summary>
+    /// Crank degrees the intake closes later than the correlation's reference installation, with the intake cam
+    /// advanced <paramref name="intakeAdvanceDeg"/> from its installed centreline (0 for straight-up cams).
+    /// </summary>
+    public double IntakeClosingShiftDeg(double intakeAdvanceDeg) => Cams.HasCenterlines
+        ? Cams.InstalledIntakeCenterlineDeg - intakeAdvanceDeg - ReferenceIntakeCenterlineDeg
+        : 0.0;
+
+    /// <summary>Tuned mean piston speed of the cam/runner filling peak (before the <see cref="MinTunedPistonSpeed"/> guard), m/s.</summary>
+    public double TunedPistonSpeed(double intakeAdvanceDeg) =>
+        _durationTunedPistonSpeed + IntakeClosingShiftDeg(intakeAdvanceDeg) * TunedPistonSpeedPerCenterlineDeg;
+
+    /// <summary>Speed of peak cam/runner filling with the intake cam advanced <paramref name="intakeAdvanceDeg"/>, rpm.</summary>
+    public double VePeakRpmAt(double intakeAdvanceDeg)
+    {
+        double tunedPistonSpeed = Math.Max(MinTunedPistonSpeed, TunedPistonSpeed(intakeAdvanceDeg));
+        double camPeakRpm = tunedPistonSpeed * 60.0 / (2.0 * Geometry.Stroke);
+        return camPeakRpm * _runnerTuning;
+    }
+
+    /// <summary>Valve overlap with the intake cam advanced <paramref name="intakeAdvanceDeg"/>, crank degrees.</summary>
+    public double OverlapAt(double intakeAdvanceDeg) => Cams.OverlapAt(intakeAdvanceDeg);
     public double ScavengingRpm { get; }
     public double ScavengingGain { get; }
 

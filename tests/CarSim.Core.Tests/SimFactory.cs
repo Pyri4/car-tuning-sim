@@ -46,7 +46,8 @@ public static class SimFactory
             Id = d.Id, Name = d.Name, RpmAxis = d.RpmAxis, LoadAxisKpa = d.LoadAxisKpa.Concat(extraKpa).ToArray(),
             TargetLambda = Extend(d.TargetLambda), IgnitionAdvanceDeg = Extend(d.IgnitionAdvanceDeg),
             VolumetricEfficiency = Extend(d.VolumetricEfficiency!), DisplacementCc = d.DisplacementCc,
-            BoostTargetKpa = d.BoostTargetKpa, RevLimitRpm = d.RevLimitRpm, IdleRpm = d.IdleRpm,
+            BoostTargetKpa = d.BoostTargetKpa, IntakeCamAdvanceDeg = d.IntakeCamAdvanceDeg == null ? null : Extend(d.IntakeCamAdvanceDeg),
+            RevLimitRpm = d.RevLimitRpm, IdleRpm = d.IdleRpm,
             KnockControlEnabled = d.KnockControlEnabled, InjectorFlowCcMin = d.InjectorFlowCcMin, FuelStoichAfr = d.FuelStoichAfr,
             InjectorDeadTimeMs = d.InjectorDeadTimeMs, FuelDensityKgL = d.FuelDensityKgL,
         });

@@ -77,6 +77,12 @@ public sealed class EcuSpec : PartSpec
     /// <summary>Whether fuel/ignition tables can be edited by the player.</summary>
     public bool TablesEditable { get; init; } = true;
 
+    /// <summary>
+    /// Whether the ECU can drive cam phasers (from its tune's intake cam-advance table). Without it a phased cam
+    /// stays at its park position.
+    /// </summary>
+    public bool CamPhaseControl { get; init; }
+
     [JsonIgnore] public double MapSensorMax => Units.KpaToPa(MapSensorMaxKpa);
 
     protected override void Validate(SpecChecker check)

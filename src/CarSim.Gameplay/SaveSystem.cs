@@ -178,6 +178,7 @@ public static class SaveSystem
             {
                 Id = tune.Id, Name = tune.Name, Description = tune.Description, RpmAxis = tune.RpmAxis, LoadAxisKpa = tune.LoadAxisKpa,
                 TargetLambda = tune.TargetLambda, IgnitionAdvanceDeg = tune.IgnitionAdvanceDeg, BoostTargetKpa = tune.BoostTargetKpa,
+                IntakeCamAdvanceDeg = tune.IntakeCamAdvanceDeg,
                 RevLimitRpm = tune.RevLimitRpm, IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
                 InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = tune.Source,
                 VolumetricEfficiency = tune.VolumetricEfficiency ?? ve,

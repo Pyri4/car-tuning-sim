@@ -45,6 +45,12 @@ public sealed class EngineSimulation
     /// <summary>Latent heat of vaporisation used for boiling coolant off, J/kg.</summary>
     public const double CoolantLatentHeat = 2.0e6;
 
+    /// <summary>
+    /// Time constant of an oil-pressure cam phaser following its target, s (hydraulic phasers sweep their range in a
+    /// few tenths of a second). Oil-pressure dependence is not modelled: a running engine can always move them.
+    /// </summary>
+    public const double CamPhaserTimeConstant = 0.15;
+
     private readonly AirPath _airPath;
     private readonly double _referenceDensity =
         PhysicalConstants.StandardPressure / (PhysicalConstants.AirGasConstant * PhysicalConstants.StandardTemperature);
@@ -200,12 +206,17 @@ public sealed class EngineSimulation
         double throttleArea = c.ThrottleCdA * (ThrottleAreaFraction(input.Throttle)
                                + IdleBypassAreaFraction * idleValve + ThrottleLeakAreaFraction);
 
+        // ---- Cam phaser: the ECU's table at the MAP it last read; parked unless running (no oil pressure) ----
+        double camTarget = s.Running ? Ecu.IntakeCamAdvanceTarget(rpm, Ecu.ReadMap(s.LastManifoldPressure), c.IntakePhaserRange) : 0.0;
+        s.IntakeCamAdvance += (camTarget - s.IntakeCamAdvance) * MathUtil.LagFactor(dt, CamPhaserTimeConstant);
+
         // ---- Air path ----
         double floatRpm = ValveFloatRpm();
         double evapCooling = CombustionModel.EvaporativeCooling(s.LastFuelAirRatio, fuel.LatentHeat);
         var air = _airPath.Solve(new AirPathConditions(rpm, throttleArea, input.AmbientPressure, input.AmbientTemperature,
             s.ExhaustGasTemperature, s.CoolantTemperature, s.LastFuelAirRatio, evapCooling, floatRpm,
-            s.TurboOmega, s.WastegateOpening, input.CoolingAirSpeed, s.TurbineOutletTemperature));
+            s.TurboOmega, s.WastegateOpening, input.CoolingAirSpeed, s.TurbineOutletTemperature, s.IntakeCamAdvance));
+        s.LastManifoldPressure = air.ManifoldPressure;
 
         // ---- ECU fuel and spark ----
         double mapReading = Ecu.ReadMap(air.ManifoldPressure);
@@ -391,6 +402,7 @@ public sealed class EngineSimulation
             VolumetricEfficiency = air.AirPerCycle / (input.AmbientPressure / (PhysicalConstants.AirGasConstant * input.AmbientTemperature) * g.SweptVolumePerCylinder),
             VeDynamic = air.VeDynamic,
             ResidualFactor = air.ResidualFactor,
+            IntakeCamAdvance = s.IntakeCamAdvance,
             TargetLambda = targetLambda,
             Lambda = firing ? lambda : 0.0,
             Afr = firing ? lambda * fuel.StoichiometricAfr : 0.0,
@@ -423,7 +435,8 @@ public sealed class EngineSimulation
             ExhaustHeat = exhaustHeat,
             PortWallHeat = portWallHeat,
             WallHeatLimited = heat.WallsLimited,
-            VeFloorActive = rpm > 1 && _airPath.VeShape(rpm) < AirPath.VeShapeFloor,
+            VeFloorActive = rpm > 1 && _airPath.VeShape(rpm, s.IntakeCamAdvance) < AirPath.VeShapeFloor,
+            CamTuningFloorActive = c.TunedPistonSpeed(s.IntakeCamAdvance) < EngineConfiguration.MinTunedPistonSpeed,
             RadiatorHeatRejection = radiatorHeat,
             CoolantSurfaceLoss = surfaceLoss,
             OilToCoolantHeat = oilToCoolant,

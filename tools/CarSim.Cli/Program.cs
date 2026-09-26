@@ -26,6 +26,16 @@ public static class Program
           carsim drive [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--cold 1] [--trace <s>] [build options]
                                                         Autopilot laps of the test facility in the engine's car: lap times,
                                                         clutch/brake temperatures, wear, warnings and failure reports.
+          carsim calibrate-spark [--knock-margin 1.5] [--mbt-margin 1] [--hold 1] [build options]
+                                                        Measure best-torque and knock-limited timing on a steady-state dyno and
+                                                        print an ignition_advance_deg table (min(MBT − margin, knock limit − margin)
+                                                        on the --fuel given; a base map for content authors).
+          carsim calibrate-cams [--step 5] [--hold 0.8] [build options]
+                                                        For a cam phaser the ECU can drive: the intake advance that traps the most
+                                                        air at each rpm and load, as an intake_cam_advance_deg table (a base map).
+          carsim bench [<engine-id>] [--steps 20000] [--repeats 5] [--rpm 5000] [build options]
+                                                        Step cost: best-of-N time and allocated bytes per engine step (full
+                                                        throttle, held speed) and per vehicle step (autopilot on the test track).
           carsim calibrate-ve [--hold 1] [build options]
                                                         Measure the build's breathing on a steady-state dyno and print a
                                                         volumetric_efficiency table for the tune (a base-map generator for
@@ -51,6 +61,9 @@ public static class Program
                 "hold" => Hold(options),
                 "drive" => Drive(options),
                 "calibrate-ve" => CalibrateVe(options),
+                "bench" => Bench(options),
+                "calibrate-spark" => CalibrateSpark(options),
+                "calibrate-cams" => CalibrateCams(options),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -136,6 +149,34 @@ public static class Program
         return 0;
     }
 
+    private static int CalibrateSpark(CliOptions o)
+    {
+        var (sim, tune, _, _) = BuildEngine(o);
+        var table = SparkCalibrator.Calibrate(sim, Num(o, "knock-margin", 1.5), Num(o, "mbt-margin", 1.0), Num(o, "hold", 1.0));
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Console.WriteLine($"// {tune.Id} on {sim.Config.Fuel.Id}: rpm {string.Join(", ", tune.IgnitionAdvance.XAxis)}; load kPa {string.Join(", ", tune.IgnitionAdvance.YAxis)}");
+        Console.WriteLine("\"ignition_advance_deg\": [");
+        for (int r = 0; r < table.Length; r++)
+            Console.WriteLine($"  [{string.Join(", ", table[r].Select(v => v.ToString("0.#", inv)))}]{(r < table.Length - 1 ? "," : "")}");
+        Console.WriteLine("],");
+        return 0;
+    }
+
+    private static int CalibrateCams(CliOptions o)
+    {
+        var (sim, tune, _, _) = BuildEngine(o);
+        if (sim.Config.IntakePhaserRange <= 0)
+            return Fail($"This build has no intake cam phaser its ECU can drive ({sim.Config.Part(PartCategory.Camshafts).Definition.Name}, {sim.Config.Part(PartCategory.Ecu).Definition.Name}).");
+        var table = CamPhaseCalibrator.Calibrate(sim, Num(o, "step", 5.0), Num(o, "hold", 0.8));
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Console.WriteLine($"// {tune.Id}: rpm {string.Join(", ", tune.IgnitionAdvance.XAxis)}; load kPa {string.Join(", ", tune.IgnitionAdvance.YAxis)}; phaser range {sim.Config.IntakePhaserRange:0.#}°");
+        Console.WriteLine("\"intake_cam_advance_deg\": [");
+        for (int r = 0; r < table.Length; r++)
+            Console.WriteLine($"  [{string.Join(", ", table[r].Select(v => v.ToString("0.#", inv)))}]{(r < table.Length - 1 ? "," : "")}");
+        Console.WriteLine("],");
+        return 0;
+    }
+
     private static double Num(CliOptions o, string key, double fallback) =>
         o.Named.TryGetValue(key, out var v) ? double.Parse(v, System.Globalization.CultureInfo.InvariantCulture) : fallback;
 
@@ -182,10 +223,10 @@ public static class Program
         double from = double.Parse(o.Named.GetValueOrDefault("from", "1000"), System.Globalization.CultureInfo.InvariantCulture);
         double to = double.Parse(o.Named.GetValueOrDefault("to", "8000"), System.Globalization.CultureInfo.InvariantCulture);
         double step = double.Parse(o.Named.GetValueOrDefault("step", "500"), System.Globalization.CultureInfo.InvariantCulture);
-        Console.WriteLine($"{"rpm",6} {"Nm",6} {"kW",6} {"hp",6} {"MAPkPa",7} {"VE",5} {"λ",5} {"duty",5} {"adv",5} {"MBT",5} {"KLSA",5} {"knk",4} {"PCPbar",6} {"EGT°C",6} {"oil bar",7} {"FMEPbar",7} {"limit",6} {"port",6} {"exhBP",6} {"VEdyn",5} {"resid",5} {"PMEP",5} {"turbo krpm",10} {"PR",5} {"cEff",5} {"choke",5} {"WG",4} {"IAT°C",6}");
+        Console.WriteLine($"{"rpm",6} {"Nm",6} {"kW",6} {"hp",6} {"MAPkPa",7} {"VE",5} {"λ",5} {"duty",5} {"adv",5} {"MBT",5} {"KLSA",5} {"knk",4} {"PCPbar",6} {"EGT°C",6} {"oil bar",7} {"FMEPbar",7} {"limit",6} {"port",6} {"exhBP",6} {"VEdyn",5} {"resid",5} {"PMEP",5} {"turbo krpm",10} {"PR",5} {"cEff",5} {"choke",5} {"WG",4} {"IAT°C",6} {"cam°",5}");
         foreach (var t in SteadyStateSweep.Run(sim, from, to, step))
         {
-            Console.WriteLine($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2} {t.TurboRpm / 1000,10:F1} {t.CompressorPressureRatio,5:F2} {t.CompressorEfficiency,5:F2} {t.CompressorChokeRatio,5:F2} {t.WastegateOpening,4:F2} {Units.KToC(t.ChargeTemperature),6:F0}");
+            Console.WriteLine($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2} {t.TurboRpm / 1000,10:F1} {t.CompressorPressureRatio,5:F2} {t.CompressorEfficiency,5:F2} {t.CompressorChokeRatio,5:F2} {t.WastegateOpening,4:F2} {Units.KToC(t.ChargeTemperature),6:F0} {t.IntakeCamAdvance,5:F1}");
         }
         return 0;
     }
@@ -201,7 +242,11 @@ public static class Program
         }
     }
 
-    private static int Drive(CliOptions o)
+    private sealed record BuiltCar(CarSim.Core.Vehicles.VehicleSimulation Sim, CarSim.Core.Vehicles.VehicleConfiguration Car,
+        CarSim.Core.Vehicles.VehicleAssembly Chassis, EngineAssembly Engine);
+
+    /// <summary>The engine (with build options) in the car that takes its family, with --chassis, --set and --wear applied.</summary>
+    private static BuiltCar BuildCar(CliOptions o)
     {
         var (engineSim, _, db, factory) = BuildEngine(o);
         var engine = engineSim.Config.Assembly;
@@ -232,6 +277,13 @@ public static class Program
         var car = new CarSim.Core.Vehicles.VehicleConfiguration(vehicle, chassis, engine, db);
         var sim = new CarSim.Core.Vehicles.VehicleSimulation(car, engineSim);
         sim.StartIdling();
+        return new BuiltCar(sim, car, chassis, engine);
+    }
+
+    private static int Drive(CliOptions o)
+    {
+        var (sim, car, chassis, _) = BuildCar(o);
+        var vehicle = car.Definition;
         var session = new CarSim.Gameplay.DrivingSession(sim, CarSim.Core.Vehicles.TrackLayout.TestFacility()) { AutopilotEnabled = true };
         if (o.Named.GetValueOrDefault("cold") == "1") session.StartOnColdTyres();
         int laps = (int)Num(o, "laps", 3);
@@ -268,6 +320,50 @@ public static class Program
             if (sim.Engine.Damage.Seized) break;
         }
         return session.Failures.Count > 0 ? 3 : 0;
+    }
+
+    /// <summary>
+    /// Step-cost measurement for any engine family: the engine held at full throttle (2 ms steps, as in driving) and
+    /// the whole car on autopilot. Best of <c>--repeats</c> runs of <c>--steps</c> steps after a warm-up; allocation is
+    /// the managed bytes allocated per step on this thread.
+    /// </summary>
+    private static int Bench(CliOptions o)
+    {
+        int steps = (int)Num(o, "steps", 20000), repeats = (int)Num(o, "repeats", 5);
+        double rpm = Num(o, "rpm", 5000);
+        const double dt = 0.002;
+        var (engineSim, _, _, _) = BuildEngine(o);
+        var input = new EngineInputs { Throttle = 1, SpeedMode = SpeedMode.Held, HeldRpm = rpm, CoolantTemperatureOverride = 363.15 };
+        var (engineUs, engineBytes) = Measure(() => engineSim.Step(dt, input), steps, repeats);
+        Console.WriteLine($"{engineSim.Config.Assembly.Definition.Name}: {engineSim.Config.Geometry.Cylinders} cylinders, {Units.M3ToCc(engineSim.Config.Geometry.Displacement):F0} cc");
+        Console.WriteLine($"  engine step  (WOT, {rpm:F0} rpm held): {engineUs,7:F2} µs  {engineBytes,8:F0} B/step  ({engineBytes * 500 / 1e6:F1} MB/s at 500 Hz)");
+        BuiltCar built;
+        try { built = BuildCar(o); }
+        catch (ArgumentException e)
+        {
+            Console.WriteLine($"  vehicle step: skipped ({e.Message})");
+            return 0;
+        }
+        var session = new CarSim.Gameplay.DrivingSession(built.Sim, CarSim.Core.Vehicles.TrackLayout.TestFacility()) { AutopilotEnabled = true };
+        var (carUs, carBytes) = Measure(() => session.Advance(CarSim.Gameplay.DrivingSession.StepSeconds, default), steps, repeats);
+        Console.WriteLine($"  vehicle step (autopilot lap, engine + chassis): {carUs,7:F2} µs  {carBytes,8:F0} B/step  ({carBytes * 500 / 1e6:F1} MB/s at 500 Hz)");
+        return 0;
+    }
+
+    private static (double MicrosecondsPerStep, double BytesPerStep) Measure(Action step, int steps, int repeats)
+    {
+        for (int i = 0; i < Math.Min(steps, 2000); i++) step();
+        double best = double.PositiveInfinity, bytes = 0;
+        for (int r = 0; r < repeats; r++)
+        {
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < steps; i++) step();
+            watch.Stop();
+            best = Math.Min(best, watch.Elapsed.TotalMilliseconds * 1000.0 / steps);
+            bytes = (double)(GC.GetAllocatedBytesForCurrentThread() - allocated) / steps;
+        }
+        return (best, bytes);
     }
 
     private static void SwapPart(EngineAssembly a, string slot, PartDefinition part, PartInstanceFactory factory)

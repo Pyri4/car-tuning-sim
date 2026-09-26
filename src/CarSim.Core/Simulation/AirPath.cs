@@ -38,7 +38,8 @@ public readonly record struct AirPathConditions(
     double TurboOmega = 0.0,
     double WastegateOpening = 0.0,
     double CoolingAirSpeed = 10.0,
-    double TurbineOutletTemperature = 0.0);
+    double TurbineOutletTemperature = 0.0,
+    double IntakeCamAdvance = 0.0);
 
 /// <summary>
 /// Intake: ambient → intake/filter → [compressor → intercooler] → throttle → manifold → intake ports → cylinder.
@@ -71,11 +72,12 @@ public sealed class AirPath
 
     /// <summary>
     /// Dynamic (tuning) volumetric efficiency relative to port conditions: cam/runner resonance shape,
-    /// header scavenging bump, valve float collapse above the float speed.
+    /// header scavenging bump, valve float collapse above the float speed. <paramref name="intakeCamAdvance"/> is
+    /// the intake phaser's advance from the installed centreline (crank degrees).
     /// </summary>
-    public double VeDynamic(double rpm, double floatRpm)
+    public double VeDynamic(double rpm, double floatRpm, double intakeCamAdvance = 0.0)
     {
-        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm));
+        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance));
         if (_c.ScavengingGain > 0)
         {
             double w = 0.25 * _c.ScavengingRpm;
@@ -95,10 +97,10 @@ public sealed class AirPath
     public const double VeShapeFloor = 0.25;
 
     /// <summary>Cam/runner VE shape before the floor: an inverted parabola around the tuned speed (steeper below it with more overlap).</summary>
-    public double VeShape(double rpm)
+    public double VeShape(double rpm, double intakeCamAdvance = 0.0)
     {
-        double x = rpm / _c.VePeakRpm;
-        double aLo = VeLowSideBase + VeLowSidePerOverlapDeg * _c.OverlapDeg;
+        double x = rpm / _c.VePeakRpmAt(intakeCamAdvance);
+        double aLo = VeLowSideBase + VeLowSidePerOverlapDeg * _c.OverlapAt(intakeCamAdvance);
         return x < 1.0 ? 1.0 - aLo * (1.0 - x) * (1.0 - x) : 1.0 - VeHighSideCoefficient * (x - 1.0) * (x - 1.0);
     }
 
@@ -119,13 +121,13 @@ public sealed class AirPath
     /// long-overlap cam's VE falls smoothly instead of kinking onto a limit no fuel map can follow.
     /// Below 1 exhaust-to-intake ratio the residual shrinks (f slightly above 1, at most 1/(1 − c)).
     /// </summary>
-    public double ResidualFactor(double exhaustPortPressure, double portPressure)
+    public double ResidualFactor(double exhaustPortPressure, double portPressure, double intakeCamAdvance = 0.0)
     {
         var g = _c.Geometry;
         double clearanceShare = g.ClearanceVolume / (g.ClearanceVolume + g.SweptVolumePerCylinder);
         double ratio = exhaustPortPressure / Math.Max(1.0, portPressure);
         double expansion = Math.Pow(ratio, 1.0 / PhysicalConstants.CompressionPolytropicExponent) - 1.0;
-        double reversion = _c.OverlapDeg / 15.0 * Math.Max(0.0, ratio - ReversionPressureRatioMargin);
+        double reversion = _c.OverlapAt(intakeCamAdvance) / 15.0 * Math.Max(0.0, ratio - ReversionPressureRatioMargin);
         return 1.0 / (1.0 + clearanceShare * (expansion + reversion));
     }
 
@@ -150,7 +152,7 @@ public sealed class AirPath
                 k.AmbientPressure, k.AmbientPressure, 0, 1, 0, k.AmbientPressure, k.AmbientPressure, k.AmbientTemperature,
                 default, k.AmbientPressure, k.AmbientPressure, 0, 0);
         }
-        double veDyn = VeDynamic(k.Rpm, k.ValveFloatRpm);
+        double veDyn = VeDynamic(k.Rpm, k.ValveFloatRpm, k.IntakeCamAdvance);
         double cyclesPerSecond = k.Rpm / 120.0;
         double prBound = _c.Turbo == null ? 1.0 : TurbochargerModel.MaxPressureRatio(_c.Turbo, k.TurboOmega, k.AmbientTemperature);
 
@@ -230,7 +232,7 @@ public sealed class AirPath
         double exhaustEventFlow = exhaustFlow * (1.0 - BlowdownFraction) / n / _c.ExhaustEventFraction;
         double pExhPort = CompressibleFlow.UpstreamPressure(_c.ExhaustPortCdA, pExhManifold, tExh, exhaustEventFlow, gE, rE);
 
-        double residual = ResidualFactor(pExhPort, pPort);
+        double residual = ResidualFactor(pExhPort, pPort, k.IntakeCamAdvance);
         double airPerCycle = veDyn * residual * pPort * g.SweptVolumePerCylinder / (rAir * tCharge);
         double demand = airPerCycle * n * k.Rpm / 120.0;
         return new AirPathResult(demand, pMan, tMan, pPort, tCharge, pExhPort, pExhManifold, veDyn, residual, airPerCycle,

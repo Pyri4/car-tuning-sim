@@ -34,6 +34,12 @@ public sealed class TuneDocument
     /// <summary>Boost target (absolute manifold pressure, kPa) per RPM axis point. Used only with ECU boost control.</summary>
     public double[]? BoostTargetKpa { get; init; }
 
+    /// <summary>
+    /// Intake cam advance the ECU commands from the phaser's park position, crank degrees [load row][rpm column].
+    /// Optional: without it (or without a phaser and an ECU that can drive one) the cams stay where they are installed.
+    /// </summary>
+    public double[][]? IntakeCamAdvanceDeg { get; set; }
+
     public required double RevLimitRpm { get; init; }
 
     /// <summary>Injector flow the ECU believes is installed (injector scaling), cc/min per injector.</summary>
@@ -75,6 +81,7 @@ public sealed class TuneDocument
             if (BoostTargetKpa.Length != RpmAxis.Length) p.Add("boost_target_kpa must have one value per rpm_axis point.");
             if (BoostTargetKpa.Any(v => v < 50 || v > 1000)) p.Add("boost_target_kpa values must be within [50, 1000] kPa absolute.");
         }
+        if (IntakeCamAdvanceDeg != null) CheckTable(p, "intake_cam_advance_deg", IntakeCamAdvanceDeg, 0, 80);
         if (!(RevLimitRpm >= 1000 && RevLimitRpm <= 25000)) p.Add($"rev_limit_rpm out of range: {RevLimitRpm}");
         if (!(IdleRpm >= 300 && IdleRpm < RevLimitRpm)) p.Add($"idle_rpm out of range: {IdleRpm}");
         if (!(InjectorFlowCcMin >= 50 && InjectorFlowCcMin <= 5000)) p.Add($"injector_flow_cc_min out of range: {InjectorFlowCcMin}");

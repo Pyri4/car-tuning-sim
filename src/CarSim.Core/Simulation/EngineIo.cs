@@ -77,6 +77,12 @@ public sealed class EngineState
     /// <summary>Exhaust temperature after the turbine (mixed with wastegate flow), K.</summary>
     public double TurbineOutletTemperature;
 
+    /// <summary>Intake cam phaser position: advance from the park position, crank degrees.</summary>
+    public double IntakeCamAdvance;
+
+    /// <summary>Manifold pressure of the previous step, Pa (what the ECU's MAP sensor last reported, before clipping).</summary>
+    public double LastManifoldPressure = PhysicalConstants.StandardPressure;
+
     /// <summary>Starts the state warm (fully warmed-up engine), as after a warm-up drive.</summary>
     public static EngineState Warm(double coolantK = 363.15, double oilK = 368.15) => new()
     {
@@ -135,6 +141,9 @@ public sealed record EngineTelemetry
 
     /// <summary>Residual-gas / reversion multiplier from exhaust backpressure (1 = none).</summary>
     public double ResidualFactor { get; init; }
+
+    /// <summary>Intake cam phaser position, crank degrees advanced from park (0 for fixed cams). A cam-position sensor reads it.</summary>
+    public double IntakeCamAdvance { get; init; }
 
     public double TargetLambda { get; init; }
     public double Lambda { get; init; }
@@ -228,6 +237,9 @@ public sealed record EngineTelemetry
 
     /// <summary>Debug: the cam/runner VE shape sits on <see cref="AirPath.VeShapeFloor"/> at this speed.</summary>
     public bool VeFloorActive { get; init; }
+
+    /// <summary>Debug: the intake closes so early that the tuned-speed correlation sits on <see cref="EngineConfiguration.MinTunedPistonSpeed"/>.</summary>
+    public bool CamTuningFloorActive { get; init; }
 
     /// <summary>Turbine blade-speed ratio U/c_s (debug: 0.7 is the efficiency peak; see <see cref="TurbochargerModel.TurbineEfficiencyFloor"/>).</summary>
     public double TurbineBladeSpeedRatio { get; init; }
