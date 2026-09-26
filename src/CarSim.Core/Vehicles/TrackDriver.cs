@@ -90,6 +90,8 @@ public sealed class TrackDriver
         double error = target - speed;
         if (error < -1.0) input.Brake = Math.Clamp(-error / 6.0, 0.1, 0.55) * (1.0 - 0.6 * turning);
         else input.Throttle = Math.Clamp(0.25 + error / 3.0, 0.0, 1.0);
+        // Friction circle: with lock on, leave the rear tyres grip for cornering (progressive on exit).
+        input.Throttle = Math.Min(input.Throttle, Math.Max(0.15, Math.Sqrt(Math.Max(0.0, 1.0 - turning * turning))));
 
         // Traction and stability: back off when the driven wheels spin or the car starts to slide.
         if (last != null)

@@ -73,6 +73,23 @@ public class TrackTests
     }
 
     [Fact]
+    public void WobblingBackAndForthOverTheLineIsNotALap()
+    {
+        var timer = new LapTimer(Track);
+        int n = Track.Count;
+        timer.Update(n / 2, 20);
+        timer.Update(n - 1, 40);
+        Assert.False(timer.Update(1, 41), "starts the timed lap");
+        timer.Update(n - 1, 43); // spun backwards over the line...
+        Assert.False(timer.Update(1, 45), "...and forwards again: no lap without getting round the far side");
+        Assert.Equal(0, timer.Laps);
+        timer.Update(n / 2, 70);
+        timer.Update(n - 1, 90);
+        Assert.True(timer.Update(1, 92));
+        Assert.Equal(51.0, timer.LastLap!.Value, 9);
+    }
+
+    [Fact]
     public void LapTimerCountsCompleteLapsOnly()
     {
         var timer = new LapTimer(Track);

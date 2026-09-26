@@ -161,6 +161,7 @@ public sealed class LapTimer
     private readonly TrackLayout _track;
     private int _lastIndex = -1;
     private double _lapStart = double.NaN;
+    private bool _visitedFarSide;
 
     public LapTimer(TrackLayout track) => _track = track;
 
@@ -175,16 +176,24 @@ public sealed class LapTimer
     /// <summary>Voids the lap in progress (e.g. after a recovery); timing restarts at the next crossing.</summary>
     public void Invalidate() => _lapStart = double.NaN;
 
-    /// <summary>Update with the car's nearest centreline index; returns true when a lap was completed.</summary>
+    /// <summary>
+    /// Update with the car's nearest centreline index; returns true when a lap was completed. A lap
+    /// counts only if the car got round the far side of the circuit since the last crossing, so
+    /// wobbling back and forth over the line (a spin at the final corner) is not a lap.
+    /// </summary>
     public bool Update(int index, double time)
     {
         bool crossed = false;
+        int n = _track.Count;
+        if (index > n / 3 && index < 2 * n / 3) _visitedFarSide = true;
         if (_lastIndex >= 0)
         {
-            int n = _track.Count;
             // Crossing sample 0 forwards (from the end of the lap back to the start).
             if (_lastIndex > n * 3 / 4 && index < n / 4)
             {
+                bool complete = _visitedFarSide;
+                _visitedFarSide = false;
+                if (!complete) { _lastIndex = index; return false; }
                 if (!double.IsNaN(_lapStart))
                 {
                     LastLap = time - _lapStart;
