@@ -164,7 +164,24 @@ public sealed class Garage
         return ActionResult.Success(r.Message);
     }
 
-    /// <summary>Slots of the engine that accept <paramref name="part"/>'s category.</summary>
+    /// <summary>Whether <paramref name="part"/> could be fitted to <paramref name="slotId"/> right now (engine or chassis).</summary>
+    public ActionResult CanInstall(string slotId, PartInstance part)
+    {
+        if (IsChassisSlot(slotId))
+        {
+            var cslot = Chassis!.Definition.FindSlot(slotId)!;
+            if (part.Category != cslot.Category) return ActionResult.Fail($"{part.Definition.Name} is a {part.Category} part; {cslot.Label} takes {cslot.Category}.");
+            if (Chassis.PartIn(slotId) != null) return ActionResult.Fail($"{cslot.Label} is occupied.");
+            return ActionResult.Success("");
+        }
+        var slot = Engine.Definition.FindSlot(slotId);
+        if (slot == null) return ActionResult.Fail($"Unknown slot '{slotId}'.");
+        if (!CanAccess(slotId)) return ActionResult.Fail($"{slot.Label} cannot be reached with the engine in the car. Remove the engine first.");
+        var r = Engine.CanInstall(slotId, part);
+        return r.Ok ? ActionResult.Success("") : ActionResult.Fail(r.Message);
+    }
+
+    /// <summary>Slots of the engine or the car that accept <paramref name="part"/>'s category.</summary>
     public IEnumerable<EngineSlotDefinition> SlotsFor(PartInstance part) =>
         Engine.Definition.Slots.Concat(Chassis?.Definition.Slots ?? Array.Empty<EngineSlotDefinition>()).Where(s => s.Category == part.Category);
 

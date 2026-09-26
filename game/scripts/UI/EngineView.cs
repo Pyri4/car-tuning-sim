@@ -9,7 +9,10 @@ using Godot;
 
 namespace CarTuningSim.UI;
 
-/// <summary>Engine component tree, part details, inspection, removal/installation and the parts shop.</summary>
+/// <summary>
+/// Workshop: the engine and chassis component tree, part details, inspection, removal/installation and
+/// the parts shop.
+/// </summary>
 public partial class EngineView : HSplitContainer
 {
     private static readonly (string Group, string[] Categories)[] Groups =
@@ -20,6 +23,12 @@ public partial class EngineView : HSplitContainer
         ("Fuel", new[] { "injectors", "fuel_pump" }),
         ("Exhaust", new[] { "exhaust_manifold", "exhaust" }),
         ("Cooling & electronics", new[] { "radiator", "ecu" }),
+    };
+
+    private static readonly (string Group, string[] Categories)[] ChassisGroups =
+    {
+        ("Drivetrain", new[] { "clutch", "gearbox", "differential" }),
+        ("Chassis", new[] { "tires", "suspension", "brakes" }),
     };
 
     private Tree _tree = null!;
@@ -96,10 +105,12 @@ public partial class EngineView : HSplitContainer
     {
         _tree.Clear();
         var root = _tree.CreateItem();
-        var engine = G.Engine;
-        foreach (var (group, categories) in Groups)
+        var engineGroups = Groups.Select(g => (g.Group, g.Categories, Slots: G.Engine.Definition.Slots));
+        var chassisSlots = G.Vehicle?.Slots ?? System.Array.Empty<EngineSlotDefinition>();
+        var chassisGroups = ChassisGroups.Select(g => (g.Group, g.Categories, Slots: chassisSlots));
+        foreach (var (group, categories, allSlots) in engineGroups.Concat(chassisGroups))
         {
-            var slots = engine.Definition.Slots.Where(s => categories.Contains(s.Category)).ToList();
+            var slots = allSlots.Where(s => categories.Contains(s.Category)).ToList();
             if (slots.Count == 0) continue;
             var groupItem = _tree.CreateItem(root);
             groupItem.SetText(0, group);
@@ -110,7 +121,7 @@ public partial class EngineView : HSplitContainer
             foreach (var slot in slots)
             {
                 var item = _tree.CreateItem(groupItem);
-                var part = engine.PartIn(slot.Id);
+                var part = G.PartIn(slot.Id);
                 item.SetText(0, $"{slot.Label}: {(part == null ? "— empty —" : part.Definition.Name)}");
                 item.SetMetadata(0, slot.Id);
                 if (part != null)
@@ -123,7 +134,7 @@ public partial class EngineView : HSplitContainer
                     : PartInspector.Inspect(part).Any(f => f.Severity == FindingSeverity.Major) ? "damaged"
                     : PartInspector.Inspect(part).Any(f => f.Severity == FindingSeverity.Minor) ? "worn"
                     : "ok";
-                if (G.EngineInCar && !slot.AccessibleInVehicle) status += " · in car";
+                if (!G.CanAccess(slot.Id)) status += " · in car";
                 item.SetText(2, status);
                 item.SetCustomColor(2, status.StartsWith("FAILED") || status.StartsWith("missing") ? Ui.Danger
                     : status.StartsWith("damaged") || status.StartsWith("worn") ? Ui.Caution : Ui.Muted);
@@ -166,13 +177,14 @@ public partial class EngineView : HSplitContainer
     private void BuildDetails()
     {
         Ui.Clear(_details);
-        if (_selectedSlot == null || G.Engine.Definition.FindSlot(_selectedSlot) is not { } slot)
+        if (_selectedSlot == null || FindSlot(_selectedSlot) is not { } slot)
         {
             _details.AddChild(Ui.Heading("Select a part"));
             _details.AddChild(Ui.Wrapped("Pick a slot in the tree to inspect the part, see its specifications, remove it, or fit a replacement from the shelf or the shop.", 14, Ui.Muted));
             return;
         }
-        var part = G.Engine.PartIn(slot.Id);
+        bool chassis = G.IsChassisSlot(slot.Id);
+        var part = G.PartIn(slot.Id);
         _details.AddChild(Ui.Heading(slot.Label));
         if (part == null)
         {
@@ -200,7 +212,7 @@ public partial class EngineView : HSplitContainer
             var remove = Ui.Button("Remove to shelf", () => Act(G.RemovePart(slot.Id)));
             actions.AddChild(remove);
             _details.AddChild(actions);
-            var blocked = G.Engine.CanRemove(slot.Id);
+            var blocked = chassis ? AssemblyResult.Success() : G.Engine.CanRemove(slot.Id);
             if (!G.CanAccess(slot.Id))
             {
                 remove.Disabled = true;
@@ -225,11 +237,11 @@ public partial class EngineView : HSplitContainer
                 var row = Ui.HBox();
                 row.AddChild(Ui.Expand(Ui.Label($"{p.Definition.Name}  ({p.Condition * 100:F0} %)", 14, Ui.ConditionColor(p.Condition))));
                 var install = Ui.Button("Install", () => Act(G.InstallPart(p, slot.Id)));
-                install.Disabled = !G.CanAccess(slot.Id) || !G.Engine.CanInstall(slot.Id, p).Ok;
+                install.Disabled = !G.CanInstall(slot.Id, p).Ok;
                 row.AddChild(install);
                 _details.AddChild(row);
             }
-            var check = G.Engine.CanInstall(slot.Id, shelf[0]);
+            var check = G.CanInstall(slot.Id, shelf[0]);
             if (!check.Ok) _details.AddChild(Ui.Wrapped(check.Message, 13, Ui.Caution));
         }
 
@@ -247,6 +259,8 @@ public partial class EngineView : HSplitContainer
             _details.AddChild(row);
         }
     }
+
+    private static EngineSlotDefinition? FindSlot(string id) => G.Engine.Definition.FindSlot(id) ?? G.Vehicle?.FindSlot(id);
 
     private static GridContainer SpecGrid(PartDefinition def)
     {

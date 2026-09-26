@@ -6,7 +6,7 @@ namespace CarTuningSim;
 
 /// <summary>
 /// Root of the prototype UI: a status bar and tabs for the garage, engine, tuning, dyno and reports.
-/// Command-line (after "--"): --tab=garage|engine|tuning|dyno|reports, --select=slot, --autorun,
+/// Command-line (after "--"): --tab=garage|workshop|tuning|dyno|reports|drive, --select=slot, --autorun,
 /// --dyno-end=rpm, --screenshot=file.png, --frames=N.
 /// </summary>
 public partial class Main : Control
@@ -37,7 +37,7 @@ public partial class Main : Control
 
         _tabs = new TabContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         root.AddChild(_tabs);
-        var engine = new EngineView { Name = "Engine", InitialSelection = Arg("select") };
+        var engine = new EngineView { Name = "Workshop", InitialSelection = Arg("select") };
         var dyno = new DynoView { Name = "Dyno", AutoRun = Flag("autorun") };
         if (double.TryParse(Arg("dyno-end"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var end)) dyno.AutoEndRpm = end;
         _tabs.AddChild(new GarageView { Name = "Garage" });

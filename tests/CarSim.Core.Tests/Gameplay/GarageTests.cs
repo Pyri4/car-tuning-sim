@@ -137,7 +137,11 @@ public class GarageTests
         Assert.False(g.CreateVehicleSimulation().Sim != null, "no differential, no driving");
         Assert.True(g.Buy("differential.lsd_410").Ok);
         var lsd = g.Inventory.Single(p => p.Definition.Id == "differential.lsd_410");
+        Assert.False(g.CanInstall("gearbox", lsd).Ok, "a differential does not go in the gearbox slot");
+        Assert.True(g.CanInstall("differential", lsd).Ok);
+        Assert.Contains(g.SlotsFor(lsd), s => s.Id == "differential");
         Assert.True(g.InstallPart(lsd, "differential").Ok);
+        Assert.False(g.CanInstall("differential", lsd).Ok, "slot is now occupied");
         Assert.Equal("differential.lsd_410", g.PartIn("differential")!.Definition.Id);
         Assert.NotNull(g.CreateVehicleSimulation().Sim);
     }

@@ -82,7 +82,7 @@ public partial class GarageView : HBoxContainer
         Ui.Clear(_shelf);
         _shelf.AddChild(Ui.Heading($"Shelf ({G.Inventory.Count} parts)"));
         if (G.Inventory.Count == 0)
-            _shelf.AddChild(Ui.Wrapped("Empty. Parts you remove or buy land here. Buy parts from the Engine tab (select a slot).", 14, Ui.Muted));
+            _shelf.AddChild(Ui.Wrapped("Empty. Parts you remove or buy land here. Buy parts from the Workshop tab (select a slot).", 14, Ui.Muted));
         foreach (var part in G.Inventory.OrderBy(p => p.Category).ThenBy(p => p.Definition.Name))
         {
             var box = Ui.VBox(2);
@@ -93,17 +93,17 @@ public partial class GarageView : HBoxContainer
             box.AddChild(head);
             foreach (var f in PartInspector.Inspect(part).Where(f => f.Severity != FindingSeverity.Good))
                 box.AddChild(Ui.Wrapped("   " + f.Text, 13, f.Severity == FindingSeverity.Minor ? Ui.Caution : Ui.Danger));
-            var targets = G.SlotsFor(part).Where(s => !G.Engine.IsInstalled(s.Id)).ToList();
+            var targets = G.SlotsFor(part).Where(s => !G.IsFilled(s.Id)).ToList();
             foreach (var slot in targets)
             {
-                var check = G.Engine.CanInstall(slot.Id, part);
+                var check = G.CanInstall(slot.Id, part);
                 var install = Ui.Button($"Install in {slot.Label}", () =>
                 {
                     var r = G.InstallPart(part, slot.Id);
                     if (!r.Ok) Ui.Message(this, "Install", r.Message);
                     State.NotifyChanged();
                 });
-                install.Disabled = !check.Ok || !G.CanAccess(slot.Id);
+                install.Disabled = !check.Ok;
                 install.TooltipText = check.Ok ? "" : check.Message;
                 box.AddChild(install);
             }
