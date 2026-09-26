@@ -201,7 +201,7 @@ public sealed class EngineSimulation
         FuelDelivery delivery = default;
         if (wantsToFire && !revCut && air.AirPerCycle > 0)
         {
-            double estAir = Ecu.EstimatedAirPerCycle(air.AirPerCycle, air.ManifoldPressure);
+            double estAir = Ecu.EstimatedAirPerCycle(rpm, air.ManifoldPressure, air.ManifoldTemperature, g.Cylinders);
             double fuelCmd = Ecu.CommandedFuelPerCycle(estAir, targetLambda);
             double pw = Ecu.PulseWidth(fuelCmd, fuel.Density);
             delivery = FuelSystem.Deliver(c.Injectors, c.Part(PartCategory.Injectors).Wear, c.FuelPump,
@@ -357,6 +357,7 @@ public sealed class EngineSimulation
             BoostPressure = air.ManifoldPressure - input.AmbientPressure,
             PortPressure = air.PortPressure,
             ExhaustBackPressure = air.ExhaustManifoldPressure - input.AmbientPressure,
+            ManifoldTemperature = air.ManifoldTemperature,
             ChargeTemperature = air.ChargeTemperature,
             AirMassFlow = air.MassFlow,
             AirPerCycle = air.AirPerCycle,

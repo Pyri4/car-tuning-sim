@@ -33,6 +33,34 @@ public static class SimFactory
     public static IReadOnlyList<EngineTelemetry> Sweep(EngineSimulation sim, double from = 1000, double to = 7500, double step = 500) =>
         SteadyStateSweep.Run(sim, from, to, step, settleSeconds: 1.0);
 
+    /// <summary>
+    /// A copy of the tune with more rows on its load axis, each repeating the top row — what a tuner does
+    /// before mapping more boost than the base calibration covers.
+    /// </summary>
+    public static EcuTune ExtendLoadAxis(EcuTune tune, params double[] extraKpa)
+    {
+        var d = tune.ToDocument();
+        double[][] Extend(double[][] rows) => rows.Concat(extraKpa.Select(_ => rows[^1].ToArray())).ToArray();
+        return EcuTune.FromDocument(new CarSim.Core.Content.TuneDocument
+        {
+            Id = d.Id, Name = d.Name, RpmAxis = d.RpmAxis, LoadAxisKpa = d.LoadAxisKpa.Concat(extraKpa).ToArray(),
+            TargetLambda = Extend(d.TargetLambda), IgnitionAdvanceDeg = Extend(d.IgnitionAdvanceDeg),
+            VolumetricEfficiency = Extend(d.VolumetricEfficiency!), DisplacementCc = d.DisplacementCc,
+            BoostTargetKpa = d.BoostTargetKpa, RevLimitRpm = d.RevLimitRpm, IdleRpm = d.IdleRpm,
+            KnockControlEnabled = d.KnockControlEnabled, InjectorFlowCcMin = d.InjectorFlowCcMin, FuelStoichAfr = d.FuelStoichAfr,
+        });
+    }
+
+    /// <summary>The tune with its VE table measured on this engine (the dyno session after a build).</summary>
+    public static EcuTune WithCalibratedVe(EngineAssembly assembly, string fuel, EcuTune tune, double holdSeconds = 1.0)
+    {
+        var table = VeCalibrator.Calibrate(Create(assembly, fuel, tune), holdSeconds);
+        var calibrated = tune.Clone();
+        for (int r = 0; r < table.Length; r++)
+            for (int c = 0; c < table[r].Length; c++) calibrated.VolumetricEfficiency[r, c] = table[r][c];
+        return calibrated;
+    }
+
     public static EngineTelemetry PeakPower(IEnumerable<EngineTelemetry> points) => points.MaxBy(p => p.Power)!;
     public static EngineTelemetry PeakTorque(IEnumerable<EngineTelemetry> points) => points.MaxBy(p => p.Torque)!;
 }

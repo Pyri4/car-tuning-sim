@@ -45,14 +45,23 @@ public sealed class EcuController
     public double SparkAdvance(double rpm, double mapReading) => Tune.AdvanceAt(rpm, Units.PaToKpa(mapReading)) - KnockRetard;
 
     /// <summary>
-    /// Speed-density air estimate. The calibration is assumed to model the engine's breathing
-    /// correctly, so the estimate is exact while the MAP sensor is in range and falls short in
-    /// proportion to how far the manifold pressure exceeds the sensor's range.
+    /// Speed-density air estimate from the ECU's own sensors and calibration:
+    /// m = VE_table(rpm, MAP_read) · MAP_read · (displacement / cylinders) / (R · IAT). The ECU does not
+    /// know the engine's real breathing: when cams, head, exhaust or boost hardware change it, the table is
+    /// wrong and the mixture drifts until it is re-tuned. Beyond the MAP sensor's range the reading is
+    /// clipped, so the estimate falls short (a stock ECU on boost runs lean).
     /// </summary>
-    public double EstimatedAirPerCycle(double trueAirPerCycle, double manifoldPressure)
+    /// <param name="rpm">Engine speed.</param>
+    /// <param name="manifoldPressure">True manifold pressure, Pa (the sensor clips it).</param>
+    /// <param name="intakeAirTemperature">Manifold air temperature at the IAT sensor, K.</param>
+    /// <param name="cylinders">Cylinder count (the ECU's injection pattern).</param>
+    public double EstimatedAirPerCycle(double rpm, double manifoldPressure, double intakeAirTemperature, int cylinders)
     {
-        if (manifoldPressure <= 0) return 0.0;
-        return trueAirPerCycle * ReadMap(manifoldPressure) / manifoldPressure;
+        if (manifoldPressure <= 0 || intakeAirTemperature <= 0 || cylinders <= 0) return 0.0;
+        double map = ReadMap(manifoldPressure);
+        double ve = Tune.VolumetricEfficiencyAt(rpm, Units.PaToKpa(map));
+        double cylinderVolume = Units.CcToM3(Tune.DisplacementCc) / cylinders;
+        return ve * map * cylinderVolume / (PhysicalConstants.AirGasConstant * intakeAirTemperature);
     }
 
     /// <summary>Fuel mass per cylinder per cycle the ECU wants, using its own stoichiometric AFR belief.</summary>

@@ -200,6 +200,29 @@ public class GarageTests
     }
 
     [Fact]
+    public void AVersion1SaveGetsTheStockFuelMapAndLoads()
+    {
+        // Version-1 tunes had no VE table or displacement (the old ECU fuelled from the true airflow).
+        var g = NewGame();
+        g.Tune.InjectorFlowCcMin = 550;
+        var node = System.Text.Json.Nodes.JsonNode.Parse(SaveSystem.Serialize(g))!.AsObject();
+        node["version"] = 1;
+        var tune = node["tune"]!.AsObject();
+        Assert.True(tune.Remove("volumetric_efficiency") && tune.Remove("displacement_cc"));
+        var loaded = SaveSystem.Deserialize(node.ToJsonString(), TestContent.Database);
+
+        var stock = SimFactory.StockTune();
+        Assert.Equal(550, loaded.Tune.InjectorFlowCcMin);
+        Assert.Equal(stock.DisplacementCc, loaded.Tune.DisplacementCc);
+        Assert.Equal(stock.VolumetricEfficiency.ToRows(), loaded.Tune.VolumetricEfficiency.ToRows());
+        Assert.Contains($"\"version\": {SaveSystem.CurrentVersion}", SaveSystem.Serialize(loaded));
+        // Without migration the tune would be rejected outright.
+        node["version"] = SaveSystem.CurrentVersion;
+        var ex = Assert.Throws<InvalidDataException>(() => SaveSystem.Deserialize(node.ToJsonString(), TestContent.Database));
+        Assert.Contains("volumetric_efficiency missing", ex.Message);
+    }
+
+    [Fact]
     public void SaveReferencingMissingContentGivesAClearError()
     {
         string json = SaveSystem.Serialize(NewGame()).Replace("\"k20.head.oem\"", "\"modpack.head.missing\"");

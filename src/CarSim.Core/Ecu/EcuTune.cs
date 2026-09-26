@@ -10,13 +10,15 @@ namespace CarSim.Core.Ecu;
 /// </summary>
 public sealed class EcuTune
 {
-    public EcuTune(string id, string name, Table2D targetLambda, Table2D ignitionAdvance, Table2D? boostTarget,
-        double revLimitRpm, double idleRpm, bool knockControlEnabled, double injectorFlowCcMin, double fuelStoichAfr)
+    public EcuTune(string id, string name, Table2D targetLambda, Table2D ignitionAdvance, Table2D volumetricEfficiency, Table2D? boostTarget,
+        double revLimitRpm, double idleRpm, bool knockControlEnabled, double injectorFlowCcMin, double fuelStoichAfr, double displacementCc)
     {
         Id = id;
         Name = name;
         TargetLambda = targetLambda;
         IgnitionAdvance = ignitionAdvance;
+        VolumetricEfficiency = volumetricEfficiency;
+        DisplacementCc = displacementCc;
         BoostTarget = boostTarget;
         RevLimitRpm = revLimitRpm;
         IdleRpm = idleRpm;
@@ -34,6 +36,15 @@ public sealed class EcuTune
     /// <summary>Spark advance, degrees BTDC [MAP kPa row][rpm column].</summary>
     public Table2D IgnitionAdvance { get; }
 
+    /// <summary>
+    /// Speed-density fuel map: volumetric efficiency relative to the MAP and intake air temperature the
+    /// ECU measures [MAP kPa row][rpm column].
+    /// </summary>
+    public Table2D VolumetricEfficiency { get; }
+
+    /// <summary>Engine displacement the ECU is set up for, cc.</summary>
+    public double DisplacementCc { get; set; }
+
     /// <summary>Boost target (absolute kPa) vs rpm, single row. Null when the calibration has none.</summary>
     public Table2D? BoostTarget { get; }
 
@@ -49,6 +60,7 @@ public sealed class EcuTune
 
     public double LambdaAt(double rpm, double mapKpa) => TargetLambda.Evaluate(rpm, mapKpa);
     public double AdvanceAt(double rpm, double mapKpa) => IgnitionAdvance.Evaluate(rpm, mapKpa);
+    public double VolumetricEfficiencyAt(double rpm, double mapKpa) => VolumetricEfficiency.Evaluate(rpm, mapKpa);
     public double? BoostTargetKpaAt(double rpm) => BoostTarget?.Evaluate(rpm, 0.0);
 
     /// <summary>Highest boost target in the table (absolute kPa), or null without a boost table.</summary>
@@ -58,9 +70,12 @@ public sealed class EcuTune
     {
         var lambda = new Table2D(d.RpmAxis, d.LoadAxisKpa, d.TargetLambda);
         var ign = new Table2D(d.RpmAxis, d.LoadAxisKpa, d.IgnitionAdvanceDeg);
+        var ve = new Table2D(d.RpmAxis, d.LoadAxisKpa, d.VolumetricEfficiency
+            ?? throw new InvalidDataException($"Tune '{d.Id}' has no volumetric_efficiency table."));
+        double displacement = d.DisplacementCc ?? throw new InvalidDataException($"Tune '{d.Id}' has no displacement_cc.");
         Table2D? boost = d.BoostTargetKpa == null ? null : new Table2D(d.RpmAxis, new[] { 0.0 }, new[] { d.BoostTargetKpa });
-        return new EcuTune(d.Id, d.Name, lambda, ign, boost, d.RevLimitRpm, d.IdleRpm, d.KnockControlEnabled,
-            d.InjectorFlowCcMin, d.FuelStoichAfr);
+        return new EcuTune(d.Id, d.Name, lambda, ign, ve, boost, d.RevLimitRpm, d.IdleRpm, d.KnockControlEnabled,
+            d.InjectorFlowCcMin, d.FuelStoichAfr, displacement);
     }
 
     public TuneDocument ToDocument() => new()
@@ -71,6 +86,8 @@ public sealed class EcuTune
         LoadAxisKpa = TargetLambda.YAxis.ToArray(),
         TargetLambda = TargetLambda.ToRows(),
         IgnitionAdvanceDeg = IgnitionAdvance.ToRows(),
+        VolumetricEfficiency = VolumetricEfficiency.ToRows(),
+        DisplacementCc = DisplacementCc,
         BoostTargetKpa = BoostTarget?.ToRows()[0],
         RevLimitRpm = RevLimitRpm,
         IdleRpm = IdleRpm,

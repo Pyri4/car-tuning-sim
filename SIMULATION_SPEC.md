@@ -72,24 +72,45 @@ cylinder → exhaust port → exhaust manifold → exhaust system → ambient.
 - Valve float: above the float speed VE collapses by up to 60 % over the next 8 %.
 
 ### Residuals and reversion
-With pressure ratio `r = p_exhaust_port / p_intake_port` and clearance share `c = V_c/(V_c+V_d)`:
-`f_res = 1 − c · [(r^(1/1.3) − 1) + (overlap°/15) · max(0, r − 1.25)]`, clamped to [0.4, 1.03].
-The first term is burnt gas left in the clearance volume; the second is exhaust pushed back into the
-intake during overlap once exhaust pressure is well above intake pressure (tuned NA exhausts keep
-pulse pressure favourable below the 1.25 margin; turbo manifolds exceed it).
+With pressure ratio `r = p_exhaust_port / p_intake_port` and clearance share `c = V_c/(V_c+V_d)`, the
+displaced fraction is `x = c · [(r^(1/1.3) − 1) + (overlap°/15) · max(0, r − 1.25)]` and
+`f_res = 1 / (1 + x)`. The first term is burnt gas left in the clearance volume; the second is exhaust
+pushed back into the intake during overlap once exhaust pressure is well above intake pressure (tuned
+NA exhausts keep pulse pressure favourable below the 1.25 margin; turbo manifolds exceed it).
+`1/(1+x)` equals `1 − x` to first order but only tends to zero as the backflow grows (reverted gas
+raises the port pressure and chokes its own backflow). The earlier `1 − x` clamped at 0.4 put a flat
+floor and a kink into part-load VE for long-overlap cams (VE 0.39 flat below 31 kPa MAP, then 0.60 at
+45 kPa), which no fuel table can follow. `f_res` is at most `1/(1 − c)` (exhaust below intake).
 
 ## Valvetrain (`Engines/ValvetrainModel.cs`)
 Harmonic lift profile over the advertised event (duration@1mm + 50°):
 `rpm_float = (D/6) · √(F_open / (2π² · m_valve · L))`. Spring wear reduces force by up to 15 %.
 
 ## ECU (`Ecu/`)
-- Tables over rpm × **measured** MAP (kPa): target λ, spark advance. Optional boost target vs rpm.
-- MAP sensor reading is clipped at `map_sensor_max_kpa`. The speed-density air estimate is exact
-  while the sensor is in range and under-reads by `MAP_read / MAP_actual` beyond it (stock ECU on
-  boost → lean).
+The ECU only knows its sensors and its calibration; it never sees the engine's true airflow.
+- Tables over rpm × **measured** MAP (kPa): target λ, spark advance, volumetric efficiency. Optional
+  boost target vs rpm.
+- MAP sensor reading is clipped at `map_sensor_max_kpa` (stock ECU on boost: the reading and so the
+  fuel estimate stop rising → lean).
+- Speed-density air estimate per cylinder per cycle:
+  `m_air_est = VE_table(rpm, MAP_read) · MAP_read · (displacement_cc / cylinders) / (R · IAT)`, with
+  IAT the manifold air temperature (the sensor sits upstream of the injectors).
 - Fuel command: `m_f = m_air_est / (λ_target · fuel_stoich_afr_calibrated)`; pulse width uses the
-  calibrated injector flow (`injector_flow_cc_min`). Wrong injector scaling or fuel calibration gives
-  the corresponding AFR error.
+  calibrated injector flow (`injector_flow_cc_min`).
+- λ therefore follows the ratio of true to estimated air. Everything the table was not calibrated
+  for moves it: cams, head, header, exhaust, intake runners, turbo and manifold, a stroker
+  (displacement), and even the fuel — E85's stronger evaporative cooling happens after the IAT sensor
+  and packs in ≈ 4–6 % more air than a gasoline table expects. The IAT correction covers most of a
+  missing intercooler (≈ 3 % λ error for ≈ 11 % less dense charge). Wrong injector scaling or fuel
+  calibration gives the corresponding AFR error.
+- Not modelled: injector dead time, coolant/warm-up enrichment, transient (wall-film) fuelling,
+  closed-loop λ trim. The wideband λ on the dyno is the feedback the player tunes the VE table with.
+- `VeCalibrator` (`carsim calibrate-ve`) is the content author's base-map generator: it holds the
+  engine on a steady-state dyno over a 13-point throttle sweep at every rpm column, computes
+  `VE = m_air · R · IAT / (MAP · V_cyl)` and interpolates onto the table's load axis (two passes, the
+  second fuelled from the first; boost target raised to the top load row; columns above the rev limit
+  repeat the last one inside it). The game never calls it. The shipped tables are its output, and
+  `SpeedDensityTests` fails when physics changes make them stale (stock engine off target by > 2 %).
 - Rev limit: `min(tune, hardware max)`, fuel cut with 150 rpm hysteresis.
 - Knock control (if hardware + tune enable it): retard at 6°/s per degree of knock, up to 10°;
   recover at 1°/s.
@@ -419,7 +440,8 @@ peak VE ≈ 0.93, WOT peak cylinder pressure ≈ 60–66 bar, hot oil pressure �
 Deterministic xUnit tests cover: unit conversions, compressible flow, root finding, geometry and
 compression ratio, valvetrain, combustion functions, torque/power identity (P = T·ω), BMEP
 identity, throttle/vacuum, exhaust restriction, cams/runners/heads, fueling limits (injectors,
-pump, calibration errors), knock and timing, rev limiter, valve float, rod loads, oil pressure,
+pump, calibration errors), speed-density fuelling (shipped tables on target, breathing mods, stroker
+displacement, IAT compensation, recalibration, smooth part-load VE), knock and timing, rev limiter, valve float, rod loads, oil pressure,
 thermal behaviour, starting/idle/revving, determinism, compressor speed lines/choke/surge, compressor
 energy consistency, turbine power, spool order by turbo size, transient lag vs steady state, boost
 control, boost creep, intercooling, stock-ECU MAP saturation, overlap reversion under drive pressure,

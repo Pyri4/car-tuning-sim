@@ -403,6 +403,7 @@ public static class ContentLoader
                 Id = tune.Id, Name = tune.Name, Description = tune.Description,
                 RpmAxis = tune.RpmAxis, LoadAxisKpa = tune.LoadAxisKpa,
                 TargetLambda = tune.TargetLambda, IgnitionAdvanceDeg = tune.IgnitionAdvanceDeg,
+                VolumetricEfficiency = tune.VolumetricEfficiency, DisplacementCc = tune.DisplacementCc,
                 BoostTargetKpa = tune.BoostTargetKpa, RevLimitRpm = tune.RevLimitRpm,
                 IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
                 InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = source,

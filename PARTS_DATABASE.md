@@ -230,8 +230,14 @@ The `install_after` graph must be acyclic. A slot can be filled only when all of
 
 ## Tunes (`tunes`)
 See SIMULATION_SPEC.md (ECU section) — `rpm_axis`, `load_axis_kpa`, `target_lambda[load][rpm]`,
-`ignition_advance_deg[load][rpm]`, optional `boost_target_kpa[rpm]`, `rev_limit_rpm`, `idle_rpm`,
-`knock_control_enabled`.
+`ignition_advance_deg[load][rpm]`, `volumetric_efficiency[load][rpm]` (speed-density fuel map: VE
+relative to the MAP and intake air temperature the ECU reads, 0.05–3.0), `displacement_cc` (the
+engine size the ECU assumes), `injector_flow_cc_min`, `fuel_stoich_afr`, optional
+`boost_target_kpa[rpm]`, `rev_limit_rpm`, `idle_rpm`, `knock_control_enabled`.
+
+The VE table and displacement are required. Generate a base table for the build the tune is meant
+for with `carsim calibrate-ve [build options]` (it prints the rows to paste); an engine whose
+breathing differs from that build runs off its target λ until the table is re-tuned.
 
 ## Scenarios (`scenarios`)
 New-game starting points: `id`, `name`, `description`, `engine`, `vehicle` (optional car id; its

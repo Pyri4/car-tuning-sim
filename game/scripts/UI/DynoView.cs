@@ -19,7 +19,7 @@ public partial class DynoView : HSplitContainer
 
     private static readonly string[] Channels =
     {
-        "Boost & λ", "Spark: advance / MBT / knock limit", "Temperatures (EGT, coolant, oil, charge)",
+        "Boost & λ", "Spark advance & knock sensor", "Temperatures (EGT, coolant, oil, charge)",
         "Oil pressure vs requirement", "Volumetric efficiency & injector duty", "Turbo: shaft rpm & wastegate",
         "Peak cylinder pressure & rod load",
     };
@@ -228,8 +228,8 @@ public partial class DynoView : HSplitContainer
         Set("Boost", $"{t.BoostKpa:F0} kPa ({Units.PaToPsi(t.BoostPressure):F1} psi)");
         Set("λ / AFR", t.Firing ? $"{t.Lambda:F2} / {t.Afr:F1}  (target {t.TargetLambda:F2})" : "—", t.Firing && t.Lambda > t.TargetLambda + 0.07 ? Ui.Danger : null);
         Set("Injector duty", $"{t.InjectorDuty * 100:F0} %" + (t.FuelLimit != FuelLimit.None ? $"  {t.FuelLimit}" : ""), t.InjectorDuty > 0.9 || t.FuelLimit != FuelLimit.None ? Ui.Danger : t.InjectorDuty > 0.8 ? Ui.Caution : null);
-        Set("Spark advance", $"{t.IgnitionAdvance:F1}°  (MBT {t.MbtAdvance:F1}°, knock limit {t.KnockLimitAdvance:F1}°)");
-        Set("Knock", t.KnockIntensity > 0 ? $"{t.KnockIntensity:F1}° over  (retard {t.KnockRetard:F1}°)" : $"none (retard {t.KnockRetard:F1}°)", t.KnockIntensity > 0.3 ? Ui.Danger : null);
+        Set("Spark advance", $"{t.IgnitionAdvance:F1}° BTDC" + (t.KnockRetard > 0.05 ? $"  (knock retard {t.KnockRetard:F1}°)" : ""));
+        Set("Knock", $"{KnockSensor(t.KnockIntensity)}  (sensor {t.KnockIntensity * 10:F0})", t.KnockIntensity > 0.3 ? Ui.Danger : null);
         Set("Peak cyl. pressure", $"{t.PeakCylinderPressureBar:F0} bar");
         Set("EGT", $"{t.EgtC:F0} °C", t.EgtC > 950 ? Ui.Caution : null);
         Set("Coolant", $"{t.CoolantC:F0} °C" + (t.CoolantLevel < 0.99 ? $"  level {t.CoolantLevel * 100:F0} %" : ""), t.CoolantC > 110 ? Ui.Danger : t.CoolantC > 100 ? Ui.Caution : null);
@@ -288,6 +288,13 @@ public partial class DynoView : HSplitContainer
         _auxGraph.QueueRedraw();
     }
 
+    /// <summary>
+    /// What a knock sensor tells a tuner: how hard it is knocking, not how far the timing is from the limit
+    /// (MBT and the knock limit are found by experiment; the CLI's hold/sweep still print them for development).
+    /// </summary>
+    private static string KnockSensor(double intensity) =>
+        intensity <= 0 ? "quiet" : intensity < 1 ? "light knock" : intensity < 3 ? "knocking" : "heavy knock";
+
     private void AddAux(IReadOnlyList<EngineTelemetry> s, string name, Color color)
     {
         var g = _auxGraph;
@@ -302,9 +309,9 @@ public partial class DynoView : HSplitContainer
                 g.RightMin = 0.6f; g.RightMax = 1.3f;
                 break;
             case 1:
-                g.LeftLabel = "Degrees BTDC"; g.RightLabel = "Knock (° over)";
-                L("advance", t => t.IgnitionAdvance, color); L("MBT", t => t.MbtAdvance, Ui.Good, true); L("knock limit", t => t.KnockLimitAdvance, Ui.Danger, true);
-                R("knock", t => t.KnockIntensity, Ui.Caution);
+                g.LeftLabel = "Degrees BTDC"; g.RightLabel = "Knock sensor";
+                L("advance", t => t.IgnitionAdvance, color); L("knock retard", t => t.KnockRetard, Ui.Danger, true);
+                R("knock", t => t.KnockIntensity * 10, Ui.Caution);
                 break;
             case 2:
                 g.LeftLabel = "°C"; g.RightLabel = "";

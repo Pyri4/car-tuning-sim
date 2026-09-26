@@ -1,6 +1,7 @@
 using CarSim.Core.Common;
 using CarSim.Core.Damage;
 using CarSim.Core.Ecu;
+using CarSim.Core.Engines;
 using CarSim.Core.Tests.Simulation;
 using CarSim.Core.Vehicles;
 
@@ -146,7 +147,10 @@ public class ChassisWearTests
     /// A T35 on E85 at 300 kPa: about 475 N·m once spooled (6500 rpm), more than the stock gearbox is rated for (and the OEM
     /// crankshaft, which is why this build has a forged one and race bearings).
     /// </summary>
-    private static VehicleSimulation BigTurboCar(params (string slot, string part)[] chassisSwaps)
+    private static VehicleSimulation BigTurboCar(params (string slot, string part)[] chassisSwaps) =>
+        Car.Create(BigTurboEngine(), BigTurboTune.Value.Clone(), "e85", chassisSwaps);
+
+    private static EngineAssembly BigTurboEngine()
     {
         var db = TestContent.Database;
         var a = SimFactory.Assembly(("crankshaft", "k20.crankshaft.forged"), ("main_bearings", "k20.main_bearings.race"), ("rod_bearings", "k20.rod_bearings.race"),
@@ -156,12 +160,21 @@ public class ChassisWearTests
         var f = new CarSim.Core.Parts.PartInstanceFactory(6_000_000);
         Assert.True(a.Install("turbocharger", f.Create(db.GetPart("turbo.t35_big"))).Ok);
         Assert.True(a.Install("intercooler", f.Create(db.GetPart("intercooler.fmic_race"))).Ok);
-        var tune = EcuTune.FromDocument(db.GetTune("k20.turbo_base"));
+        return a;
+    }
+
+    /// <summary>
+    /// The turbo base tune taken to 300 kPa on E85, its map extended past the boost and its VE table
+    /// calibrated on this build (on the T28's table the T35 runs lean at 300 kPa and melts a piston).
+    /// </summary>
+    private static readonly Lazy<EcuTune> BigTurboTune = new(() =>
+    {
+        var tune = SimFactory.ExtendLoadAxis(EcuTune.FromDocument(TestContent.Database.GetTune("k20.turbo_base")), 300, 350);
         for (int c = 0; c < tune.BoostTarget!.Columns; c++) if (tune.BoostTarget[0, c] >= 170) tune.BoostTarget[0, c] = 300;
         tune.InjectorFlowCcMin = 1000;
-        tune.FuelStoichAfr = db.GetFuel("e85").StoichiometricAfr;
-        return Car.Create(a, tune, "e85", chassisSwaps);
-    }
+        tune.FuelStoichAfr = TestContent.Database.GetFuel("e85").StoichiometricAfr;
+        return SimFactory.WithCalibratedVe(BigTurboEngine(), "e85", tune);
+    });
 
     /// <summary>Full-throttle pulls in fourth from 110 km/h to the limiter until something in the driveline breaks.</summary>
     private static int PullsUntilBroken(VehicleSimulation sim, int maxPulls)

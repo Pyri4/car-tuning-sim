@@ -30,19 +30,28 @@ public class FuelingTests
     [Fact]
     public void E85WithGasolineCalibrationRunsLean()
     {
+        // The ECU still divides by 14.7, so it delivers 14.7/9.8 too little fuel. E85 also cools the charge
+        // more than the gasoline the VE table was calibrated on, so a little more air than the ECU expects
+        // gets in: slightly leaner still.
         var t = SimFactory.At(SimFactory.Create(SimFactory.Assembly(), fuel: "e85"), 4000);
-        Assert.Equal(t.TargetLambda * 14.7 / 9.8, t.Lambda, 2);
+        double stoichError = t.TargetLambda * 14.7 / 9.8;
+        Assert.InRange(t.Lambda, stoichError, stoichError * 1.05);
     }
 
     [Fact]
     public void E85PushesStockInjectorsPastTheirRecommendedDuty()
     {
+        // An E85 power target (λ 0.80) on the stock injectors.
+        var gasTune = SimFactory.StockTune();
+        gasTune.SetLambda(0.80, 90);
         var tune = SimFactory.StockTune();
         tune.FuelStoichAfr = 9.8;
+        tune.SetLambda(0.80, 90);
         var sim = SimFactory.Create(SimFactory.Assembly(), fuel: "e85", tune: tune);
         var high = SimFactory.At(sim, 7400);
         Assert.True(high.InjectorDuty > sim.Config.Injectors.MaxDuty);
-        Assert.True(high.InjectorDuty > 1.35 * SimFactory.At(SimFactory.Create(), 7400).InjectorDuty, "E85 needs ~44% more fuel volume");
+        double gasDuty = SimFactory.At(SimFactory.Create(SimFactory.Assembly(), tune: gasTune), 7400).InjectorDuty;
+        Assert.True(high.InjectorDuty > 1.35 * gasDuty, "E85 needs ~40 % more fuel volume at the same λ");
     }
 
     [Fact]
@@ -55,10 +64,12 @@ public class FuelingTests
         var low = SimFactory.At(sim, 3000);
         var high = SimFactory.At(sim, 7400);
         Assert.Equal(FuelLimit.None, low.FuelLimit);
-        Assert.Equal(low.TargetLambda, low.Lambda, 3);
+        // Off target by the gasoline-calibrated VE table only (E85's extra charge cooling packs in more air).
+        Assert.InRange(low.Lambda / low.TargetLambda, 1.0, 1.08);
         Assert.Equal(FuelLimit.InjectorCapacity, high.FuelLimit);
-        Assert.True(high.InjectorDuty > 1.0);
-        Assert.True(high.Lambda > high.TargetLambda + 0.03, "lean when the injectors go static");
+        // The ECU asks for more than 100 % duty; the shortfall shows up as a leaner mixture.
+        Assert.True(high.InjectorDuty > 1.03);
+        Assert.True(high.Lambda / high.TargetLambda > low.Lambda / low.TargetLambda + 0.02, "lean when the injectors go static");
     }
 
     [Fact]

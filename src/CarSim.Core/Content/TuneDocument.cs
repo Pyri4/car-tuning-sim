@@ -19,6 +19,18 @@ public sealed class TuneDocument
     /// <summary>Ignition advance, degrees BTDC [load row][rpm column].</summary>
     public required double[][] IgnitionAdvanceDeg { get; init; }
 
+    /// <summary>
+    /// Speed-density fuel map: the volumetric efficiency the ECU assumes, relative to the manifold
+    /// pressure and air temperature its sensors read [load row][rpm column]. Its fuel estimate is
+    /// VE · MAP · (displacement / cylinders) / (R · IAT), so any engine whose real breathing differs from
+    /// this table (cams, head, exhaust, turbo) runs off its target λ until the table is re-tuned.
+    /// Required in content; saves from version 1 predate it and are migrated.
+    /// </summary>
+    public double[][]? VolumetricEfficiency { get; init; }
+
+    /// <summary>Engine displacement the ECU is set up for, cc (a stroker kit needs this or the VE table changed).</summary>
+    public double? DisplacementCc { get; init; }
+
     /// <summary>Boost target (absolute manifold pressure, kPa) per RPM axis point. Used only with ECU boost control.</summary>
     public double[]? BoostTargetKpa { get; init; }
 
@@ -41,6 +53,10 @@ public sealed class TuneDocument
         CheckAxis(p, "load_axis_kpa", LoadAxisKpa);
         CheckTable(p, "target_lambda", TargetLambda, 0.5, 1.6);
         CheckTable(p, "ignition_advance_deg", IgnitionAdvanceDeg, -20, 60);
+        if (VolumetricEfficiency == null) p.Add("volumetric_efficiency missing (the ECU's speed-density fuel map).");
+        else CheckTable(p, "volumetric_efficiency", VolumetricEfficiency, 0.05, 3.0);
+        if (DisplacementCc is not double cc) p.Add("displacement_cc missing (the engine displacement the ECU is set up for).");
+        else if (!(cc >= 50 && cc <= 20000)) p.Add($"displacement_cc out of range: {cc}");
         if (BoostTargetKpa != null)
         {
             if (BoostTargetKpa.Length != RpmAxis.Length) p.Add("boost_target_kpa must have one value per rpm_axis point.");

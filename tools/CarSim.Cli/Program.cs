@@ -26,6 +26,10 @@ public static class Program
           carsim drive [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--cold 1] [--trace <s>] [build options]
                                                         Autopilot laps of the test facility in the engine's car: lap times,
                                                         clutch/brake temperatures, wear, warnings and failure reports.
+          carsim calibrate-ve [--hold 1] [build options]
+                                                        Measure the build's breathing on a steady-state dyno and print a
+                                                        volumetric_efficiency table for the tune (a base-map generator for
+                                                        content authors; the game's ECU never sees the engine's true VE).
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
         """;
 
@@ -46,6 +50,7 @@ public static class Program
                 "sweep" => Sweep(options),
                 "hold" => Hold(options),
                 "drive" => Drive(options),
+                "calibrate-ve" => CalibrateVe(options),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -115,6 +120,20 @@ public static class Program
         var config = EngineConfiguration.Build(assembly, fuel, new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa));
         foreach (var issue in config.Report.Issues.Where(i => i.Severity != IssueSeverity.Info)) Console.WriteLine(issue);
         return new Built(new EngineSimulation(config.GetOrThrow(), tune, EngineState.Warm()), tune, db, factory);
+    }
+
+    private static int CalibrateVe(CliOptions o)
+    {
+        var (sim, tune, _, _) = BuildEngine(o);
+        var table = VeCalibrator.Calibrate(sim, Num(o, "hold", 1.0));
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Console.WriteLine($"// {tune.Id}: rpm {string.Join(", ", tune.VolumetricEfficiency.XAxis)}; load kPa {string.Join(", ", tune.VolumetricEfficiency.YAxis)}");
+        Console.WriteLine("\"volumetric_efficiency\": [");
+        for (int r = 0; r < table.Length; r++)
+            Console.WriteLine($"  [{string.Join(", ", table[r].Select(v => v.ToString("0.000", inv)))}]{(r < table.Length - 1 ? "," : "")}");
+        Console.WriteLine("],");
+        Console.WriteLine($"\"displacement_cc\": {tune.DisplacementCc.ToString("0", inv)},");
+        return 0;
     }
 
     private static double Num(CliOptions o, string key, double fallback) =>

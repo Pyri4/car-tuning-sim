@@ -12,10 +12,15 @@ namespace CarSim.Gameplay;
 /// <summary>
 /// Versioned JSON save format. Definitions are referenced by id, never embedded, so content updates
 /// flow into existing saves; runtime state (wear, fatigue, failures, tune) is stored in full.
+/// Older versions are migrated on load (<see cref="Migrate"/>).
 /// </summary>
 public static class SaveSystem
 {
-    public const int CurrentVersion = 1;
+    /// <summary>
+    /// 1: first format. 2: tunes carry a speed-density VE table and displacement (version-1 tunes take them
+    /// from the engine's stock tune on load).
+    /// </summary>
+    public const int CurrentVersion = 2;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -101,6 +106,7 @@ public static class SaveSystem
         if (file == null) throw new InvalidDataException("Save file is empty.");
         if (file.Version > CurrentVersion) throw new InvalidDataException($"Save version {file.Version} is newer than this game (v{CurrentVersion}).");
 
+        Migrate(file, content);
         var problems = new List<string>();
         if (!content.Engines.TryGetValue(file.EngineId, out var engineDef)) problems.Add($"Unknown engine '{file.EngineId}'.");
         if (!content.Fuels.ContainsKey(file.FuelId)) problems.Add($"Unknown fuel '{file.FuelId}'.");
@@ -133,6 +139,31 @@ public static class SaveSystem
         garage.RestoreInventory(file.Inventory.Select(ps => Load(ps, content)));
         garage.RestoreLog(file.Log);
         return garage;
+    }
+
+    /// <summary>Brings an older save up to <see cref="CurrentVersion"/> in place.</summary>
+    private static void Migrate(SaveFile file, ContentDatabase content)
+    {
+        if (file.Version < 2 && file.Tune is { } tune && (tune.VolumetricEfficiency == null || tune.DisplacementCc == null)
+            && content.Engines.TryGetValue(file.EngineId, out var engine) && content.Tunes.TryGetValue(engine.StockTune, out var stock)
+            && stock.VolumetricEfficiency != null)
+        {
+            // Version-1 ECUs had no fuel map (they fuelled from the true airflow). Give the tune the stock
+            // map, resampled onto its own axes: the car runs as it did on a stock engine and drifts off its
+            // target λ as far as its breathing differs from stock — exactly what the player now has to tune.
+            var stockVe = new CarSim.Core.Common.Table2D(stock.RpmAxis, stock.LoadAxisKpa, stock.VolumetricEfficiency);
+            double[][] ve = tune.LoadAxisKpa.Select(load => tune.RpmAxis.Select(rpm => stockVe.Evaluate(rpm, load)).ToArray()).ToArray();
+            file.Tune = new TuneDocument
+            {
+                Id = tune.Id, Name = tune.Name, Description = tune.Description, RpmAxis = tune.RpmAxis, LoadAxisKpa = tune.LoadAxisKpa,
+                TargetLambda = tune.TargetLambda, IgnitionAdvanceDeg = tune.IgnitionAdvanceDeg, BoostTargetKpa = tune.BoostTargetKpa,
+                RevLimitRpm = tune.RevLimitRpm, IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
+                InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = tune.Source,
+                VolumetricEfficiency = tune.VolumetricEfficiency ?? ve,
+                DisplacementCc = tune.DisplacementCc ?? stock.DisplacementCc,
+            };
+        }
+        file.Version = CurrentVersion;
     }
 
     private static PartInstance Load(PartSave ps, ContentDatabase content)

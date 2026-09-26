@@ -119,6 +119,10 @@ public sealed record EngineTelemetry
     public double BoostPressure { get; init; }
     public double PortPressure { get; init; }
     public double ExhaustBackPressure { get; init; }
+    /// <summary>Manifold air temperature (what the ECU's intake-air-temperature sensor reads), K.</summary>
+    public double ManifoldTemperature { get; init; }
+
+    /// <summary>Trapped charge temperature (manifold air after heat pick-up and fuel evaporation), K.</summary>
     public double ChargeTemperature { get; init; }
     public double AirMassFlow { get; init; }
     public double AirPerCycle { get; init; }

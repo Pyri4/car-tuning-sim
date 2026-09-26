@@ -8,7 +8,7 @@ using Godot;
 
 namespace CarTuningSim.UI;
 
-/// <summary>ECU hardware limits, calibration values and editable fuel/ignition/boost tables.</summary>
+/// <summary>ECU hardware limits, calibration values and editable fuel (VE, λ)/ignition/boost tables.</summary>
 public partial class TuningView : HSplitContainer
 {
     private VBoxContainer _left = null!;
@@ -33,6 +33,7 @@ public partial class TuningView : HSplitContainer
         _table = new OptionButton();
         _table.AddItem("Ignition advance (° BTDC)");
         _table.AddItem("Target λ (1.00 = stoichiometric)");
+        _table.AddItem("Volumetric efficiency (fuel map)");
         _table.AddItem("Boost target (kPa absolute)");
         _table.ItemSelected += _ => BuildGrid();
         bar.AddChild(_table);
@@ -101,6 +102,11 @@ public partial class TuningView : HSplitContainer
 
         var injectors = State.Garage.Engine.FindByCategory(PartCategory.Injectors)?.Spec<InjectorSpec>();
         AddSpin("Injector scaling (cc/min)", 100, 3000, 10, Tune.InjectorFlowCcMin, v => Tune.InjectorFlowCcMin = v);
+        AddSpin("Engine displacement (cc)", 50, 20000, 1, Tune.DisplacementCc, v => Tune.DisplacementCc = v);
+        var geometry = CarSim.Core.Engines.EngineGeometry.TryCreate(State.Garage.Engine, out _);
+        if (geometry != null && Math.Abs(Units.M3ToCc(geometry.Displacement) - Tune.DisplacementCc) > 5)
+            _left.AddChild(Ui.Wrapped($"The engine now displaces {Units.M3ToCc(geometry.Displacement):F0} cc: the fuel map's air estimate is off by " +
+                $"{Units.M3ToCc(geometry.Displacement) / Tune.DisplacementCc * 100 - 100:+0;-0} % until this or the VE table is changed.", 13, Ui.Caution));
         if (injectors != null && Math.Abs(injectors.FlowCcMin - Tune.InjectorFlowCcMin) > 1)
         {
             _left.AddChild(Ui.Wrapped($"Installed injectors flow {injectors.FlowCcMin:F0} cc/min: the ECU will meter the wrong amount of fuel.", 13, Ui.Danger));
@@ -122,7 +128,9 @@ public partial class TuningView : HSplitContainer
                 State.Garage.TuneChanged();
                 State.NotifyChanged();
             }));
-        _left.AddChild(Ui.Wrapped("Tips: MBT (best-torque timing) and the knock limit are shown on the dyno's spark graph. " +
+        _left.AddChild(Ui.Wrapped("Tips: the ECU fuels from its VE table — after changing cams, head, exhaust or turbo, hold each load point " +
+            "on the dyno and scale the VE cell by measured λ ÷ target λ until the wideband agrees. Find best-torque timing by " +
+            "adding advance until torque stops rising; back off if the knock sensor hears anything. " +
             "Rich mixtures (λ 0.78–0.82) cool the chamber under boost; λ ≈ 0.88 makes best power naturally aspirated.", 13, Ui.Muted));
     }
 
@@ -140,31 +148,34 @@ public partial class TuningView : HSplitContainer
     {
         Ui.Clear(_grid);
         bool editable = State.Garage.Engine.FindByCategory(PartCategory.Ecu)?.Spec<EcuSpec>().TablesEditable ?? false;
-        Table2D? table = _table.Selected switch { 0 => Tune.IgnitionAdvance, 1 => Tune.TargetLambda, _ => Tune.BoostTarget };
+        const int boostTable = 3;
+        Table2D? table = _table.Selected switch { 0 => Tune.IgnitionAdvance, 1 => Tune.TargetLambda, 2 => Tune.VolumetricEfficiency, _ => Tune.BoostTarget };
         _tableHelp.Text = _table.Selected switch
         {
             0 => "Rows: manifold pressure the ECU reads (kPa). Columns: rpm. More advance → more torque up to MBT, then knock and higher cylinder pressure.",
-            1 => "Target λ per load/rpm. Below 1.0 is rich. The actual λ depends on the injectors, pump and calibration keeping up.",
+            1 => "Target λ per load/rpm. Below 1.0 is rich. The actual λ depends on the VE table being right and the injectors and pump keeping up.",
+            2 => "Speed-density fuel map: how well the engine fills relative to the manifold pressure and air temperature the ECU reads. " +
+                 "Fuel = VE × MAP × displacement ÷ (R × IAT) ÷ (target λ × stoich AFR). A cell 5 % too low runs 5 % lean there.",
             _ => Tune.BoostTarget == null ? "This tune has no boost table: boost is set by the wastegate spring." :
                  "Absolute manifold pressure target per rpm. Only used by ECUs with boost control, and never below the wastegate spring.",
         };
         if (table == null) return;
         _grid.Columns = table.Columns + 1;
-        _grid.AddChild(Ui.Label(_table.Selected == 2 ? "" : "kPa \\ rpm", 12, Ui.Muted));
+        _grid.AddChild(Ui.Label(_table.Selected == boostTable ? "" : "kPa \\ rpm", 12, Ui.Muted));
         for (int c = 0; c < table.Columns; c++) _grid.AddChild(Ui.Label($"{table.XAxis[c]:F0}", 12, Ui.Muted));
         double min = double.MaxValue, max = double.MinValue;
         for (int r = 0; r < table.Rows; r++) for (int c = 0; c < table.Columns; c++) { min = Math.Min(min, table[r, c]); max = Math.Max(max, table[r, c]); }
         for (int r = table.Rows - 1; r >= 0; r--)
         {
-            _grid.AddChild(Ui.Label(_table.Selected == 2 ? "target" : $"{table.YAxis[r]:F0}", 12, Ui.Muted));
+            _grid.AddChild(Ui.Label(_table.Selected == boostTable ? "target" : $"{table.YAxis[r]:F0}", 12, Ui.Muted));
             for (int c = 0; c < table.Columns; c++)
             {
                 int rr = r, cc = c;
                 var spin = new SpinBox
                 {
-                    MinValue = _table.Selected switch { 0 => -20, 1 => 0.5, _ => 50 },
-                    MaxValue = _table.Selected switch { 0 => 60, 1 => 1.6, _ => 400 },
-                    Step = _table.Selected switch { 0 => 0.5, 1 => 0.01, _ => 5 },
+                    MinValue = _table.Selected switch { 0 => -20, 1 => 0.5, 2 => 0.05, _ => 50 },
+                    MaxValue = _table.Selected switch { 0 => 60, 1 => 1.6, 2 => 3.0, _ => 400 },
+                    Step = _table.Selected switch { 0 => 0.5, 1 => 0.01, 2 => 0.005, _ => 5 },
                     Value = table[r, c],
                     Editable = editable,
                     CustomMinimumSize = new Vector2(64, 0),

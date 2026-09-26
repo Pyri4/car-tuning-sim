@@ -98,9 +98,14 @@ public sealed class AirPath
     public const double ReversionPressureRatioMargin = 1.25;
 
     /// <summary>
-    /// Residual-gas / reversion factor. Two effects of exhaust pressure above port pressure:
-    /// (1) the burnt gas left in the clearance volume expands and displaces fresh charge;
-    /// (2) during valve overlap, exhaust flows back into the intake, scaled by the overlap angle.
+    /// Residual-gas / reversion factor (fresh charge relative to a cylinder with no residuals). Two effects
+    /// of exhaust pressure above port pressure displace fresh charge, x = c·[(r^(1/n) − 1) + (overlap/15)·
+    /// max(0, r − 1.25)]: (1) the burnt gas left in the clearance volume expands; (2) during valve overlap,
+    /// exhaust flows back into the intake, scaled by the overlap angle. f = 1/(1 + x) — the same as 1 − x
+    /// to first order, but the fresh charge only tends to zero as the backflow grows (reverted gas raises
+    /// the port pressure and chokes its own backflow), so there is no floor to hit: at part load a
+    /// long-overlap cam's VE falls smoothly instead of kinking onto a limit no fuel map can follow.
+    /// Below 1 exhaust-to-intake ratio the residual shrinks (f slightly above 1, at most 1/(1 − c)).
     /// </summary>
     public double ResidualFactor(double exhaustPortPressure, double portPressure)
     {
@@ -109,8 +114,7 @@ public sealed class AirPath
         double ratio = exhaustPortPressure / Math.Max(1.0, portPressure);
         double expansion = Math.Pow(ratio, 1.0 / PhysicalConstants.CompressionPolytropicExponent) - 1.0;
         double reversion = _c.OverlapDeg / 15.0 * Math.Max(0.0, ratio - ReversionPressureRatioMargin);
-        double f = 1.0 - clearanceShare * (expansion + reversion);
-        return MathUtil.Clamp(f, 0.4, 1.03);
+        return 1.0 / (1.0 + clearanceShare * (expansion + reversion));
     }
 
     /// <summary>

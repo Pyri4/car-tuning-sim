@@ -58,6 +58,8 @@ dotnet run --project tools/CarSim.Cli -- sweep --swap exhaust=exhaust.race_76mm
 dotnet run --project tools/CarSim.Cli -- hold --rpm 6500 --sump-g 1.3  # abuse test: warnings, failure report, inspection
 dotnet run --project tools/CarSim.Cli -- drive --laps 5 --wear clutch=0.4 [--chassis clutch=clutch.sport] [--trace 1]
                                                                        # autopilot laps: times, clutch/brake heat, wear, failures
+dotnet run --project tools/CarSim.Cli -- calibrate-ve --swap camshafts=k20.cams.sport [--hold 1]
+                                                                       # measure a build's VE table (base map for a tune file)
 ```
 
 ### Driving
