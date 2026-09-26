@@ -170,8 +170,12 @@ public sealed class ChassisWearModel
         double a = 1.0 - Math.Exp(-dt / DrivelineLoadTimeConstant);
         GearboxLoadNm += (e.GearboxTorque - GearboxLoadNm) * a;
         DifferentialLoadNm += (e.DifferentialTorque - DifferentialLoadNm) * a;
-        Overload(_gearbox, _c.GearboxSlot, FailureMode.GearboxOverload, GearboxLoadNm, _c.Gearbox.MaxTorqueNm, ref _peakGearboxLoad, gear, dt, time, warnings);
-        Overload(_differential, _c.DifferentialSlot, FailureMode.DifferentialOverload, DifferentialLoadNm, _c.Differential.MaxTorqueNm, ref _peakDifferentialLoad, gear, dt, time, warnings);
+        // Tooth load cycles: one per revolution of the gearbox input shaft / the pinion.
+        double wheelRpm = Units.RadPerSecToRpm(Math.Abs(speed) / (_c.RearWheelDrive ? _c.TiresRear.Radius : _c.TiresFront.Radius));
+        double pinionRpm = wheelRpm * _c.Differential.FinalDriveRatio;
+        double inputRpm = gear != 0 ? Math.Abs(_c.OverallRatio(gear)) * wheelRpm : 0.0;
+        Overload(_gearbox, _c.GearboxSlot, FailureMode.GearboxOverload, GearboxLoadNm, _c.Gearbox.MaxTorqueNm, inputRpm, ref _peakGearboxLoad, gear, dt, time, warnings);
+        Overload(_differential, _c.DifferentialSlot, FailureMode.DifferentialOverload, DifferentialLoadNm, _c.Differential.MaxTorqueNm, pinionRpm, ref _peakDifferentialLoad, gear, dt, time, warnings);
 
         // Clutch.
         var cs = _c.Clutch;
@@ -232,17 +236,19 @@ public sealed class ChassisWearModel
 
     private double _peakEngineTorque, _peakGearboxLoad, _peakDifferentialLoad;
 
-    private void Overload(PartInstance? part, string slot, FailureMode mode, double load, double rating, ref double peak, int gear,
+    private void Overload(PartInstance? part, string slot, FailureMode mode, double load, double rating, double shaftRpm, ref double peak, int gear,
         double dt, double time, List<EngineWarning> warnings)
     {
         if (part == null || part.IsFailed || rating <= 0) return;
         var info = FailureModeInfo.Of(mode);
-        double r = load / rating;
+        double r = Math.Abs(load) / rating;
         peak = Math.Max(peak, load);
-        if (r > info.Endurance)
+        if (r > info.DamageOnsetLoadRatio)
             warnings.Add(new EngineWarning($"{part.Definition.Category}_overload", r > 1.0 ? WarningLevel.Danger : WarningLevel.Caution,
                 $"{Label(slot)} overloaded: {load:F0} N·m against a {rating:F0} N·m rating."));
-        if (r >= info.InstantRatio || part.Damage.Accumulate(mode, info.FatigueRate(r) * dt))
+        double rate = info.DamageRate(r, load, rating, shaftRpm, 0);
+        if (rate > DamageModel.ExposureThreshold || info.IsInstant(r, load, rating)) part.Damage.RecordExposure(mode, r, dt);
+        if (info.IsInstant(r, load, rating) || part.Damage.Accumulate(mode, rate * dt))
             FailDriveline(part, slot, mode, load, rating, gear, time);
     }
 
@@ -259,6 +265,7 @@ public sealed class ChassisWearModel
             new("Gear", gear switch { 0 => "neutral", < 0 => "reverse", _ => gear.ToString(System.Globalization.CultureInfo.InvariantCulture) }),
             new("Peak engine torque", $"{_peakEngineTorque:F0} N·m"),
             new("Clutch rating", $"{clutchCapacity:F0} N·m"),
+            new("Time overloaded (part's lifetime)", $"{part.Damage.ExposureOf(mode).Seconds:F1} s, peak {100 * part.Damage.ExposureOf(mode).PeakRatio:F0} % of the rating"),
         };
         var factors = new List<string>();
         double clutchLimit = gearbox ? clutchCapacity : clutchCapacity * gearRatio * _c.Gearbox.Efficiency;
@@ -267,7 +274,7 @@ public sealed class ChassisWearModel
                 ? $"The {_clutch?.Definition.Name ?? "clutch"} can pass {clutchCapacity:F0} N·m, more than the gearbox's {rating:F0} N·m: shock loads (launches, fast engagements, downshifts) reached the gear teeth instead of slipping the clutch."
                 : $"In gear {gear} the clutch can put {clutchLimit:F0} N·m into the differential, more than its {rating:F0} N·m rating: shock loads reached the crown wheel instead of slipping the clutch.");
         double engineLimit = gearbox ? _peakEngineTorque : _peakEngineTorque * gearRatio * _c.Gearbox.Efficiency;
-        if (engineLimit > rating * FailureModeInfo.Of(mode).Endurance)
+        if (engineLimit > rating * FailureModeInfo.Of(mode).DamageOnsetLoadRatio)
             factors.Add(gearbox
                 ? $"The engine makes {_peakEngineTorque:F0} N·m, close to or above what the gearbox is built for."
                 : $"The engine's {_peakEngineTorque:F0} N·m multiplied by gear {gear} ({gearRatio:F2}:1) is {engineLimit:F0} N·m at the pinion.");

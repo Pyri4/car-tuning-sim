@@ -283,16 +283,33 @@ Every step, `StressEvaluator` turns the operating point into stress ratios `r = 
 | Valve–piston contact | rpm | 110 % of the valve-float speed |
 | Turbo overspeed / turbine temperature | shaft rpm, inlet °C | turbo `max_shaft_rpm`, `max_turbine_inlet_temperature_c` |
 
-Fatigue per mode accumulates on the part instance (`PartDamage`), deterministically:
-`rate = 0` for `r ≤ endurance`; `(1/T)·((r − e)/(1 − e))³` up to the rating; `(1/T)·(1 + 50(r − 1))²`
-above it; instant failure at `r ≥ 1.3` (1.05 for valve contact). `T` is the life at exactly the
-rating (10–120 s depending on mode, see `FailureModeInfo`). Endurance ratios: 0.80 rods/pistons/
-bearings, 0.85 gasket/block/crank torque, 0.90 crown temperature, 0.95 crank speed/flywheel/turbine
-temperature, 0.97 turbo speed.
+Damage per mode accumulates on the part instance (`PartDamage`), deterministically, by one of three
+laws (`FailureModeInfo`, `DamageLaw`):
 
+- **Cycle fatigue** (Miner's rule, Basquin-type): each load cycle at stress ratio `s` uses
+  `x^6 / N_rated` of the part's life, `x = (s − e)/(1 − e)`; nothing below the endurance limit `e`,
+  one smooth curve through the rating (no kink), instant fracture at `s ≥ 1.3`. Cycles: per
+  combustion (`rpm/120`: rods, pistons, gasket, block; `N = 3·10⁴`, `e` 0.80/0.85), per firing
+  (`rpm/120 · cylinders`: crank torque, `N = 1.2·10⁵`), per revolution (bearings, crank speed,
+  flywheel `N = 10⁵`; gear teeth per input-shaft / pinion revolution `N = 2·10⁵`, `e` 0.9, instant at
+  2×). Rods at the rating last ≈ 9 min at 7000 rpm, at 90 % ≈ 9 h, at 110 % ≈ 45 s; running the
+  same load at twice the speed halves the running time to failure.
+- Parts **rated in rpm** (crankshaft, flywheel, turbo) are stressed with the square of speed
+  (centrifugal/inertia stress ∝ ω²): `s = (rpm/rating)²`, so a flywheel bursts at 114 % of its rated
+  speed (stress 1.3). The crank's speed rating is a fatigue limit (instant only at stress 1.6).
+- **Stress rupture** (turbo overspeed: a steady load on a hot spinning wheel creeps rather than
+  cycles): the same power law per second, `e` 0.90 (stress), 30 min at the rating.
+- **Thermal** (piston crown, turbine inlet): Arrhenius in kelvin, `rate = exp(Θ·(1/T_rated − 1/T)) /
+  t_rated`; crown `Θ` = 20 000 K, 20 min at the rating (280 °C on a 300 °C piston ≈ 70 min, each 10 K
+  hotter ≈ ×1.8 faster), melting 100 K over the rating; turbine `Θ` = 50 000 K, 30 min, +150 K. The
+  old model divided Celsius values ("280 °C is 93 % of 300 °C") and lasted 9 minutes there.
+- **Valve–piston contact** begins at 103 % of the valve-float speed (`ValveContactOnset`, the valves
+  hanging open past the valve-to-piston clearance), per revolution, `N = 300`, instant at 1.05 of
+  the reading (110 % of float speed).
 Special processes:
-- **Detonation**: pistons `0.002·KI²·(120 bar / piston rating)^1.5` per s; gasket `0.0005·KI²`; rod
-  bearings `0.0003·KI²`; ring wear `0.0005·KI`.
+- **Detonation**: per knocking combustion (`rpm/120`), pistons `10⁻⁴·KI²·(120 bar / piston
+  rating)^1.5`; gasket `2.5·10⁻⁵·KI²`; rod bearings `1.5·10⁻⁵·KI²` (the same per-second rates as
+  before at 2500 rpm); ring wear `0.0005·KI` per s.
 - **Lubrication**: bearing wear `0.05·deficit²·(0.3 + load ratio)` per s, deficit = `1 − p_oil/p_req`,
   plus `0.0005` per 10 K of oil above 150 °C; bearing wear ≥ 1 → spun bearing (oil starvation).
 - **Overheating**: gasket `0.01·(T_coolant − 115 °C)/10 K + 0.05·coolant_lost` per s; cylinder head
@@ -310,8 +327,15 @@ Failures:
   drawn from the operating history (`OperatingHistory`: extremes, knock seconds, time below required
   oil pressure, coolant lost, ...), recommendations (e.g. safe rpm for the installed rods, rating to
   buy, timing to remove), and collateral damage. Diagnosis uses the state *before* collateral damage.
+- Every part keeps a **damage ledger** (`PartDamage.Exposure`, saved with the part): per mode, the peak
+  load ratio seen while taking damage and the time spent taking damage (faster than 10 h of life).
+  Reports quote it with the fatigue carried in from earlier sessions ("70 % of its life already used
+  before this run … the final load only finished it off"), so a failure several sessions in the
+  making explains itself.
 - Live `EngineWarning`s (knock, low oil pressure, oil surge, coolant/oil temperature, coolant loss,
-  lean under load, fuel limits, MAP saturation, valve float, surge, EGT, any stress above endurance).
+  lean under load, fuel limits, MAP saturation, valve float, surge, EGT). Stress warnings come from the
+  damage law itself: caution when the part would last under an hour at the current load, danger under
+  two minutes or above the rating, with the remaining life in the text.
 - `PartInspector` reports visible signs once fatigue passes 25 % (minor) / 60 % (major) and wear
   findings (bearing clearance, ring wear, spring sag, ...); `EngineDiagnostics.CompressionTestBar`
   gives a cranking compression figure that drops with ring wear, a blown gasket, bent valves.
@@ -445,7 +469,7 @@ displacement, IAT compensation, recalibration, smooth part-load VE), knock and t
 thermal behaviour, starting/idle/revving, determinism, compressor speed lines/choke/surge, compressor
 energy consistency, turbine power, spool order by turbo size, transient lag vs steady state, boost
 control, boost creep, intercooling, stock-ECU MAP saturation, overlap reversion under drive pressure,
-fatigue curve, survival within limits, over-rev → bent valves / flywheel / rods (weak-link order),
+fatigue laws (per-cycle counting, smooth through the rating, speed² for rpm-rated parts, Arrhenius in kelvin), damage ledger across sessions and saves, survival within limits, over-rev → bent valves / flywheel / rods (weak-link order),
 detonation, knock control protection, inspection before failure, turbo on stock ECU, oil starvation
 and the baffled pan, overheating → blown gasket with power loss, turbo overspeed, repair restores
 the engine, report content, warnings, compression test, damage determinism, tyre force shape,

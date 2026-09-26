@@ -25,21 +25,6 @@ public class DamageTests
     }
 
     [Fact]
-    public void FatigueCurveShape()
-    {
-        var info = FailureModeInfo.Of(FailureMode.RodTensileOverload);
-        Assert.Equal(0.0, info.FatigueRate(0.5));
-        Assert.Equal(0.0, info.FatigueRate(info.Endurance));
-        Assert.Equal(1.0 / info.SecondsToFailureAtRating, info.FatigueRate(1.0), 12);
-        double last = 0;
-        foreach (double r in new[] { 0.82, 0.9, 0.95, 1.0, 1.05, 1.1 })
-        {
-            Assert.True(info.FatigueRate(r) > last);
-            last = info.FatigueRate(r);
-        }
-    }
-
-    [Fact]
     public void StockEngineSurvivesSustainedFullPowerWithinItsLimits()
     {
         var sim = SimFactory.Create();
@@ -100,9 +85,11 @@ public class DamageTests
             ("crankshaft", "k20.crankshaft.forged"));
         var tune = SimFactory.StockTune();
         var sim = SimFactory.Create(a, tune: tune);
-        Hold(sim, 9800, 30, throttle: 0.0);
+        // At 9800 rpm the rods see 111 % of their rating: about half a minute of life (per-cycle fatigue).
+        Hold(sim, 9800, 120, throttle: 0.0);
         var report = Assert.Single(sim.Damage.Failures);
         Assert.Equal(FailureMode.RodTensileOverload, report.Mode);
+        Assert.InRange(report.Time, 10, 60);
         Assert.Contains(report.Recommendations, r => r.Contains("Keep engine speed below"));
         Assert.Contains(report.CollateralDamage, c => c.Contains("block"));
         Assert.True(sim.Config.Part("block").IsFailed, "a thrown rod takes the block with it");

@@ -64,4 +64,5 @@ public sealed record FailureContext(
     IReadOnlyList<StressReading> Readings,
     OperatingHistory History,
     double RevLimitRpm,
-    IReadOnlyList<string> Collateral);
+    IReadOnlyList<string> Collateral,
+    double PriorFatigue = 0.0);

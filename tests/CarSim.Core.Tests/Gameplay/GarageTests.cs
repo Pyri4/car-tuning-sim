@@ -91,6 +91,7 @@ public class GarageTests
         g.Tune.InjectorFlowCcMin = 550;
         g.SetFuel("gasoline_98");
         g.Engine.PartIn("crankshaft")!.Damage.Fail(FailureMode.CrankshaftOverspeed, 12.5);
+        g.Engine.PartIn("connecting_rods")!.Damage.RecordExposure(FailureMode.RodTensileOverload, 1.08, 42.0);
 
         string json = SaveSystem.Serialize(g);
         var loaded = SaveSystem.Deserialize(json, TestContent.Database);
@@ -106,6 +107,7 @@ public class GarageTests
         Assert.Equal(0.55, loaded.Engine.PartIn("main_bearings")!.Wear, 9);
         Assert.Equal(0.30, loaded.Engine.PartIn("pistons")!.Damage.FatigueOf(FailureMode.Detonation), 9);
         Assert.Equal(FailureMode.CrankshaftOverspeed, loaded.Engine.PartIn("crankshaft")!.Damage.Failure!.Mode);
+        Assert.Equal(new DamageExposure(1.08, 42.0), loaded.Engine.PartIn("connecting_rods")!.Damage.ExposureOf(FailureMode.RodTensileOverload));
         // New parts after loading never reuse an id.
         loaded.Buy("throttle.70mm");
         var ids = loaded.Engine.AllParts.Concat(loaded.Inventory).Select(p => p.InstanceId).ToList();
@@ -220,6 +222,17 @@ public class GarageTests
         node["version"] = SaveSystem.CurrentVersion;
         var ex = Assert.Throws<InvalidDataException>(() => SaveSystem.Deserialize(node.ToJsonString(), TestContent.Database));
         Assert.Contains("volumetric_efficiency missing", ex.Message);
+    }
+
+    [Fact]
+    public void UnknownFailureModesAreRejectedNotSilentlyHealed()
+    {
+        // Loading used to drop failure modes it did not recognise, turning a failed part healthy.
+        var g = NewGame();
+        g.Engine.PartIn("pistons")!.Damage.Fail(FailureMode.PistonCrownOverheat, 3);
+        string json = SaveSystem.Serialize(g).Replace("\"piston_crown_overheat\"", "\"piston_crown_melt\"");
+        var ex = Assert.Throws<InvalidDataException>(() => SaveSystem.Deserialize(json, TestContent.Database));
+        Assert.Contains("Unknown failure mode 'piston_crown_melt'", ex.Message);
     }
 
     [Fact]

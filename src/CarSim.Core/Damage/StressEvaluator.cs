@@ -15,7 +15,10 @@ public readonly record struct StressReading(FailureMode Mode, string Category, d
 /// <summary>Computes component stress ratios from the current operating point. Pure function of its inputs.</summary>
 public static class StressEvaluator
 {
-    /// <summary>Temperatures are compared in °C so ratios read naturally ("280 °C of a 300 °C rating").</summary>
+    /// <summary>
+    /// Temperatures are reported in °C so ratios read naturally ("280 °C of a 300 °C rating"); the thermal
+    /// damage law converts to kelvin (<see cref="DamageLaw.Thermal"/>).
+    /// </summary>
     public static IReadOnlyList<StressReading> Evaluate(EngineConfiguration c, EngineTelemetry t)
     {
         var list = new List<StressReading>(16);

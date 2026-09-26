@@ -15,9 +15,9 @@ public sealed record DamageStep(IReadOnlyList<FailureReport> NewFailures, IReadO
 public sealed class DamageModel
 {
     // Special-process rates (documented in SIMULATION_SPEC.md).
-    public const double KnockPistonRate = 0.002;          // per s per deg² of knock, at a 120 bar piston
-    public const double KnockGasketRate = 0.0005;
-    public const double KnockBearingRate = 0.0003;
+    public const double KnockPistonDamagePerCycle = 1e-4;  // per knocking combustion per deg² of knock, at a 120 bar piston
+    public const double KnockGasketDamagePerCycle = 2.5e-5;
+    public const double KnockBearingDamagePerCycle = 1.5e-5;
     public const double StarvationWearRate = 0.05;         // per s at total oil loss, scaled by load
     public const double NormalBearingWearRate = 2e-7;      // per s
     public const double HotOilWearRate = 0.0005;           // per s per 10 K above 150 °C
@@ -29,12 +29,28 @@ public sealed class DamageModel
     public const double NormalRingWearRate = 2e-7;         // per s
     public const double SurgeBearingWearRate = 0.002;      // per s at full surge depth, per unit of (PR − 1)
 
+    /// <summary>
+    /// Damage faster than this (life under 10 hours at the current load) counts as exposure in a part's
+    /// damage ledger; slower ageing (hot but healthy parts) is accumulated but not logged.
+    /// </summary>
+    public const double ExposureThreshold = 1.0 / 36_000;
+
+    /// <summary>Warn when a part would last less than this at the current load (s); danger below <see cref="DangerLifeSeconds"/>.</summary>
+    public const double CautionLifeSeconds = 3600;
+    public const double DangerLifeSeconds = 120;
+
     private readonly EngineConfiguration _c;
     private readonly List<FailureReport> _failures = new();
     private readonly Queue<EngineTelemetry> _recent = new();
+    private readonly Dictionary<PartInstance, Dictionary<FailureMode, double>> _fatigueAtStart;
     private double _sinceSample;
 
-    public DamageModel(EngineConfiguration config) => _c = config;
+    public DamageModel(EngineConfiguration config)
+    {
+        _c = config;
+        // Fatigue carried in from earlier sessions, so a report can say how much of the damage is old.
+        _fatigueAtStart = config.Assembly.AllParts.ToDictionary(p => p, p => p.Damage.Fatigue.ToDictionary(kv => kv.Key, kv => kv.Value));
+    }
 
     public OperatingHistory History { get; } = new();
     public IReadOnlyList<FailureReport> Failures => _failures;
@@ -71,12 +87,21 @@ public sealed class DamageModel
 
         if (spinning && !Seized)
         {
+            int cylinders = _c.Geometry.Cylinders;
             foreach (var r in readings)
             {
                 var info = FailureModeInfo.Of(r.Mode);
                 var part = _c.Assembly.FindByCategory(r.Category);
                 if (part == null || part.IsFailed) continue;
-                if (r.Ratio >= info.InstantRatio || part.Damage.Accumulate(r.Mode, info.FatigueRate(r.Ratio) * dt))
+                if (info.IsInstant(r.Ratio, r.Load, r.Rating))
+                {
+                    part.Damage.RecordExposure(r.Mode, r.Ratio, dt);
+                    Fail(part, r.Mode, t, readings, revLimitRpm, newFailures);
+                    continue;
+                }
+                double rate = info.DamageRate(r.Ratio, r.Load, r.Rating, t.Rpm, cylinders);
+                if (rate > ExposureThreshold) part.Damage.RecordExposure(r.Mode, r.Ratio, dt);
+                if (part.Damage.Accumulate(r.Mode, rate * dt))
                     Fail(part, r.Mode, t, readings, revLimitRpm, newFailures);
             }
             ApplySpecialProcesses(t, dt, readings, revLimitRpm, newFailures);
@@ -96,14 +121,16 @@ public sealed class DamageModel
         var head = _c.Part(PartCategory.CylinderHead);
         var springs = _c.Part(PartCategory.ValveSprings);
 
-        // Detonation: erosion scales with the square of knock intensity; stronger pistons tolerate it better.
+        // Detonation: each knocking combustion erodes the crown, with the square of knock intensity;
+        // stronger pistons tolerate it better.
         double ki = t.KnockIntensity;
-        if (ki > 0)
+        if (ki > 0 && t.Firing)
         {
+            double knockingCycles = t.Rpm / 120.0 * dt;
             double pistonTolerance = Math.Pow(120.0 / _c.Pistons.MaxCylinderPressureBar, 1.5);
-            TryAccumulate(pistons, FailureMode.Detonation, KnockPistonRate * ki * ki * pistonTolerance * dt, t, readings, revLimit, failures);
-            TryAccumulate(gasket, FailureMode.HeadGasketBreach, KnockGasketRate * ki * ki * dt, t, readings, revLimit, failures);
-            TryAccumulate(rodBearings, FailureMode.RodBearingFatigue, KnockBearingRate * ki * ki * dt, t, readings, revLimit, failures);
+            TryAccumulate(pistons, FailureMode.Detonation, KnockPistonDamagePerCycle * ki * ki * pistonTolerance * knockingCycles, dt, t, readings, revLimit, failures);
+            TryAccumulate(gasket, FailureMode.HeadGasketBreach, KnockGasketDamagePerCycle * ki * ki * knockingCycles, dt, t, readings, revLimit, failures);
+            TryAccumulate(rodBearings, FailureMode.RodBearingFatigue, KnockBearingDamagePerCycle * ki * ki * knockingCycles, dt, t, readings, revLimit, failures);
             pistons.Wear += KnockRingWearRate * ki * dt;
         }
         pistons.Wear += NormalRingWearRate * dt;
@@ -122,9 +149,9 @@ public sealed class DamageModel
         double coolantC = t.CoolantC;
         double lost = 1.0 - t.CoolantLevel;
         double gasketRate = Math.Max(0.0, coolantC - 115.0) / 10.0 * OverheatGasketRate + CoolantLossGasketRate * lost;
-        TryAccumulate(gasket, FailureMode.HeadGasketBreach, gasketRate * dt, t, readings, revLimit, failures);
+        TryAccumulate(gasket, FailureMode.HeadGasketBreach, gasketRate * dt, dt, t, readings, revLimit, failures);
         if (lost > 0.2)
-            TryAccumulate(head, FailureMode.CylinderHeadWarp, CoolantLossHeadRate * (lost - 0.2) / 0.1 * dt, t, readings, revLimit, failures);
+            TryAccumulate(head, FailureMode.CylinderHeadWarp, CoolantLossHeadRate * (lost - 0.2) / 0.1 * dt, dt, t, readings, revLimit, failures);
 
         // Compressor surge reverses the flow through the wheel every few milliseconds, hammering the
         // turbo's thrust bearing; the worn bearing lets the shaft drag (slower spool).
@@ -136,10 +163,11 @@ public sealed class DamageModel
             springs.Wear += SpringFloatWearRate * (t.Rpm / t.ValveFloatRpm - 1.0) * dt;
     }
 
-    private void TryAccumulate(PartInstance part, FailureMode mode, double amount, EngineTelemetry t,
+    private void TryAccumulate(PartInstance part, FailureMode mode, double amount, double dt, EngineTelemetry t,
         IReadOnlyList<StressReading> readings, double revLimit, List<FailureReport> failures)
     {
         if (part.IsFailed || amount <= 0) return;
+        if (amount > ExposureThreshold * dt) part.Damage.RecordExposure(mode, 0.0, dt);
         if (part.Damage.Accumulate(mode, amount)) Fail(part, mode, t, readings, revLimit, failures);
     }
 
@@ -149,7 +177,8 @@ public sealed class DamageModel
         if (part.IsFailed) return;
         var slot = _c.Assembly.Definition.Slots.First(s => _c.Assembly.PartIn(s.Id) == part);
         // Diagnose from the state just before the failure, then apply collateral damage.
-        var report = FailureDiagnostics.Build(new FailureContext(_c, part, slot, mode, t, readings, History, revLimit, Array.Empty<string>()));
+        double prior = _fatigueAtStart.TryGetValue(part, out var start) ? start.GetValueOrDefault(mode) : 0.0;
+        var report = FailureDiagnostics.Build(new FailureContext(_c, part, slot, mode, t, readings, History, revLimit, Array.Empty<string>(), prior));
         part.Damage.Fail(mode, t.Time);
         var collateral = ApplyCollateral(mode, t.Time);
         failures.Add(report with { CollateralDamage = collateral });
@@ -207,6 +236,16 @@ public sealed class DamageModel
         return notes;
     }
 
+    /// <summary>Remaining life in words ("about 4 min left").</summary>
+    public static string LifeText(double seconds) => seconds switch
+    {
+        double.PositiveInfinity => "no fatigue",
+        < 1 => "failing now",
+        < 120 => $"about {seconds:F0} s left",
+        < 7200 => $"about {seconds / 60:F0} min left",
+        _ => $"about {seconds / 3600:F0} h left",
+    };
+
     private IReadOnlyList<EngineWarning> BuildWarnings(EngineTelemetry t, IReadOnlyList<StressReading> readings, double sumpG)
     {
         var w = new List<EngineWarning>();
@@ -241,12 +280,18 @@ public sealed class DamageModel
             w.Add(new("surge", WarningLevel.Caution, "Compressor surge: the flow through the compressor is reversing, hammering the turbo's thrust bearing."));
         if (t.EgtC > 950)
             w.Add(new("egt", WarningLevel.Caution, $"Exhaust gas temperature {t.EgtC:F0} °C."));
+        // Stress warnings say how long the part would last at this load, from the same law that damages it.
         foreach (var r in readings)
         {
             var info = FailureModeInfo.Of(r.Mode);
-            if (r.Ratio > info.Endurance && info.Endurance > 0)
-                w.Add(new($"stress_{r.Mode}", r.Ratio >= 1.0 ? WarningLevel.Danger : WarningLevel.Caution,
-                    $"{r.Quantity} {r.Load:F0} {r.Unit} is {r.Ratio:P0} of the rating ({r.Rating:F0} {r.Unit})."));
+            var part = _c.Assembly.FindByCategory(r.Category);
+            if (part == null || part.IsFailed) continue;
+            double rate = info.DamageRate(r.Ratio, r.Load, r.Rating, t.Rpm, _c.Geometry.Cylinders);
+            double life = info.IsInstant(r.Ratio, r.Load, r.Rating) ? 0.0
+                : rate > 0 ? (1.0 - part.Damage.FatigueOf(r.Mode)) / rate : double.PositiveInfinity;
+            if (r.Ratio < 1.0 && life > CautionLifeSeconds) continue;
+            w.Add(new($"stress_{r.Mode}", r.Ratio >= 1.0 || life < DangerLifeSeconds ? WarningLevel.Danger : WarningLevel.Caution,
+                $"{r.Quantity} {r.Load:F0} {r.Unit} is {r.Ratio:P0} of the rating ({r.Rating:F0} {r.Unit}): {LifeText(life)} at this load."));
         }
         return w;
     }

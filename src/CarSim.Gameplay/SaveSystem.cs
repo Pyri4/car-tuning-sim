@@ -18,9 +18,10 @@ public static class SaveSystem
 {
     /// <summary>
     /// 1: first format. 2: tunes carry a speed-density VE table and displacement (version-1 tunes take them
-    /// from the engine's stock tune on load).
+    /// from the engine's stock tune on load). 3: parts carry a damage ledger (<c>exposure</c>; older saves
+    /// start with an empty one).
     /// </summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -52,10 +53,20 @@ public static class SaveSystem
         public string PartId { get; set; } = "";
         public double Wear { get; set; }
         public Dictionary<string, double> Fatigue { get; set; } = new();
+
+        /// <summary>Damage ledger per failure mode (version 3+).</summary>
+        public Dictionary<string, ExposureSave>? Exposure { get; set; }
+
         public FailureSave? Failure { get; set; }
 
         /// <summary>Setup settings that differ from the part's defaults (spec field → value).</summary>
         public Dictionary<string, double>? Settings { get; set; }
+    }
+
+    public sealed class ExposureSave
+    {
+        public double PeakRatio { get; set; }
+        public double Seconds { get; set; }
     }
 
     public sealed class FailureSave
@@ -91,6 +102,8 @@ public static class SaveSystem
         PartId = p.Definition.Id,
         Wear = p.Wear,
         Fatigue = p.Damage.Fatigue.ToDictionary(kv => FailureModeNames.ToSnakeCase(kv.Key), kv => kv.Value),
+        Exposure = p.Damage.Exposure.Count == 0 ? null : p.Damage.Exposure.ToDictionary(kv => FailureModeNames.ToSnakeCase(kv.Key),
+            kv => new ExposureSave { PeakRatio = kv.Value.PeakRatio, Seconds = kv.Value.Seconds }),
         Failure = p.Damage.Failure is { } f
             ? new FailureSave { Mode = FailureModeNames.ToSnakeCase(f.Mode), Time = f.Time, Collateral = f.Collateral, Note = f.Note }
             : null,
@@ -112,7 +125,14 @@ public static class SaveSystem
         if (!content.Fuels.ContainsKey(file.FuelId)) problems.Add($"Unknown fuel '{file.FuelId}'.");
         if (file.VehicleId.Length > 0 && !content.Vehicles.ContainsKey(file.VehicleId)) problems.Add($"Unknown vehicle '{file.VehicleId}'.");
         foreach (var ps in file.Installed.Values.Concat(file.Inventory).Concat(file.Chassis.Values))
+        {
             if (!content.Parts.ContainsKey(ps.PartId)) problems.Add($"Unknown part '{ps.PartId}' (instance {ps.InstanceId}); was a mod removed?");
+            // A failure mode this game does not know would otherwise be dropped, silently healing the part.
+            var modes = ps.Fatigue.Keys.Concat(ps.Exposure?.Keys ?? Enumerable.Empty<string>());
+            if (ps.Failure != null) modes = modes.Append(ps.Failure.Mode);
+            foreach (var mode in modes.Distinct())
+                if (!FailureModeNames.TryParse(mode, out _)) problems.Add($"Unknown failure mode '{mode}' on part {ps.PartId} (instance {ps.InstanceId}).");
+        }
         if (file.Tune == null) problems.Add("Save has no ECU tune.");
         else problems.AddRange(file.Tune.Validate().Select(p => $"Tune: {p}"));
         if (problems.Count > 0) throw new InvalidDataException("Cannot load save:\n" + string.Join("\n", problems));
@@ -168,14 +188,13 @@ public static class SaveSystem
 
     private static PartInstance Load(PartSave ps, ContentDatabase content)
     {
+        // Failure-mode names were validated in Deserialize.
         var p = new PartInstance(ps.InstanceId, content.GetPart(ps.PartId), ps.Wear);
-        var fatigue = new List<KeyValuePair<FailureMode, double>>();
-        foreach (var (name, v) in ps.Fatigue)
-            if (FailureModeNames.TryParse(name, out var mode)) fatigue.Add(new(mode, v));
-        PartFailure? failure = null;
-        if (ps.Failure != null && FailureModeNames.TryParse(ps.Failure.Mode, out var fm))
-            failure = new PartFailure(fm, ps.Failure.Time, ps.Failure.Collateral, ps.Failure.Note);
-        p.Damage.Restore(fatigue, failure);
+        static FailureMode Mode(string name) => FailureModeNames.TryParse(name, out var m) ? m : throw new InvalidDataException($"Unknown failure mode '{name}'.");
+        var fatigue = ps.Fatigue.Select(kv => new KeyValuePair<FailureMode, double>(Mode(kv.Key), kv.Value));
+        var exposure = (ps.Exposure ?? new()).Select(kv => new KeyValuePair<FailureMode, DamageExposure>(Mode(kv.Key), new DamageExposure(kv.Value.PeakRatio, kv.Value.Seconds)));
+        PartFailure? failure = ps.Failure == null ? null : new PartFailure(Mode(ps.Failure.Mode), ps.Failure.Time, ps.Failure.Collateral, ps.Failure.Note);
+        p.Damage.Restore(fatigue, failure, exposure);
         // Settings the part no longer offers (content changed) are dropped; the rest are re-clamped to today's ranges.
         foreach (var (field, value) in ps.Settings ?? new()) p.Adjust(field, value);
         return p;

@@ -95,7 +95,7 @@ public static class FailureDiagnostics
             case FailureMode.CrankshaftOverspeed:
                 if (t.Rpm > x.RevLimitRpm + 100) f.Add($"Engine speed ({N0(t.Rpm)} rpm) was above the rev limiter ({N0(x.RevLimitRpm)} rpm).");
                 else f.Add($"The rev limit ({N0(x.RevLimitRpm)} rpm) is above the crankshaft's rating ({N0(c.Crankshaft.MaxRpm)} rpm).");
-                r.Add($"Keep engine speed below {N0(0.95 * c.Crankshaft.MaxRpm)} rpm, or fit a forged crankshaft rated for more.");
+                r.Add($"Keep engine speed below {N0(FailureModeInfo.Of(FailureMode.CrankshaftOverspeed).DamageOnsetLoadRatio * c.Crankshaft.MaxRpm)} rpm, or fit a forged crankshaft rated for more.");
                 break;
             case FailureMode.CrankshaftTorsion:
                 f.Add($"Engine torque {N0(Math.Abs(t.Torque))} N·m against a {N0(c.Crankshaft.MaxTorqueNm)} N·m rating.");
@@ -156,15 +156,28 @@ public static class FailureDiagnostics
                 break;
         }
 
+        // The part's damage ledger: how much of this failure was built up before the final run.
+        var exposure = x.Part.Damage.ExposureOf(x.Mode);
+        if (x.PriorFatigue >= 0.01)
+            Measure("Fatigue life already used before this run", $"{N0(100 * x.PriorFatigue)} %");
+        if (exposure.Seconds > 0)
+            Measure("Time under damaging load (part's lifetime)", Duration(exposure.Seconds) +
+                (exposure.PeakRatio > 0 ? $", peak {N0(100 * exposure.PeakRatio)} % of the rating" : ""));
+        if (x.PriorFatigue >= 0.3)
+            f.Add($"This part had already used {N0(100 * x.PriorFatigue)} % of its life to this kind of damage in earlier running: the final load only finished it off.");
+
         return new FailureReport(t.Time, x.Mode, info.Severity, info.Title, info.Cause, x.Slot.Label, x.Part.Definition.Name,
             m, f, r, x.Collateral);
     }
+
+    private static string Duration(double seconds) =>
+        seconds < 120 ? $"{F1(seconds)} s" : seconds < 7200 ? $"{F1(seconds / 60)} min" : $"{F1(seconds / 3600)} h";
 
     /// <summary>Speed at which rod inertia load reaches the fatigue (endurance) threshold.</summary>
     public static double SafeRpmForRods(EngineConfiguration c)
     {
         var g = c.Geometry;
-        double endurance = FailureModeInfo.Of(FailureMode.RodTensileOverload).Endurance;
+        double endurance = FailureModeInfo.Of(FailureMode.RodTensileOverload).DamageOnsetLoadRatio;
         double k = g.ReciprocatingMass * g.CrankRadius * (1.0 + g.CrankRadius / g.RodLength);
         return Units.RadPerSecToRpm(Math.Sqrt(endurance * c.Rods.MaxTensileLoad / k));
     }
@@ -222,6 +235,8 @@ public static class FailureDiagnostics
         if (!c.Ecu.KnockControl) f.Add("The ECU has no knock control to pull timing.");
         else if (h.MaxKnockRetard >= Ecu.EcuController.MaxKnockRetardDeg - 0.01) f.Add($"Knock control was at its {N0(Ecu.EcuController.MaxKnockRetardDeg)}° limit and could not remove more timing.");
         else if (t.KnockRetard < 0.01 && h.MaxKnockRetard < 0.01) f.Add("Knock control was disabled in the tune.");
+        if (t.MapSensorSaturated)
+            r.Add("Fit an ECU with a MAP sensor that covers the boost level (standalone ECU): until the ECU can see the boost, no timing table can be right.");
         r.Add($"Remove at least {N0(Math.Ceiling(h.MaxKnockIntensity + 2))}° of timing around {N0(t.Rpm)} rpm / {N0(t.MapKpa)} kPa.");
         r.Add("Use higher-octane fuel (RON 98, race fuel or E85 with a matching calibration).");
         if (c.Geometry.CompressionRatio > 10 && t.BoostKpa > 20) r.Add("Lower the compression ratio (dished pistons or a thicker gasket) for boost.");
