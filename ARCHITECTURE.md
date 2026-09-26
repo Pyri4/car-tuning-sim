@@ -86,15 +86,17 @@ forbidden. This is enforced structurally: the core project has no Godot package 
 Deterministic, fixed-timestep, SI units internally. No rendering, no input, no file-format concerns
 beyond the content loader. Namespaces:
 
-- `CarSim.Core.Units` – unit conversions and physical constants.
-- `CarSim.Core.Mathx` – interpolation tables and small numeric helpers.
-- `CarSim.Core.Parts` – part definitions (typed per category), part instances (wear/fatigue),
-  catalog, JSON content loading and validation.
+- `CarSim.Core.Common` – unit conversions, physical constants, interpolation tables, root finding.
+- `CarSim.Core.Parts` – part definitions (typed per category), part instances (wear), spec registry.
+- `CarSim.Core.Content` – JSON content loading, validation and the content database.
+- `CarSim.Core.Fuels` – fuel definitions.
 - `CarSim.Core.Engines` – engine family definitions (slot graph), engine assembly (install/remove
-  order), compatibility validation, derived geometry, and the engine model.
-- `CarSim.Core.Ecu` – ECU capabilities and tune tables.
-- `CarSim.Core.Damage` – stress evaluation, fatigue accumulation, failures and diagnostic reports.
-- `CarSim.Core.Dyno` – dyno runs, telemetry, run comparison.
+  order), compatibility validation, derived geometry, valvetrain limits.
+- `CarSim.Core.Ecu` – editable tunes (tables + calibration) and the runtime ECU controller.
+- `CarSim.Core.Simulation` – the mean-value engine model: configuration, air path, fuel system,
+  combustion, thermal, lubrication, telemetry.
+- `CarSim.Core.Dyno` – dyno runs and telemetry capture.
+- `CarSim.Core.Damage` *(planned)* – stress evaluation, fatigue accumulation, failures and diagnostic reports.
 - `CarSim.Core.Vehicles` *(planned)* – drivetrain, gearbox, differential, tires, chassis state.
 
 ### Domain / data

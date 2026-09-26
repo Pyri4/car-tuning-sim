@@ -1,5 +1,8 @@
 using CarSim.Core.Common;
 using CarSim.Core.Content;
+using CarSim.Core.Dyno;
+using CarSim.Core.Ecu;
+using CarSim.Core.Simulation;
 using CarSim.Core.Engines;
 using CarSim.Core.Parts;
 
@@ -14,6 +17,8 @@ public static class Program
           carsim validate [--content <dir>]            Load and validate all content.
           carsim inspect [<engine-id>] [--content <dir>]
                                                         Show the stock build, derived geometry and compatibility report.
+          carsim sweep [<engine-id>] [--swap slot=part,...] [--fuel <id>] [--from 1000] [--to 8000] [--step 500]
+                                                        Steady-state full-throttle dyno sweep of the stock build (with swaps).
         """;
 
     public static int Main(string[] args)
@@ -30,6 +35,7 @@ public static class Program
             {
                 "validate" => Validate(options),
                 "inspect" => Inspect(options),
+                "sweep" => Sweep(options),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -59,6 +65,52 @@ public static class Program
         Console.WriteLine($"  {result.Errors.Count} error(s):");
         foreach (var e in result.Errors) Console.WriteLine($"    {e}");
         return 2;
+    }
+
+    private static int Sweep(CliOptions o)
+    {
+        var db = ContentLoader.LoadDirectory(o.ContentDir).GetOrThrow();
+        var engine = db.GetEngine(o.Positional.FirstOrDefault() ?? db.Engines.Keys.First());
+        var factory = new PartInstanceFactory();
+        var assembly = EngineAssembly.CreateStock(engine, db, factory);
+        if (o.Named.TryGetValue("swap", out var swaps))
+        {
+            foreach (var pair in swaps.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = pair.Split('=', 2);
+                if (kv.Length != 2) throw new ArgumentException($"Bad --swap entry '{pair}', expected slot=part.");
+                SwapPart(assembly, kv[0], db.GetPart(kv[1]), factory);
+            }
+        }
+        var fuel = db.GetFuel(o.Named.GetValueOrDefault("fuel", "gasoline_95"));
+        var tune = EcuTune.FromDocument(db.GetTune(engine.StockTune));
+        var config = EngineConfiguration.Build(assembly, fuel, new ValidationContext(tune.RevLimitRpm));
+        foreach (var issue in config.Report.Issues.Where(i => i.Severity != IssueSeverity.Info)) Console.WriteLine(issue);
+        var sim = new EngineSimulation(config.GetOrThrow(), tune, EngineState.Warm());
+        double from = double.Parse(o.Named.GetValueOrDefault("from", "1000"), System.Globalization.CultureInfo.InvariantCulture);
+        double to = double.Parse(o.Named.GetValueOrDefault("to", "8000"), System.Globalization.CultureInfo.InvariantCulture);
+        double step = double.Parse(o.Named.GetValueOrDefault("step", "500"), System.Globalization.CultureInfo.InvariantCulture);
+        Console.WriteLine($"{"rpm",6} {"Nm",6} {"kW",6} {"hp",6} {"MAPkPa",7} {"VE",5} {"λ",5} {"duty",5} {"adv",5} {"MBT",5} {"KLSA",5} {"knk",4} {"PCPbar",6} {"EGT°C",6} {"oil bar",7} {"FMEPbar",7} {"limit",6} {"port",6} {"exhBP",6} {"VEdyn",5} {"resid",5} {"PMEP",5}");
+        foreach (var t in SteadyStateSweep.Run(sim, from, to, step))
+        {
+            Console.WriteLine($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2}");
+        }
+        return 0;
+    }
+
+    private static void SwapPart(EngineAssembly a, string slot, PartDefinition part, PartInstanceFactory factory)
+    {
+        var removed = new Stack<(string, PartInstance)>();
+        foreach (var s in a.RemovalSequenceFor(slot))
+        {
+            var r = a.Remove(s, out var p);
+            if (!r.Ok) throw new ArgumentException(r.Message);
+            removed.Push((s, p!));
+        }
+        if (a.IsInstalled(slot)) a.Remove(slot, out _);
+        var ir = a.Install(slot, factory.Create(part));
+        if (!ir.Ok) throw new ArgumentException(ir.Message);
+        while (removed.Count > 0) { var (s, p) = removed.Pop(); a.Install(s, p); }
     }
 
     private static int Inspect(CliOptions o)

@@ -23,6 +23,12 @@ public sealed class TuneDocument
     public double[]? BoostTargetKpa { get; init; }
 
     public required double RevLimitRpm { get; init; }
+
+    /// <summary>Injector flow the ECU believes is installed (injector scaling), cc/min per injector.</summary>
+    public required double InjectorFlowCcMin { get; init; }
+
+    /// <summary>Stoichiometric AFR the ECU believes the fuel has (fuel calibration).</summary>
+    public required double FuelStoichAfr { get; init; }
     public double IdleRpm { get; init; } = 850;
     public bool KnockControlEnabled { get; init; } = true;
 
@@ -42,6 +48,8 @@ public sealed class TuneDocument
         }
         if (!(RevLimitRpm >= 1000 && RevLimitRpm <= 25000)) p.Add($"rev_limit_rpm out of range: {RevLimitRpm}");
         if (!(IdleRpm >= 300 && IdleRpm < RevLimitRpm)) p.Add($"idle_rpm out of range: {IdleRpm}");
+        if (!(InjectorFlowCcMin >= 50 && InjectorFlowCcMin <= 5000)) p.Add($"injector_flow_cc_min out of range: {InjectorFlowCcMin}");
+        if (!(FuelStoichAfr >= 3 && FuelStoichAfr <= 20)) p.Add($"fuel_stoich_afr out of range: {FuelStoichAfr}");
         return p;
     }
 

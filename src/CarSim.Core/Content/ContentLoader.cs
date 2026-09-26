@@ -247,7 +247,8 @@ public static class ContentLoader
                 RpmAxis = tune.RpmAxis, LoadAxisKpa = tune.LoadAxisKpa,
                 TargetLambda = tune.TargetLambda, IgnitionAdvanceDeg = tune.IgnitionAdvanceDeg,
                 BoostTargetKpa = tune.BoostTargetKpa, RevLimitRpm = tune.RevLimitRpm,
-                IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled, Source = source,
+                IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
+                InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = source,
             };
         }
 

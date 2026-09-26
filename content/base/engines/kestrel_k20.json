@@ -53,7 +53,8 @@
         "exhaust": "exhaust.oem_57mm",
         "radiator": "radiator.oem",
         "ecu": "ecu.k20_oem"
-      }
+      },
+      "stock_tune": "k20.stock"
     }
   ]
 }
