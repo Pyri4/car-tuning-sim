@@ -42,6 +42,10 @@ DOHC V8s, a flat-four, VVL, variable intake) proves that other architectures run
 - SIMULATION_SPEC.md — initial simulation model and equations
 - PARTS_DATABASE.md — initial component/data schema
 - docs/ENGINE_ARCHITECTURE_AUDIT.md — structural engine assumptions found in the code and what was done about each
+- docs/milestones/ — milestone definitions (the next one is proposed until the owner authorizes it)
+
+Coding agents also get this project's procedures as agent skills (`.agents/skills/`, `.claude/skills/`, managed with
+`npx skills`; sources in `tools/agent-skills/`). See AGENTS.md, "Agent skills".
 
 ## Technology
 Godot 4.7 (.NET) for presentation; the mechanical simulation is a pure C# (.NET 8) library with no

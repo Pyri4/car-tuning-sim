@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "skills": {
+    "car-sim-add-engine": {
+      "source": "./tools/agent-skills",
+      "sourceType": "local",
+      "computedHash": "2f3b7637353911cf9ab9b4f837f6ab4b438c25222ac449e2e50e74032cc55344"
+    },
+    "car-sim-project-gate": {
+      "source": "./tools/agent-skills",
+      "sourceType": "local",
+      "computedHash": "fec21dedaa198d90232e27ffd162bd9e3152470e987bb46dd83d6c73c4e5d635"
+    },
+    "car-sim-verify": {
+      "source": "./tools/agent-skills",
+      "sourceType": "local",
+      "computedHash": "e6bb3c3b94324bd4bf5ab55d29ca1a0d8417c6f0311d59e0333ba01111c5757d"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+    }
+  }
+}
