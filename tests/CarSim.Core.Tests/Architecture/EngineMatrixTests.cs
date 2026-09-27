@@ -204,18 +204,30 @@ public class EngineMatrixTests
         Assert.True(EngineDiagnostics.CompressionTestByBank(a).Count == a.Definition.Banks.Count);
         foreach (var part in a.AllParts) Assert.NotEmpty(PartInspector.Inspect(part).Select(f => f.Text).Append(PartInspector.WearText(part)));
     }
+}
 
-    // ---- Cars: any engine that fits ----------------------------------------------------------------------------------
-
+/// <summary>
+/// The last step of the matrix pipeline: every synthetic engine driven in a car it was not built for (an engine swap,
+/// decided by interfaces). Its own class so xUnit runs these laps in parallel with the rest of the matrix.
+/// </summary>
+public class EngineMatrixDriveTests
+{
     public static IEnumerable<object[]> CarScenarios =>
         TestContent.Matrix.Scenarios.Values.Where(s => s.Vehicle.Length > 0 && !TestContent.Database.Scenarios.ContainsKey(s.Id))
             .OrderBy(s => s.Id, StringComparer.Ordinal).Select(s => new object[] { s.Id });
+
+    [Fact]
+    public void EverySyntheticEngineHasACarToDrive()
+    {
+        var driven = TestContent.Matrix.Scenarios.Values.Where(s => s.Vehicle.Length > 0).Select(s => s.Engine).ToHashSet();
+        Assert.All(TestContent.MatrixFamilies, f => Assert.Contains(f, driven));
+    }
 
     [Theory]
     [MemberData(nameof(CarScenarios))]
     public void DrivesInACarItWasNotBuiltFor(string scenario)
     {
-        var g = Garage.NewGame(Db, scenario);
+        var g = Garage.NewGame(TestContent.Matrix, scenario);
         Assert.NotEqual(g.Chassis!.Definition.Engine, g.Engine.Definition.Id); // the car shipped with another engine
         var (car, problem) = g.CreateVehicleSimulation();
         Assert.True(car != null, problem);
@@ -223,5 +235,6 @@ public class EngineMatrixTests
         while (session.Timer.Laps < 1 && car!.State.Time < 150) session.Advance(0.1, default);
         Assert.Equal(1, session.Timer.Laps);
         Assert.InRange(session.Timer.LastLap!.Value, 30, 120);
+        Assert.Empty(car!.Engine.Damage.Failures);
     }
 }

@@ -1,12 +1,20 @@
 # Car Tuning Simulator — Agent Instructions
 
-## Project vision
-Build a deep car-building and tuning simulator inspired by Car Mechanic Simulator, Street Legal Racing: Redline, Automation, and BeamNG.drive.
+## Read this first: the North Star
+**[GAME_VISION.md](GAME_VISION.md) is the canonical statement of what this project is.** In short:
 
-Core loop:
-BUY → INSPECT → REPAIR → BUILD → TUNE → DYNO → DRIVE → BREAK → REBUILD
+A deep automotive building, repair, tuning and simulation game inspired by Car Mechanic Simulator, Street Legal Racing:
+Redline, Automation and BeamNG.drive — with more emphasis than any of them on mechanical construction, tuning,
+diagnostics, part compatibility, realistic failure, the dyno and telemetry, rebuilding and experimentation.
 
-Mechanical depth and tuning are more important than arcade racing.
+Long-term loop:
+BUY → INSPECT → DISASSEMBLE → DIAGNOSE → REPAIR → BUILD → MODIFY → SWAP → TUNE → DYNO → DRIVE → BREAK → DIAGNOSE → REBUILD
+
+Scale goal: hundreds of engine families, thousands of parts, many cars, engine swaps.
+**Adding the 100th engine should be almost as easy as adding the 2nd.**
+
+Mechanical depth and tuning are more important than arcade racing. You do not need the user to re-explain any of
+this; the repository holds it.
 
 ## Development principles
 - Prefer modular, data-driven systems over hardcoded vehicle-specific logic.
@@ -20,25 +28,29 @@ Mechanical depth and tuning are more important than arcade racing.
 - Document major architectural decisions.
 - Do not generate large quantities of placeholder code merely to appear complete.
 
-## Prototype scope
-First playable prototype:
-- One car
-- One engine
-- One garage
-- One dyno
-- One test track
+## Engine architecture rules
+Full reference: [ENGINE_AUTHORING_GUIDE.md](ENGINE_AUTHORING_GUIDE.md).
+- **Adding an engine is a content/data task**: an architecture (banks, slots), parts with specs and interfaces, and a
+  tune calibrated with the dev calibrators. Follow the guide's procedure (§6).
+- **Never branch on identity** in simulation, damage, ECU or gameplay code: no `engine.Id ==`, `part.Id ==`,
+  family names, cylinder-count or layout special cases. `EngineAgnosticTests` audits `src/` for them.
+- The model is **generic physics + generic capabilities + part data + calibration**. A missing physical feature becomes a
+  reusable capability (guide §7), driven by part data, tested, and bit-identical for engines without the hardware.
+- **Do not re-fit shared model constants to make one engine match its reference.** Document the miss and classify it.
+- Parts fit through **interfaces** (`provides`/`requires`, bank-aware); cars and engines fit through interfaces too
+  (bellhousing today). Never tie a car to an engine family or a part to a list of engines.
+- Bank-scoped categories (head, gasket, springs, cams, intake, throttle, exhaust manifold, exhaust, turbo, intercooler)
+  may have several parts: read them per bank (`PartFor`, `PartsOf`, `BankConfiguration`), never "the first one".
+  Where the model deliberately has one of something (the MAP sensor, the knock retard), say so in a comment.
+- **Regression content vs architecture tests:** the Kestrel K20 and Isar M54 pin behaviour (single-bank output must stay
+  bit-identical unless a documented generic correction changes it); the synthetic matrix in
+  `content/test/engine-matrix/` proves architectures and must stay content-only.
+- Record structural findings in `docs/ENGINE_ARCHITECTURE_AUDIT.md`.
 
-Required loop:
-1. Inspect vehicle
-2. Remove engine
-3. Disassemble engine
-4. Replace components
-5. Reassemble engine
-6. Start engine
-7. Tune ECU
-8. Run dyno
-9. Drive
-10. Trigger mechanical failure through bad parts/build/tuning
+## Prototype scope (complete)
+The first playable prototype exists: two cars, two engine families, one garage, one dyno, one test track, and the
+required loop (inspect, remove engine, disassemble, replace components, reassemble, start, tune ECU, dyno, drive,
+trigger mechanical failure through bad parts/build/tuning). See ROADMAP.md for what is next.
 
 ## Desired simulation areas
 - Engine assembly and internal components
@@ -58,11 +70,17 @@ Required loop:
 
 ## Agent workflow
 When starting a task:
-1. Read README.md, GAME_DESIGN.md, ARCHITECTURE.md, ROADMAP.md, and relevant system docs.
+1. Read GAME_VISION.md, README.md, GAME_DESIGN.md, ARCHITECTURE.md, ROADMAP.md, and the relevant system docs
+   (ENGINE_AUTHORING_GUIDE.md for anything touching engines or parts; SIMULATION_SPEC.md; PARTS_DATABASE.md).
 2. Identify affected systems and dependencies.
 3. Make the smallest coherent implementation.
 4. Add/update tests.
-5. Run available tests/build checks.
+5. Run available tests/build checks:
+   - `dotnet build CarTuningSim.sln` and `dotnet test CarTuningSim.sln`;
+   - `dotnet run --project tools/CarSim.Cli -- validate --mods content/test` (base content plus the synthetic matrix);
+   - for engine or UI changes, the Godot smoke tests (`godot --headless --path game -- --smoke-test [--scenario=<id>]`,
+     and `--drive --smoke-test`; `CARSIM_MODS_DIR=<repo>/content/test` loads the synthetic engines).
 6. Summarize changed files, validation, and remaining risks.
 
-Do not begin broad gameplay implementation until the architecture document defines the engine/framework, simulation boundaries, data model, and test strategy.
+Architecture work comes before content scale: do not add hundreds of parts, an open world, multiplayer or unrelated UI
+before the systems underneath can carry them.

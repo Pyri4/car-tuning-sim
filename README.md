@@ -3,12 +3,16 @@
 A mechanically deep car-building and tuning simulator.
 
 ## Vision
-Car Mechanic Simulator × Street Legal Racing: Redline × Automation × BeamNG.drive.
+Car Mechanic Simulator × Street Legal Racing: Redline × Automation × BeamNG.drive — with more emphasis on mechanical
+construction, tuning, diagnostics, part compatibility, realistic failure, the dyno and telemetry, rebuilding and
+experimentation. **[GAME_VISION.md](GAME_VISION.md) is the North Star.**
 
-The main attraction is building and tuning cars where component choices have meaningful mechanical consequences.
+The main attraction is building and tuning cars where component choices have meaningful mechanical consequences. The
+long-term scale is hundreds of engine families and thousands of parts, so engines are data: *adding the 100th engine
+should be almost as easy as adding the 2nd* ([ENGINE_AUTHORING_GUIDE.md](ENGINE_AUTHORING_GUIDE.md)).
 
-## Core gameplay loop
-BUY → INSPECT → REPAIR → BUILD → TUNE → DYNO → DRIVE → BREAK → REBUILD
+## Gameplay loop
+BUY → INSPECT → DISASSEMBLE → DIAGNOSE → REPAIR → BUILD → MODIFY → SWAP → TUNE → DYNO → DRIVE → BREAK → DIAGNOSE → REBUILD
 
 ## Prototype
 The first milestone is intentionally small:
@@ -25,15 +29,19 @@ The first milestone is intentionally small:
 Two engine families ship: the fictional Kestrel K20 four (the prototype's engine) and the Isar M54 straight six, a
 real engine (BMW M54B30, European E46 330i) authored purely as data to prove engine families are content — see
 PARTS_DATABASE.md ("Isar M54 reference engine") and SIMULATION_SPEC.md ("Second engine family") for its sources and
-how close the model gets.
+how close the model gets. A synthetic engine matrix (`content/test/engine-matrix/`: V6, twin-turbo V6, pushrod and
+DOHC V8s, a flat-four, VVL, variable intake) proves that other architectures run through the same code as data.
 
 ## Repository docs
+- GAME_VISION.md — the North Star: what the game is, its scale goal and the principles that do not change
 - AGENTS.md — persistent coding-agent instructions
+- ENGINE_AUTHORING_GUIDE.md — engine architecture, parts and interfaces, capabilities, how to add an engine or a capability
 - GAME_DESIGN.md — gameplay and simulation goals
 - ARCHITECTURE.md — technical architecture decisions
 - ROADMAP.md — staged development plan
 - SIMULATION_SPEC.md — initial simulation model and equations
 - PARTS_DATABASE.md — initial component/data schema
+- docs/ENGINE_ARCHITECTURE_AUDIT.md — structural engine assumptions found in the code and what was done about each
 
 ## Technology
 Godot 4.7 (.NET) for presentation; the mechanical simulation is a pure C# (.NET 8) library with no
@@ -58,7 +66,10 @@ Command-line tools (no Godot needed):
 
 ```
 dotnet run --project tools/CarSim.Cli -- validate                      # check all content
-dotnet run --project tools/CarSim.Cli -- inspect isar_m54              # stock engine build, geometry, compatibility
+dotnet run --project tools/CarSim.Cli -- inspect isar_m54              # architecture, stock build, geometry, compatibility
+dotnet run --project tools/CarSim.Cli -- validate --mods content/test  # base content plus the synthetic engine matrix
+dotnet run --project tools/CarSim.Cli -- sweep syn_v6_tt --mods content/test --fuel gasoline_98   # per-bank/per-turbo columns
+dotnet run --project tools/CarSim.Cli -- drive syn_v8_ohv --mods content/test --vehicle isar_c30   # an engine swap
 dotnet run --project tools/CarSim.Cli -- sweep kestrel_k20 --swap exhaust=exhaust.race_76mm
 dotnet run --project tools/CarSim.Cli -- sweep isar_m54 --fuel gasoline_98
 dotnet run --project tools/CarSim.Cli -- hold kestrel_k20 --rpm 6500 --sump-g 1.3  # abuse test: warnings, failure report, inspection
@@ -93,19 +104,21 @@ report appears on track and in the Reports tab.
 
 Development aids for the game (arguments after `--`): `--tab=dyno`, `--autorun`, `--select=pistons`,
 `--screenshot=out.png --frames=30`, `--scenario=isar_c30_six` (start another scenario; the Garage tab's New game also
-offers every scenario), `--smoke-test` (headless CI check); for the track: `--drive`
+offers every scenario; with `CARSIM_MODS_DIR=<repo>/content/test` the synthetic engines' scenarios such as
+`syn_v8_swap` too), `--smoke-test` (headless CI check); for the track: `--drive`
 (start there), `--autodrive`, `--warp=20` (simulate 20 s ahead), `--camera=trackside`, and
 `--drive --smoke-test` (headless drive check).
 
 ## Modding
 Mods are folders of JSON under `content/mods/`, loaded after the base game; they can add parts,
 engines, fuels, tunes, scenarios and cars, or redefine existing ones by id. See PARTS_DATABASE.md
-("Mods") and the example in `docs/example-mod/`. Limits: new parts in existing categories are data only, new
-categories need code, and an engine family must fit what the engine model represents (one part or set per
-category — no twin turbos, per-bank air paths, superchargers or dry sumps yet); anything else is rejected at load
-with a reason. A second, real engine family was added as data only (the one model abstraction it needed, cam timing,
-is now data too); the level-setting constants are still the K20's, which puts the M54 about 10 % under its published
-power (SIMULATION_SPEC.md, "Second engine family").
+("Mods") and the example in `docs/example-mod/`. New engine families are data: inline, V and flat layouts with any
+number of banks, per-bank or shared intake and exhaust paths, any number of turbochargers, SOHC/DOHC/OHV valvetrains,
+cam phasing, two-stage variable valve lift and variable intake runners (ENGINE_AUTHORING_GUIDE.md). New parts in
+existing categories are data only; new categories and new capabilities need code. Superchargers, direct injection,
+dry sumps and exhaust cam phasing are not modelled yet; families that need them are rejected at load with a reason.
+The level-setting constants are still the K20's, which puts the M54 about 10 % under its published power
+(SIMULATION_SPEC.md, "Second engine family").
 
 ## Current status
 Early implementation. See ROADMAP.md for what exists and what is next.

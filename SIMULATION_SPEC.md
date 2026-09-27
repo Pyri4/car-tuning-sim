@@ -23,7 +23,10 @@ Each `Step(dt, inputs)`:
 7. Heat split to coolant, oil and exhaust; loads on rods and bearings; oil pressure.
 8. Integrate temperatures, knock control, and speed (when free).
 
-Outputs are an `EngineTelemetry` record (≈60 channels).
+Steps 2–3, 6 and 7 run once per **bank** (see "Banks and air paths"); speed, temperatures of coolant and oil, the
+ECU and the fuel command are engine-wide.
+
+Outputs are an `EngineTelemetry` record (≈60 engine channels, plus `Banks[]` and `Turbos[]`).
 
 Performance (measured in the validation pass, Release, .NET 8 defaults, one core of a shared 4-core container;
 best of 5 × 20 000 steps, ±10 % run to run; the second-family milestone's own measurements follow the table):
@@ -53,6 +56,59 @@ measured: bit-identical results, half the allocation, turbo steps 10 % faster �
 *slower* under .NET 8's default dynamic PGO (equal or faster with PGO off), so it was not merged. An
 allocation-budget test (16.5 KB per turbo step) guards regressions.
 
+Engine-architecture milestone (`carsim bench`, same settings, two runs each, the PR #4 head built in the same container
+for the before column):
+
+| Engine step | Before (PR #4 head) | After |
+|---|---|---|
+| K20 (1 bank, NA) | 55.0–56.0 µs, 10,576 B | 55.0–55.9 µs, 10,360 B |
+| M54 (1 bank, NA) | 53.9–55.8 µs, 10,576 B | 53.6–55.7 µs, 10,360 B |
+| syn_i4_turbo (1 bank, turbo) | — | 71.7–73.1 µs, 13,096 B |
+| syn_v6_na, syn_v8_dohc_vvt (2 banks, NA) | — | 101.4–103.5 µs, 18,352 B |
+| syn_v6_tt (2 banks, 2 turbos) | — | 151.7–152.5 µs, 28,032 B |
+
+Single-bank engines cost the same (and allocate 216 B less). Cost scales with the number of air paths — each bank solves
+its own — so two banks cost ≈ 1.85× one and the twin-turbo V6 ≈ 2.1× a single-turbo four: 7.6 % of a core at 500 Hz.
+Cylinder count still costs nothing. The allocation-free root finder would now pay off twice over on multi-bank engines.
+
+## Banks and air paths (`Simulation/BankConfiguration.cs`, `Simulation/EngineConfiguration.cs`)
+An engine family declares banks (ids and cylinder numbers; one implicit bank `main` when none are authored). The model's
+resolution is the bank: there is no per-cylinder state. Architecture rules and authoring: ENGINE_AUTHORING_GUIDE.md.
+
+- **Scopes.** Engine-wide parts (block, bearings, crank, rods, pistons, injectors, fuel pump, oil pump, sump, radiator,
+  flywheel, ECU) are one part or set for the engine. Each bank is served by one head gasket, head, spring set, camshaft
+  set, intake manifold, throttle, exhaust manifold and exhaust, and at most one turbocharger and intercooler; one part
+  may serve several banks.
+- **Shared elements.** Bank `b` with `n_b` cylinders sees a part serving `n_s` cylinders with the share
+  `s = n_b / n_s`: restrictions enter its path with `CdA · s`; a shared turbocharger's compressor is evaluated at the
+  bank's mass flow `/ s` (the whole compressor's operating point when the banks are alike) and the bank's turbine and
+  wastegate areas are `× s`; an intercooler's effectiveness is read at the bank's flow `/ s`. The air path of each bank
+  is then solved independently. For alike banks this is exact — two alike banks give the same result as one bank of all
+  the cylinders to within solver tolerance (`TwoAlikeBanksAreTheSameEngineAsOneBankOfAllItsCylinders`, 10⁻⁶) — and for
+  a single bank `s = 1` exactly, so single-bank engines are bit-identical to the pre-bank model. For **dissimilar**
+  banks sharing an element it is an approximation: there is no cross-feed between banks (a restricted bank does not
+  draw more through a common plenum; a failed turbo's bank runs naturally aspirated although the other turbo shares
+  its plenum).
+- **Turbochargers.** One shaft, wastegate and boost-control integrator per turbo. The shaft is driven by the sum of
+  its banks' turbine power shares; its wastegate reads the compressor outlet of the first bank it serves and the boost
+  controller reads the ECU's one MAP sensor (exact for alike banks). Each bank's turbine outlet temperature is its own.
+- **ECU.** One MAP sensor, on the plenum of the first bank's air path; one fuel command and one spark advance for all
+  cylinders, so banks that breathe differently run at different λ (a real symptom). Every bank's cam phaser, valve-lift
+  stage and runner stage follow the same tables and switch speeds.
+- **Per bank:** air per cycle, port and exhaust-port pressures, charge temperature, λ, MBT, knock limit and intensity,
+  IMEP/PMEP/FMEP (with that bank's springs and valve count), peak cylinder pressure, heat split, EGT (and its sensor),
+  exhaust-port wall heat, turbine outlet temperature, cam advance, lift stage, runner stage, valve-float speed.
+- **Engine-wide aggregation:** torque, air and fuel flow, heat flows and power are sums; IMEP/PMEP/FMEP/BMEP, MBT and λ
+  are cylinder-weighted means (weights `n_b/N`, exactly 1 for one bank); peak cylinder pressure, knock intensity and
+  the lowest knock limit, the lowest valve-float speed and the hottest crown target are the worst bank's (the knock
+  sensor hears the worst bank; one knock retard applies to all; the pistons are one set). The rod and bearing loads use
+  the worst bank's peak pressure.
+- **Damage.** Stress readings name the part instance: a gasket from the peak pressure of the banks it serves, a head
+  and spring set from their own bank's float speed, a turbo from its own shaft and inlet temperature. A failure's
+  collateral damage stays on the failed part's banks.
+- **Workshop.** The compression test reads each bank (`EngineDiagnostics.CompressionTestByBank`): a failed gasket or a
+  bent valve shows on its own bank.
+
 ## Geometry (`Engines/EngineGeometry.cs`)
 - Swept volume per cylinder `V_d = π/4 · B² · S`; displacement `V = n · V_d`.
 - Deck clearance `= deck_height − (S/2 + rod_length + compression_height)`.
@@ -61,6 +117,12 @@ allocation-budget test (16.5 KB per turbo step) guards regressions.
 - Compression ratio `CR = (V_d + V_c) / V_c` — always derived, never authored.
 - Reciprocating mass `m_recip = m_piston + m_rod / 3`.
 - Rod inertia load (tensile, TDC exhaust) `F = m_recip · ω² · r · (1 + r/l)`.
+- **Per bank:** the bottom end (block, crank, rods, pistons) is shared; the gasket and head are the bank's own, so each
+  bank has its own clearance volume, quench and compression ratio (`BankConfiguration.Geometry`). Combustion, knock,
+  residuals, the validator's quench and compression checks and the compression test use the bank's geometry. The
+  engine-level `EngineConfiguration.Geometry` is the first bank's, used only for bottom-end quantities (bore, stroke,
+  displacement, reciprocating mass). A different head or gasket on one bank changes only that bank
+  (`EachBankCompressesToItsOwnHeadAndGasket`).
 
 ## Air path (`Simulation/AirPath.cs`, `Simulation/CompressibleFlow.cs`)
 Every restriction is an isentropic nozzle:
@@ -138,6 +200,24 @@ centrelines — degreed-in cams, or the **park** position of cam phasers — and
   dependence, and intake gas dynamics that a phaser cannot move — the phaser shifts the whole filling hump, so a phased
   engine fills at its ceiling at every speed and the runner has no effect under it (see "M54 torque-curve
   investigation").
+
+## Variable valve lift (two-stage) and variable intake runners
+Generic capabilities added with the engine-architecture milestone. Both are part data plus an ECU output and a tune
+switch speed; without the ECU output the hardware stays in its base state and the validator warns.
+
+- **Variable valve lift** (VTEC/VVL type): a camshaft may carry a `high_lift_profile` (intake/exhaust duration and
+  lift). The ECU (`valve_lift_control`) switches to it above the tune's `valve_lift_switch_rpm` and back 150 rpm below
+  (`EcuController.SwitchHysteresisRpm`), only while running. On the high profile the bank's port flow (mean flow over
+  the lift profile), event lengths, the duration term of the tuned piston speed, overlap and valve-float speed are the
+  high profile's; the springs must clear the higher lift (coil bind is checked against the larger lift).
+- **Variable intake runner** (DISA/VIS type): an intake manifold may carry a `switched_runner_length_mm`. The ECU
+  (`intake_runner_control`) switches to it above `intake_runner_switch_rpm` (same hysteresis). The switched stage
+  replaces the runner length in the tuning factor `(0.300 m / L)^0.25`.
+- **Limits.** The runner stage acts through the single filling hump: on a fixed-cam engine it moves the hump as a
+  runner swap would, but under a cam phaser the phaser re-centres the hump and the runner has little effect — the
+  limitation found in the M54 torque-curve investigation. The M54's DISA is therefore not authored; splitting intake gas
+  dynamics from valve timing is the next milestone (ROADMAP).
+- Telemetry `HighValveLift`, `SwitchedRunner` (engine, from the ECU outputs) and per bank.
 
 ## ECU (`Ecu/`)
 The ECU only knows its sensors and its calibration; it never sees the engine's true airflow.

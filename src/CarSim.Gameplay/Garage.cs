@@ -198,11 +198,24 @@ public sealed class Garage
     public IReadOnlyList<string> FitProblems(PartDefinition part, string slotId)
     {
         var problems = new List<string>();
-        var others = Engine.Installed.Concat(Chassis?.Installed ?? Enumerable.Empty<KeyValuePair<string, PartInstance>>())
-            .Where(kv => kv.Key != slotId).Select(kv => kv.Value.Definition);
-        var provided = new HashSet<string>(others.SelectMany(d => d.Provides), StringComparer.Ordinal);
+        // As the validator resolves them: an engine slot serving some banks takes its keys from engine-wide parts or
+        // parts serving one of the same banks (the right exhaust manifold bolts to the right head); car slots and the
+        // car's parts see the whole engine (a gearbox takes the block's bellhousing).
+        var def = Engine.Definition;
+        var banks = def.FindSlot(slotId) is { } engineSlot ? def.BanksServedBy(engineSlot) : null;
+        bool SameBanks(string otherSlot) => banks == null || def.BanksServedBy(def.GetSlot(otherSlot)).Intersect(banks).Any();
+        var engineParts = Engine.Installed.Where(kv => kv.Key != slotId).ToList();
+        var chassisParts = (Chassis?.Installed ?? Enumerable.Empty<KeyValuePair<string, PartInstance>>()).Where(kv => kv.Key != slotId).ToList();
+        var provided = new HashSet<string>(engineParts.Where(kv => SameBanks(kv.Key)).Concat(chassisParts)
+            .SelectMany(kv => kv.Value.Definition.Provides), StringComparer.Ordinal);
         var missing = part.Requires.Where(r => !provided.Contains(r)).ToList();
-        if (missing.Count > 0) problems.Add($"needs {string.Join(", ", missing)}, which nothing fitted provides");
+        if (missing.Count > 0)
+        {
+            bool elsewhere = missing.All(r => engineParts.Any(kv => kv.Value.Definition.Provides.Contains(r, StringComparer.Ordinal)));
+            problems.Add(elsewhere
+                ? $"needs {string.Join(", ", missing)} on {string.Join(", ", def.FindSlot(slotId)!.Banks.Select(b => $"bank '{b}'"))}, which only another bank's parts provide"
+                : $"needs {string.Join(", ", missing)}, which nothing fitted provides");
+        }
         int? count = part.Spec switch
         {
             CarSim.Core.Parts.Specs.PistonSpec p => p.Count,

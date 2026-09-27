@@ -43,6 +43,8 @@ public static class Program
                                                         throttle, held speed) and per vehicle step (autopilot on the test track).
         <engine-id> (kestrel_k20, isar_m54, ...) may be left out only when the content has a single engine family.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
+        Content options (every command): --content <dir> (default content/base)  --mods <dir> (default content/mods;
+        --mods content/test loads the synthetic engine matrix)
         """;
 
     public static int Main(string[] args)

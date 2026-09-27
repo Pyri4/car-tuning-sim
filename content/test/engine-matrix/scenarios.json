@@ -100,6 +100,60 @@
       "vehicle": "isar_c30",
       "money": 10000,
       "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i4_sohc_swap",
+      "name": "Synth SOHC four in the Isar C30",
+      "description": "Engine-swap test: a 1.6 SOHC two-valve four in a car built for a 3.0 six.",
+      "engine": "syn_i4_sohc",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_i3_turbo_vvl_swap",
+      "name": "Synth turbo VVL triple in the Isar C30",
+      "description": "Engine-swap test: a turbocharged 1.2 triple with variable valve lift.",
+      "engine": "syn_i3_turbo_vvl",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i4_turbo_swap",
+      "name": "Synth turbo four in the Isar C30",
+      "description": "Engine-swap test: a turbocharged four with an intake cam phaser.",
+      "engine": "syn_i4_turbo",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i6_vis_swap",
+      "name": "Synth variable-intake six in the Isar C30",
+      "description": "Engine-swap test: a 2.5 six with a two-stage intake.",
+      "engine": "syn_i6_vis",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_h4_turbo_swap",
+      "name": "Synth turbo flat-four in the Isar C30",
+      "description": "Engine-swap test: a flat-four with one turbo fed by both banks.",
+      "engine": "syn_h4_turbo",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_v8_dohc_vvt_swap",
+      "name": "Synth DOHC V8 in the Isar C30",
+      "description": "Engine-swap test: a DOHC V8 with intake cam phasers on both banks.",
+      "engine": "syn_v8_dohc_vvt",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
     }
   ]
 }

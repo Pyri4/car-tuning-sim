@@ -1,8 +1,10 @@
-# Engine architecture audit (2026-09-26)
+# Engine architecture audit (2026-09-26, second pass 2026-09-27)
 
 What the codebase assumed about engines before the engine-architecture milestone, and what was done about each
-assumption. It was written before any code changed, as the plan for that milestone; the outcome column records what
-was actually done. [ENGINE_AUTHORING_GUIDE.md](../ENGINE_AUTHORING_GUIDE.md) describes the architecture that resulted.
+assumption. The first pass (sections A–H) was written before any code changed, as the plan for that milestone; the
+outcome column records what was actually done. The [second pass](#second-pass-2026-09-27) re-searched the repository
+after the refactor for structural assumptions that survived it. [ENGINE_AUTHORING_GUIDE.md](../ENGINE_AUTHORING_GUIDE.md)
+describes the architecture that resulted.
 
 Classification:
 1. **Already generic** — works for any engine the data describes.
@@ -59,7 +61,7 @@ fitted on one engine, and UI or CLI code that only makes sense for one topology.
 
 | # | Finding | Where | Class | Outcome |
 |---|---|---|---|---|
-| D1 | `EngineConfiguration` exposes one `Head`, `Cams`, `Springs`, `HeadGasket`, `Intake`, `Throttle`, `ExhaustManifold`, `Exhaust`, `Turbo`, `Intercooler` | `EngineConfiguration` | 3 | These moved into `BankConfiguration` (one per bank) and `TurboConfiguration` (one per turbo); nothing reads "the first bank" |
+| D1 | `EngineConfiguration` exposes one `Head`, `Cams`, `Springs`, `HeadGasket`, `Intake`, `Throttle`, `ExhaustManifold`, `Exhaust`, `Turbo`, `Intercooler` | `EngineConfiguration` | 3 | These moved into `BankConfiguration` (one per bank) and `TurboConfiguration` (one per turbo). The geometry (compression ratio, quench) still came from the first head and gasket; the second pass (S1) made it per bank |
 | D2 | Combustion, knock, EGT and friction are computed once for the whole engine | `EngineSimulation.Step` | 3 | Computed per bank (its own air, λ, knock limit, peak pressure, pumping and valvetrain friction, exhaust temperature) and summed or bounded explicitly |
 | D3 | Engine-wide states (speed, coolant, oil, crown temperature, knock retard) | `EngineState` | 2 | Kept engine-wide; crown temperature follows the hottest bank, the knock sensor hears the worst bank (one retard for all — documented) |
 | D4 | Damage finds "the" part of a category | `DamageModel`, `StressEvaluator`, `FailureDiagnostics`, `Inspection` | 3 | Stress readings name the part instance; a bank's gasket, head, springs and turbo are loaded from that bank's operating point; collateral damage stays on the failed part's banks |
@@ -72,15 +74,15 @@ fitted on one engine, and UI or CLI code that only makes sense for one topology.
 | # | Finding | Where | Class | Outcome |
 |---|---|---|---|---|
 | E1 | Workshop groups slots by category (not slot id) | `EngineView` | 1 | Bank-scoped slots list under their group with the bank in their name |
-| E2 | Dyno gauges show one turbo, one cam position, one λ | `DynoView` | 3 | Per-bank λ/EGT/knock and per-turbo speed when an engine has more than one; the valve-lift stage and runner stage |
-| E3 | Tuning shows the cam table only | `TuningView` | 3 | Valve-lift and runner switch speeds are editable tune fields |
+| E2 | Dyno gauges show one turbo, one cam position, one λ | `DynoView` | 3 | Per-bank λ and EGT and per-turbo shaft speed and pressure ratio when an engine has more than one; the valve-lift and runner stages on engines that have the hardware. The drive HUD's boost line no longer indexes the first turbo (it threw on every NA engine) |
+| E3 | Tuning shows the cam table only | `TuningView` | 3 | Valve-lift and runner switch speeds are editable when the capability is active; the hardware labels come from `EngineCapabilities` and every camshaft slot |
 | E4 | New game offers every scenario | `GarageView` | 1 | — |
 
 ## F. Save/load assumptions
 
 | # | Finding | Where | Class | Outcome |
 |---|---|---|---|---|
-| F1 | Saves store the family id and a slot-id → part map; tunes field by field | `SaveSystem` | 1 (with a known trap) | New tune fields added to both copies (loader and migration) and covered by a round-trip test on an engine that uses them |
+| F1 | Saves store the family id and a slot-id → part map; tunes field by field | `SaveSystem` | 1 (with a known trap) | The trap is gone: `TuneDocument` is a record and both copies use `with`, so new tune fields survive; round-trip tests cover engines that use them |
 | F2 | Part instances, wear, fatigue ledgers keyed by instance | `SaveSystem` | 1 | — |
 
 ## G. CLI assumptions
@@ -88,7 +90,7 @@ fitted on one engine, and UI or CLI code that only makes sense for one topology.
 | # | Finding | Where | Class | Outcome |
 |---|---|---|---|---|
 | G1 | Commands take an engine id (required with several families) | `Program.EngineId` | 1 | — |
-| G2 | `drive` builds the engine's own car | `BuildCar` | 3 | It uses a scenario (`--scenario`) or the family's stock car; engines without a car are refused with a reason |
+| G2 | `drive` builds the engine's own car | `BuildCar` | 3 | `--vehicle <car>` puts the engine in any car whose interfaces fit (an engine swap); otherwise a car whose stock engine it is; engines without one are refused with a reason |
 | G3 | `inspect` prints geometry and the report | `Inspect` | 3 | Also the architecture (banks, layout, firing order) and the resolved capabilities |
 | G4 | `sweep` prints one set of columns | `Sweep` | 3 | Adds per-bank and per-turbo columns when the engine has several; valve-lift and runner stages |
 | G5 | `calibrate-cams` uses the single intake phaser | `CalibrateCams` | 1 | Works per engine; every bank's phaser follows the same table |
@@ -98,7 +100,7 @@ fitted on one engine, and UI or CLI code that only makes sense for one topology.
 | # | Finding | Where | Class | Outcome |
 |---|---|---|---|---|
 | H1 | `TestContent.Families` = {K20, M54}; helpers default to the K20 | `TestContent`, `SimFactory` | 1 | The synthetic matrix is a content layer loaded beside them |
-| H2 | Source audit: family tokens, content ids, size branches | `EngineAgnosticTests` | 1 | Extended to the synthetic ids and to "first bank" shortcuts |
+| H2 | Source audit: family tokens, content ids, size branches | `EngineAgnosticTests` | 1 | Extended to the synthetic matrix's ids and family tokens (`src/CarSim.Core`, `src/CarSim.Gameplay`). "First bank" shortcuts are caught by the invariant tests rather than by text search (mutation-checked, second pass) |
 | H3 | Tests read `Config.Turbo`, `Config.Cams`, `State.TurboOmega` | turbo, cam tests | 3 | Read the bank or turbo they mean |
 | H4 | The content-only variant test mutates one engine (8 cylinders) | `EngineAgnosticTests` | 1 | Joined by bank, valve-count, air-path and turbo-count mutations |
 
@@ -117,3 +119,57 @@ fitted on one engine, and UI or CLI code that only makes sense for one topology.
 8. CLI, UI.
 9. Synthetic engine matrix as a content layer, calibrated with the dev tools; architecture and mutation tests.
 10. Documentation: ENGINE_AUTHORING_GUIDE.md, the vision and project memory, spec, parts schema, roadmap.
+
+## Second pass (2026-09-27)
+After the refactor, the repository was searched again for structural assumptions — not only literal ids but "the
+first part of a bank-scoped category", `[0]` indexing of banks and turbos, literal cylinder/valve/bank counts, layout
+and id comparisons, fixed-length arrays, UI and CLI code written for one topology, and assumptions inside the
+calibrators. Classification (the milestone brief's):
+**A** properly generic · **B** intentional temporary limitation (documented) · **C** must fix in this milestone (fixed) ·
+**D** future work, safe to defer.
+
+### C — found and fixed
+| # | Finding | Fix |
+|---|---|---|
+| S1 | Geometry (clearance volume, quench, compression ratio) was built from the first head-gasket and cylinder-head slot, so a thicker gasket or another head on a V engine's second bank changed nothing; the validator and compression test read the same | `EngineGeometry.TryCreate(assembly, bank)`: the shared bottom end with that bank's gasket and head. `BankConfiguration.Geometry`; the air path, combustion (compression ratio, quench), validator (quench and compression checks per bank, named when banks differ), compression test, failure diagnostics, CLI `inspect` and the workshop read it. `AirPath` takes its geometry from its bank. Tests: `EachBankCompressesToItsOwnHeadAndGasket` (both directions), `ACompressionTestFindsTheBankWithTheFailedGasket`, `AlikeBanksHaveTheSameGeometryAsTheEngine`, `ASingleBankEnginesGeometryIsItsOnlyBanksGeometry`; K20/M54 bit-identical |
+| S2 | The drive HUD read `Config.Turbos[0]` to decide whether to show boost: every naturally aspirated engine threw each frame on the test track (the K20 and M54 too) | `Turbos.Count > 0`. Found by running the Godot drive smoke test on a synthetic NA swap; CI now runs synthetic swaps and fails on script errors |
+| S3 | The tuning view read the phaser range from the first camshaft slot | Capability summary plus the widest phaser of every camshaft slot |
+| S4 | The shop's fit hint (`Garage.FitProblems`) resolved a part's requirements against any installed part, so it called a right-bank manifold a fit for the left head (the validator then refused it) | Bank-aware like the validator: requirements must come from a part serving one of the slot's banks, an engine-wide part or the car |
+
+### A — properly generic (checked, no change)
+- No engine, part, vehicle or layout-dependent branch in `src/`; layout is compared only where topology rules are
+  validated (`EngineTopology`). The source audit enforces it.
+- The only literal count in physics is the valvetrain friction's 4-valve reference (`valvesPerCylinder / 4.0`), a
+  normalisation of a per-valve constant, not an assumption.
+- `EngineState.Warm()` sets the first bank and `EnsureShape` copies it to every bank; `FailureDiagnostics` falls back to
+  the first bank only when a part serves no bank (engine-wide parts).
+- `VehicleConfiguration` uses the car's stock engine only as the reference for its curb mass (the installed engine's
+  mass difference is added), so a swap changes mass and balance correctly.
+- The CLI's default car for `drive` is "a car whose stock engine this is", used only when `--vehicle`/`--scenario` is
+  absent.
+- Calibrators: `calibrate-cams` schedules to the widest phaser of any bank (one ECU table drives every bank);
+  `calibrate-spark` limits by the worst bank's knock limit and the cylinder-weighted MBT (one spark table for all);
+  `calibrate-ve` measures the whole engine per cylinder.
+- Save/load stores slot ids, so bank slots need nothing special.
+
+### B — intentional temporary limitations (documented in ENGINE_AUTHORING_GUIDE.md §9 and SIMULATION_SPEC.md)
+- One MAP sensor (first bank's plenum), one fuel command, one spark advance, one knock retard; `calibrate-ve` measures
+  against the cylinder-weighted mean manifold pressure, which equals the sensor's for a shared plenum or alike banks.
+- A turbo serving several banks reads its wastegate signal and turbine-inlet temperature from the first bank it serves
+  (exact for alike banks); shared elements have no cross-feed between dissimilar banks.
+- Engine-wide lubrication (wet sump), cooling (one radiator), fuel system (port injection: 20 % of the fuel evaporates
+  before the inlet valve closes), ECU.
+- Intake-only cam phasing, no exhaust-opening term; two-stage valve lift and two-stage runners (the `Profiles` and
+  `RunnerTuning` arrays hold two stages).
+- The VE model's single filling hump (a phaser moves it whole; the runner stage has little effect under a phaser).
+- Mean-value, bank resolution: firing order and bank angle are validated data without physics.
+- `EngineConfiguration.Geometry` is the first bank's and is used only for bottom-end quantities.
+- Level-setting constants fitted on the K20.
+
+### D — future work, safe to defer
+- Superchargers and twin-charging (a crank-driven compressor category with drive power), sequential turbos.
+- Direct injection, dry sump, exhaust cam phasing, continuous variable lift, three-stage intakes.
+- Per-bank fuel trims and knock control as an ECU capability; a network solve of shared plenums and collectors.
+- Per-cylinder state (misfire, one bent valve, per-cylinder knock).
+- Swap interfaces beyond the bellhousing: engine mounts, clearances, cooling capacity, fuel and exhaust routing,
+  wiring and ECU compatibility, driveshaft and differential matching, adapter parts.

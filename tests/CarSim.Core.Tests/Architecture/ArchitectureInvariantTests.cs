@@ -7,6 +7,7 @@ using CarSim.Core.Engines;
 using CarSim.Core.Parts;
 using CarSim.Core.Parts.Specs;
 using CarSim.Core.Simulation;
+using CarSim.Gameplay;
 
 namespace CarSim.Core.Tests.Architecture;
 
@@ -384,6 +385,12 @@ public class ArchitectureInvariantTests
         Assert.Contains("syn.v6.exhaust_flange", issue.Message);
         Assert.Contains("bank 'right'", issue.Message);
         Assert.Contains("only another bank has one", issue.Message);
+
+        // The shop's fit hint agrees with the validator: the exhaust manifold fits the left bank, not the right.
+        var garage = Garage.NewGame(db, "syn_v6_na_bench");
+        var manifold = db.GetPart(db.GetEngine("syn_v6_na").StockParts["exhaust_manifold_right"]);
+        Assert.Empty(garage.FitProblems(manifold, "exhaust_manifold_left"));
+        Assert.Contains("only another bank's parts provide", Assert.Single(garage.FitProblems(manifold, "exhaust_manifold_right")));
     }
 
     [Fact]

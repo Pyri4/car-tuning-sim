@@ -1,7 +1,12 @@
 # Roadmap
 
-## Current state (2026-09-26)
-**The first playable prototype is complete, and a second engine family validates that families are data.** Two
+North Star: [GAME_VISION.md](GAME_VISION.md) — hundreds of engines and thousands of parts; *adding the 100th engine
+should be almost as easy as adding the 2nd*. Architecture first, content scale second.
+
+## Current state (2026-09-27)
+**The first playable prototype is complete, a second engine family validates that families are data, and the engine
+architecture is generic: banks, per-bank air paths and geometry, any number of turbos, valvetrain types, variable valve
+lift and variable intakes, engine ↔ car fit by interfaces — proven by a nine-engine synthetic matrix.** Two
 cars (Kestrel S2 coupe, Isar C30 coupé), two engine families (the fictional Kestrel K20 four and the Isar M54 straight
 six, a real-engine reference: the BMW M54B30), one garage, one engine dyno and one test track, and the whole required
 loop works in the game for both:
@@ -11,16 +16,19 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 484 automated tests (435 before the second engine family, 348 before the validation pass): simulation, content, damage, dyno, vehicle
-  dynamics, wear, gameplay, saves, mods, physical invariants, property sweeps, spec fuzzing and clamp-activation
-  checks. CI runs them, a CLI content check and dyno sweep, and two headless Godot smoke tests (dyno pull;
-  autopilot drive) on the official Godot 4.7.2 .NET build.
+- 576 automated tests (484 before the engine-architecture milestone, 435 before the second engine family, 348
+  before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
+  physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
+  synthetic engine matrix. CI runs them, CLI content checks and dyno sweeps (with and without the matrix), and headless
+  Godot smoke tests (dyno pull; autopilot drive) for both real families and for synthetic engines swapped into a car,
+  on the official Godot 4.7.2 .NET build.
 - A simulation-correction phase (below) addressed the review of PR #1; a validation pass then re-checked every
   finding against independent evidence, found and fixed a regression the correction phase itself introduced
   (overrun exhaust heat burning turbines) and three remaining ECU oracles. See "Validation pass" for the status of
   every review issue.
 - Content: 105 parts, 2 engine families, 2 vehicles, 5 fuels, 3 base tunes, 2 scenarios; mods load as extra
-  content layers.
+  content layers. Test content (`content/test/engine-matrix/`, not shipped): 142 more parts, 9 synthetic engine
+  families with calibrated tunes, 18 scenarios (each engine on the stand and swapped into the Isar C30).
 - Reference numbers (re-measured after the validation pass): stock K20 ≈ 149 hp / 189 N·m (the worn project car
   ≈ 137 hp); T28 turbo build ≈ 238 hp / 293 N·m; stock car 0–100 km/h ≈ 8.8 s, ≈ 0.90 g skidpad (≈ 0.84 g on
   kerb-grade roughness). K20 output bit-identical after the second-family milestone. M54 (RON 98): 304 N·m (reference
@@ -158,32 +166,66 @@ Question: can another engine family be added through data, or does the simulator
 - Answer: **yes, primarily through data.** Generic simulation code gained one abstraction (cam timing) and no
   engine-specific branch; see "Known issues" for what the M54 still cannot match.
 
+### Engine architecture ✅ (2026-09-27, branch `claude/engine-architecture`)
+Question: is the engine architecture generic enough for hundreds of engines, or does it hide single-engine assumptions?
+Audit first (`docs/ENGINE_ARCHITECTURE_AUDIT.md`, two passes), then:
+- [x] **Banks:** families declare banks, bank angle and firing order; bank-scoped slots (one head, gasket, springs,
+      cams, intake, throttle, exhaust manifold, exhaust, optional turbo and intercooler per bank; one part may serve
+      several banks); diagnostic topology errors
+- [x] **Per-bank simulation:** one air path, geometry (own gasket and head → own compression and quench), combustion,
+      knock limit, heat and EGT per bank; shared elements split by cylinders (exact for alike banks); explicit
+      engine-level aggregation; per-bank and per-turbo telemetry. K20 and M54 bit-identical to the PR #4 head
+- [x] **Any number of turbos**, each with its own shaft, wastegate and boost-control state; a failed turbo stops only
+      its own shaft
+- [x] **Capabilities as part data:** valvetrain type (OHV/SOHC/DOHC, checked per bank), two-stage variable valve lift,
+      two-stage variable intake runner (ECU outputs + tune switch speeds); `EngineCapabilities` as a derived summary
+- [x] **Bank-aware validation, damage and diagnostics:** interfaces per bank, per-part stress and failure, collateral
+      damage on the failed part's banks, compression test per bank, messages that name the bank
+- [x] **Engine ↔ car by interfaces:** a car names its stock engine only; gearboxes require the block's bellhousing;
+      scenarios, the garage and `carsim drive --vehicle` check the fit (engine swaps are possible)
+- [x] `TuneDocument` is a record (no more field-by-field copies dropping new tune fields)
+- [x] **Synthetic engine matrix** (9 content-only architectures, calibrated with the dev tools) through the whole
+      pipeline, including a lap of the test track for each, swapped into the Isar C30; architecture invariant tests; mutation checks
+- [x] CLI (`inspect` architecture and per-bank geometry, `sweep` per-bank/per-turbo columns, `--vehicle`), UI
+      (per-bank/per-turbo dyno gauges, switch speeds in Tuning, per-bank compression in the Workshop), CI (matrix CLI and
+      Godot smoke tests)
+- [x] Project memory: GAME_VISION.md (North Star), ENGINE_AUTHORING_GUIDE.md (canonical engine reference), AGENTS.md
+- Answer: **engines are data** for every architecture in the matrix; what still needs code is listed as B/D in the
+  audit's second pass and in ENGINE_AUTHORING_GUIDE.md §9.
+
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
 ## Next recommended tasks
-1. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
-   spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are now a data change: an adjustable
-   `intake_centerline_deg`; wastegate spring preload).
-2. **Intake gas dynamics separate from valve timing, then two-stage intakes.** The M54 torque-curve investigation
+1. **Intake gas dynamics separate from valve timing (next milestone).** The M54 torque-curve investigation
    (SIMULATION_SPEC.md) found the shape's root cause in the VE model: one filling hump for intake closing and runner
    gas dynamics, moved whole by a cam phaser. The prototype (E10) keeps a share of the tuning curve at the straight-up
-   cam/runner speed; a switched runner (E11) then makes DISA-type intakes content. Prerequisites before shipping:
+   cam/runner speed. The two-stage runner capability now exists (engine-architecture milestone) and acts through the
+   runner term, so once the hump is split, DISA-type intakes on phased engines are content. Prerequisites before
+   shipping:
    - the gas-dynamic share from a source, not fitted to the M54;
    - DISA's two effective lengths (or an M54 curve measured with the flap held open and closed);
    - exact reuse of today's path when the two tuned speeds coincide (the prototype moved the K20 by rounding).
-3. **Two-family calibration.** Re-fit the level-setting constants on both families at once (not per engine), and add an
+2. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
+   spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are now a data change: an adjustable
+   `intake_centerline_deg`; wastegate spring preload).
+3. **Engine capabilities still missing** (ENGINE_AUTHORING_GUIDE.md §7 procedure): a supercharger category (crank-driven
+   compressor with drive power), per-bank fuel trim and knock control as ECU capabilities, exhaust cam phasing (with an
+   exhaust-opening term), direct injection.
+4. **Swap interfaces beyond the bellhousing:** engine mounts, clearances, cooling capacity, exhaust routing, wiring/ECU,
+   driveshaft and differential; adapter parts; a swap flow in the garage.
+5. **Two-family calibration.** Re-fit the level-setting constants on both families at once (not per engine), and add an
    exhaust-opening term so exhaust phasing and scavenging mean something.
-4. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
+6. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
    boost) using `VehicleSimulation`.
-5. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
+7. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
    record lap telemetry (speed/throttle/brake vs distance) and compare laps.
-6. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
+8. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
    market with seeded random condition, reputation and money loop.
-7. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
+9. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
    skim), per-cylinder state for the key failure modes.
-8. **Audio.** Engine sound from rpm/load/boost (presentation only).
-9. **Exported builds.** Godot export templates in CI and downloadable artifacts.
+10. **Audio.** Engine sound from rpm/load/boost (presentation only).
+11. **Exported builds.** Godot export templates in CI and downloadable artifacts.
 
 ## Known issues
 - Second engine family vs its reference: peak power −10 % (153 vs 170 kW) with torque +1 %. The model's curve is a plateau
@@ -197,6 +239,11 @@ Question: can another engine family be added through data, or does the simulator
   Not modelled for the M54: exhaust VANOS (the model has no exhaust-opening effect), part-load VANOS/EGR strategy,
   hot-film MAF metering (speed-density stands in), the returnless 3.5 bar fuel system (manifold-referenced regulator
   stands in), the map-controlled thermostat, dual-mass-flywheel torsional isolation.
+- Engines whose banks share an element but differ (another head on one bank, a failed turbo on a shared plenum) are
+  approximated: each bank takes its cylinder share of the shared element, with no cross-feed (a failed turbo's bank
+  runs as naturally aspirated even though the other turbo pressurises the common plenum).
+- The synthetic engines are calibrated to be plausible, not realistic (e.g. the twin-turbo V6's small turbos spool late);
+  they test the architecture, not the physics against a reference.
 - Idle manifold pressure is low for both families (K20 ≈ 21 kPa, M54 ≈ 15 kPa, real engines ≈ 30 kPa): no accessory
   load (alternator, pumps, A/C) is modelled.
 - The vehicle model is planar. Road roughness acts through a frequency-domain ride model (grip and
@@ -234,8 +281,9 @@ Question: can another engine family be added through data, or does the simulator
   4.7.2 .NET binaries, and both agree.
 
 ## Technical debt
-- The engine model supports one part (or set) per modelled category: twin turbos, per-bank air paths,
-  dry sumps and superchargers are rejected at load, not supported (`EngineTopology`).
+- Engine topology (`EngineTopology`): banks with per-bank or shared parts are supported; superchargers, dry sumps,
+  direct injection and exhaust cam phasing are rejected at load until they exist as capabilities. Shared elements are
+  split by cylinders without cross-feed (exact for alike banks); a network solve is deferred until an engine needs it.
 - Level-setting calibration is fitted to the K20 (Otto realisation 0.80, FMEP coefficients, the cam correlation's
   112° reference centreline), and the crown heat-flux and wave-tuning correlations are fitted on one family. The second
   family ran through them unchanged (+1 % torque, −10 % power against its reference); re-fitting on both families
@@ -244,9 +292,10 @@ Question: can another engine family be added through data, or does the simulator
 - The VE model has one filling hump for intake closing and runner gas dynamics; a cam phaser moves all of it (optimistic
   low-speed torque with a phaser, runner length inert under one, no two-stage intakes). The split was prototyped and not
   shipped; see "Next recommended tasks" 2. Exhaust phasing has no effect to model until there is an exhaust-opening term.
-- Tunes are rebuilt field by field in two places (`ContentLoader.AddTune`, `SaveSystem.Migrate`): a new tune field
-  must be added to both (the cam map was silently dropped by the loader until caught).
-- The engine step allocates 10.6 KB (NA) / 13.9 KB (turbo), the vehicle step 11.9 KB: closures in the orifice root
+- The ECU has one MAP sensor, one fuel command and one knock retard for all banks; per-bank trims are a future ECU
+  capability. The engine-level `EngineConfiguration.Geometry` is the first bank's (used only for bottom-end values).
+- The engine step allocates 10.4 KB (single-bank NA) / 13.1 KB (single-bank turbo) — two-bank engines ≈ 18 KB, the
+  twin-turbo V6 28 KB, since each bank solves its own air path — and the vehicle step ≈ 13 KB: closures in the orifice root
   finds (≈ 5–8 KB) and live warning strings rebuilt every step (≈ 3 KB). An allocation-free root finder
   (struct-generic Brent, bit-identical) was measured ≈ 25 % slower on NA/vehicle steps under .NET 8's default
   dynamic PGO and not merged; revisit with a profiler (or cache warnings at display rate). An allocation-budget
