@@ -16,8 +16,8 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 649 automated tests: 644 run and 5 are the pending acceptance tests of Intake Gas Dynamics 2.0 (586 before its
-  Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
+- 651 automated tests: 646 run and 5 are the pending acceptance tests of Intake Gas Dynamics 2.0 (649 before its
+  design resolution, 586 before its Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
   before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
   physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
   synthetic engine matrix. CI runs them, CLI content checks and dyno sweeps (with and without the matrix), and headless
@@ -204,6 +204,14 @@ Make the next physics change measurable, reproducible and reviewable before it i
 - [x] **Model specification** with sources and assumptions (SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model")
 - [x] **Acceptance tests before the code**: five pending system-level tests (each recorded failing on today's model) and
       active guards; no physics, content or tune change
+- [x] **Design resolution** (after the owner accepted Phase 0; docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md):
+  - [x] Q1–Q5 decided or put to the owner as U1–U7;
+  - [x] the cited literature checked: K and V_eff are still unverifiable here, the formula forms are re-derived, and
+        three spec corrections were made;
+  - [x] the generic model boundary, the calibration strategy, the boosted treatment and the acceptance-test rationale;
+  - [x] the **pre-physics tune regeneration** in its own commits. Two driver rules were added (hardware schedule first;
+        only settled values written), and all 12 tunes are now fixed points of their recipes. The M54 is bit-identical;
+        the K20 moved by 11 VE cells of 0.001.
 
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
@@ -219,7 +227,9 @@ the next milestone).
    valve-event filling from runner/plenum gas dynamics, so a cam phaser no longer carries the runner response, variable
    intakes act on phased engines, and the K20-fitted correlation constants give way to sourced ones. Phase 0 brought the
    verification tooling into the repo (regression fingerprint, recalibration driver, mutation harness; docs/VERIFICATION.md)
-   and wrote the model specification and acceptance tests; open questions Q1–Q5 need the owner before Phase 1. Background:
+   and wrote the model specification and acceptance tests. The design-resolution pass
+   ([docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md))
+   answered Q1–Q5 and regenerated the tunes under the old physics; the owner decisions U1–U7 come before Phase 1. Background:
    the M54 torque-curve investigation (SIMULATION_SPEC.md; its E10 prototype is an input, not the design).
 2. **Cylinder groups on inline engines.** Banks are the unit of per-bank parts and air paths, and an inline engine may
    declare only one. That blocks an inline twin turbo (a turbo per three cylinders on one head: RB26-, N54-, 2JZ-type

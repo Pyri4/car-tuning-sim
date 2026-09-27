@@ -1,9 +1,19 @@
 # Milestone: Intake Gas Dynamics 2.0
 
-**Status: PHASE 0 COMPLETE — Phase 1 (the physics) awaits the owner's explicit authorization.** Defined by the project
-gate of 2026-09-27 (after the engine-architecture milestone). The owner authorized Phase 0 only (verification tooling,
-the pre-physics baseline, the model specification, sources and acceptance tests); no intake gas-dynamics physics is
-implemented. Do not start Phase 1 until the owner authorizes it; the owner may change the scope below.
+**Status: PHASE 0 COMPLETE, DESIGN-RESOLUTION GATE DONE — Phase 1 (the physics) awaits the owner's explicit
+authorization.** Defined by the project gate of 2026-09-27 (after the engine-architecture milestone). The owner
+authorized Phase 0 (verification tooling, the pre-physics baseline, the model specification, sources and acceptance
+tests), accepted it, and asked for a design-resolution pass before Phase 1.
+
+That pass is in [INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md):
+- Q1–Q5 decided or put to the owner;
+- the literature's verification status;
+- the generic model boundary and the calibration strategy;
+- the acceptance-test rationale;
+- the tunes regenerated under the existing physics, in their own commits.
+
+No intake gas-dynamics physics is implemented. Do not start Phase 1 until the owner authorizes it and answers the
+design resolution's open questions U1–U7; the owner may change the scope below.
 
 ## Goal
 Separate the two things the current volumetric-efficiency model fuses into one filling hump:
@@ -39,8 +49,9 @@ dynamics — for NA and boosted engines, on every bank.
 ## Model constraints
 - Reduced-order and closed-form per bank per step: no CFD, no 1-D wave-action (GT-Power-style) solver, no per-cylinder
   pulse integration, no extra root finds in the air-path solve.
-- Physical basis with sources (e.g. Heywood, *Internal Combustion Engine Fundamentals*, §6.2 — volumetric efficiency is
-  in chapter 6 of the 1988 edition, not chapter 7 as this line first said; Winterbone & Pearson, *Theory of Engine
+- Physical basis with sources (e.g. Heywood, *Internal Combustion Engine Fundamentals*: volumetric efficiency is §6.2
+  of chapter 6 of the 1988 edition, and manifold flow phenomena are chapter 7, so both are relevant; Winterbone &
+  Pearson, *Theory of Engine
   Manifold Design*; Blair, *Design and Simulation of Four-Stroke Engines*): quarter-wave runner tuning and/or Helmholtz
   resonance (f = a/2π·√(A/(L·V))), speed of sound a = √(γRT) from the charge temperature. The Phase 0 specification's
   sources and their verification status: SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model".
@@ -137,6 +148,11 @@ build (RON 98) 177.5 kW / 292.5 N·m; M54 (RON 98) 153.0 kW / 303.9 N·m at 2,00
 (`carsim bench`, this container, full load 5,000 rpm, 2 ms): K20 52.5 µs / 10,360 B, M54 51.7 µs / 10,360 B,
 `syn_v6_tt` 156.5 µs / 28,032 B — the budget of acceptance criterion 6.
 
+After the design resolution's pre-physics tune regeneration:
+- K20 stock and M54: unchanged at this precision; the M54 is bit-identical.
+- T28: 177.4 kW / 292.5 N·m.
+- Details: [intake-gas-dynamics-2/TUNE_REGENERATION_2026-09-27.md](intake-gas-dynamics-2/TUNE_REGENERATION_2026-09-27.md).
+
 Measured on the current model (the rig of the acceptance tests; SIMULATION_SPEC.md has the details): runner tuned speed
 ∝ L^−0.254; no charge-temperature effect; the runner's crossover moves with the cam phase (none at 50° advance); a
 two-stage intake under the M54's VANOS map changes torque by < 2 % everywhere; `syn_i6_vis`'s switched stage loses to
@@ -147,11 +163,25 @@ Findings for the owner:
   spark and most others differ by 0.5° in a few cells; the K20 turbo VE by up to 0.026; the synthetic turbo cam maps by
   up to 10°. Regenerating them is a content change that moves the fingerprint (the K20 by 11 VE cells), so Phase 0 did
   not; Phase 1 should regenerate under the old physics first, in its own commit (Q5).
+  **Resolved by the design-resolution pass.** Two driver rules were added:
+  - the hardware schedule is set first; this also found that `syn_i6_vis`'s VE had been measured on the wrong stage;
+  - only values that settle are written; 39 spark cells sat in a 0.5° rounding 2-cycle.
+
+  All 12 tunes are now fixed points of their recipes, and every changed cell is listed in
+  [intake-gas-dynamics-2/TUNE_REGENERATION_2026-09-27.md](intake-gas-dynamics-2/TUNE_REGENERATION_2026-09-27.md).
 - **Hand-authored spark maps exceed the calibrator's ceiling** in many light-load cells (K20 stock 74, turbo base 80 of
   180, by up to 11.5°). The audit rule reports them; whether they stay is the owner's decision after Phase 1.
-- `syn_i6_vis`'s switch speed was not set by the held-stage sweep the authoring guide prescribes (above).
+- `syn_i6_vis`'s switch speed was not set by the held-stage sweep the authoring guide prescribes (above). Resolved: it
+  is now the model's crossover, 6,400 rpm, with its fuel map measured on that schedule.
 
 ### Acceptance tests (defined in Phase 0)
+The design resolution checked each test against the physics (section "Acceptance tests"):
+- tests 2 and 3 are correct as written;
+- test 1's ±10 % band is not a physical bound;
+- test 4's 2 % threshold is a requirement on unsourced constants;
+- test 5's precondition encodes the old schema.
+
+Revisions are proposed (U5) but not applied.
 Pending — `IntakeGasDynamicsAcceptanceTests`, skipped unless `CARSIM_RUN_PENDING_ACCEPTANCE=1`; each fails today as shown:
 
 | Test | Criterion (tolerance) | Today |

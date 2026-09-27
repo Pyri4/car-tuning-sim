@@ -856,6 +856,17 @@ Status: written in Phase 0 of docs/milestones/INTAKE_GAS_DYNAMICS_2.md for revie
 section runs today; the model that runs is "Volumetric efficiency (tuning component)" above. The acceptance tests that
 will hold this model are in `tests/CarSim.Core.Tests/Acceptance/` (pending until Phase 1).
 
+**Reviewed by the design-resolution pass (2026-09-27):**
+[docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md).
+Where this section and that document differ, the document governs, and this section is rewritten when Phase 1 is
+authorized. The main differences:
+- the response's reference phase is π/2 (see the φ_ivc note below), and the IVC coupling is deferred;
+- δ = 0.82;
+- K is unverified (an owner decision);
+- a distributed-runner correction of the fundamental is recommended;
+- the plenum mode is deferred;
+- a boosted engine's speed of sound uses the previous step's manifold temperature.
+
 ### What the current model does, measured in Phase 0
 The acceptance rig (`IntakeRig`: full-load sweeps with the cam phase and runner stage held; two runners on the same cams
 at the same phase, so the valve-event part cancels) measured today's model:
@@ -893,12 +904,13 @@ valve at IVC (Ohata & Ishida 1982: VE follows the dynamic inlet pressure at IVC)
 - Speed of sound of the runner gas: `a = √(γ·R·T_man)` (γ = 1.4, R = 287 J/(kg·K), `T_man` the manifold temperature —
   after the intercooler on a boosted engine).
 - Effective runner length `L_eff = L + δ·r`, `r` the runner radius, `δ` the end correction of the plenum mouth
-  (≈ 0.61 unflanged, Levine & Schwinger 1948; ≈ 0.82–0.85 flanged, Rayleigh; proposal δ = 0.85 for a bellmouth into a
-  plenum).
+  (≈ 0.61 unflanged, Levine & Schwinger 1948; 0.82 flanged pipe, Norris & Sheng 1989 — 0.85 ≈ 8/(3π) is the baffled
+  piston, a different boundary; corrected in review: δ = 0.82 for a runner mouth in a plenum wall).
 - Runner–cylinder resonance `f_H = (a / 2π) · √(A_r / (L_eff · V_eff))`, `A_r = π r²`, `V_eff = V_c + V_d/2` (the mean
   cylinder volume during induction, `V_d·(CR+1)/(2·(CR−1))` per cylinder).
 - Tuned speed `N_t = 60 · f_H / K`. Engelman's published design rule corresponds to K ≈ 2.1 (the natural frequency
-  about twice the crank frequency) — **to verify against the paper in review** (see Sources). Every quantity except K is
+  about twice the crank frequency) — **unverified**: the paper could not be opened, secondary sources give 2.0–2.1, and
+a first-principles lumped model does not reproduce it (design resolution, Q7; owner decision U1). Every quantity except K is
   geometry or physics; K is the one sourced-empirical constant.
 - Response: a periodically forced damped oscillator, `r = N / N_t`,
   `M(r) = 1 / √((1 − r²)² + (2ζr)²)`, `φ(r) = atan2(2ζr, 1 − r²)`; the gain uses `M(r)/M(1)`, `M(1) = 1/(2ζ)` (the
@@ -906,6 +918,9 @@ valve at IVC (Ohata & Ishida 1982: VE follows the dynamic inlet pressure at IVC)
 - Gain: `G_wave = 1 + A · [M(r)/M(1)] · cos(φ(r) − φ_ivc)`, bounded to `[1 − A, 1 + A]`.
   - `φ_ivc` — where the valve event sits against the wave: the crank angle of IVC after BDC, expressed as a phase of
     the resonance period (`2π · θ_ivc,ABDC / (360 · K)`), zero at the reference closing the constant K was stated for.
+    **Defect found in review:** φ(1) = π/2, so with φ_ivc = 0 the gain is zero at N_t and negative above it. The
+    consistent reference is φ_ivc = π/2, the quadrature curve that peaks at N_t. Phase 1 uses that reference and defers
+    the IVC coupling (A2) until its coefficient has a provenance (design resolution, Q2 and U6).
     **This is the cam ↔ runner interaction:** moving IVC (phaser, VVL profile, a longer cam) changes the realised gain
     and its sign, but not `N_t`.
   - Amplitude `A = min(A_max, κ · M_r)`, `M_r = ū_r / a` the runner Mach number of the mean induction flow
@@ -938,9 +953,9 @@ assumption A5), plenum volume = displacement (A6), end correction δ = 0.85. Exi
 | γ, R | 1.4, 287 J/(kg·K) | physical | air |
 | `a = √(γRT)` | — | physical | ideal-gas speed of sound |
 | Helmholtz `f = (a/2π)√(A/(L·V))` | — | physical | lumped acoustic resonator (Kinsler et al., *Fundamentals of Acoustics*) |
-| δ (end correction) | 0.85 | physical, sourced | Rayleigh (flanged, ≈ 0.82–0.85); 0.61 unflanged (Levine & Schwinger 1948) |
+| δ (end correction) | 0.82 (review; was 0.85) | physical, sourced | flanged pipe 0.8216 (Norris & Sheng 1989); 0.61 unflanged (Levine & Schwinger 1948) |
 | `V_eff = V_c + V_d/2` | — | derived | Engelman 1973 (mean induction volume) — verify |
-| K | ≈ 2.1 | sourced-empirical | Engelman 1973 design rule — verify the exact constant |
+| K | 2.0–2.1 | **unverified** prior (review) | Engelman 1973 via secondary sources only; owner decision U1 |
 | M(r), φ(r) | — | physical | forced damped oscillator |
 | ζ | fitted, [0.1, 0.5] | fitted, shared | joint fit K20 + M54 + synthetic, never per engine |
 | κ, A_max | fitted; A_max ≤ 0.15 | fitted, shared; bound | amplitude ∝ Mach (derived form); bound: assumption A3 |
@@ -965,11 +980,14 @@ Sourced (physics or literature):
   resonance types in intake tuning, runner/cylinder and plenum (Thompson & Engelman 1969, ASME 69-DGP-11); S4 the
   runner–cylinder Helmholtz model and design rule for a tuned manifold (Engelman 1973, ASME 73-WA/DGP-2); S5 VE follows
   the dynamic inlet pressure at intake closing (Ohata & Ishida 1982, SAE 820407); S6 VE vs speed, valve timing and
-  tuning effects (Heywood 1988, *Internal Combustion Engine Fundamentals*, §6.2); S7 wave action in manifolds, linear
+  tuning effects (Heywood 1988, *Internal Combustion Engine Fundamentals*, §6.2; manifold flow phenomena in ch. 7);
+  S7 wave action in manifolds, linear
   acoustics (Winterbone & Pearson 2000, *Theory of Engine Manifold Design*, SAE).
 - Verification status: the bibliographic records of S3, S4, S5 and S7 were confirmed in Phase 0; the texts could not be
   opened from the dev container, so the **exact form and constants of Engelman's rule (K, V_eff) are cited from its
-  published summary and must be checked against the paper before Phase 1 code**.
+  published summary and must be checked against the paper before Phase 1 code**. Design-resolution pass: the papers
+  still could not be opened (every host denied); the formula forms were re-derived from first principles, and K and
+  V_eff stay unverified as Engelman's (owner decision U1).
 
 Model assumptions (not sourced; each named so a reviewer can reject it):
 - A1 one lumped Helmholtz mode per runner stage (plus an optional plenum mode) represents the runner response of a
@@ -997,6 +1015,16 @@ run, **never back-solved from the dyno curve** (open question Q1).
 - Q4 Plenum mode on boosted engines (A4).
 - Q5 Whether tunes are regenerated under the old physics first (a separate, documented commit) so the Phase 1 physics
   diff is not mixed with recipe drift (see VERIFICATION.md: no shipped tune is an exact fixed point of its recipe today).
+
+Resolved or put to the owner by the design-resolution pass
+([docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md)):
+- **Q1:** DISA becomes two effective stages. The closed stage is derived from the sourced switch band under A-D1, never
+  from the dyno curve; a measured manifold is the preferred upgrade.
+- **Q2:** one runner–cylinder mode, with a distributed correction; plenum and pipe harmonics are deferred.
+- **Q3:** physics and pre-registered priors; only v₀ and the ceiling are re-anchored, on the K20 stock; the M54 is held
+  out.
+- **Q4:** the same model under boost, with no turbo term.
+- **Q5:** done. All 12 tunes are now fixed points of their recipes.
 
 ## Validation
 Deterministic xUnit tests cover: unit conversions, compressible flow, root finding, geometry and
