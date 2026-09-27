@@ -50,6 +50,11 @@ public static class Program
                                                         checked-in baseline (tests/baselines/fingerprint.txt, or --check <file>).
                                                         --write <file> re-baselines (always the whole matrix); --dump <dir> also
                                                         writes every value at full precision. Exit code 4 when it differs.
+          carsim derive-stage <engine-id> --switch <rpm> [--upper-length <mm>] [--diameter <mm>] [--k 2.1] [--damping 0.35]
+                                                        Assumption A-D1 for a two-stage intake: the effective lower stage whose
+                                                        gain crosses the upper stage's at a sourced switch speed (arithmetic on
+                                                        the model's gain functions; no engine is run). The upper stage defaults to
+                                                        the stock intake's last stage; prints the sensitivity to the inputs.
           carsim fingerprint-diff <before-dir> <after-dir>
                                                         Key-by-key comparison of two --dump directories (e.g. two commits).
           carsim regenerate-tunes [--tune <id>[,<id>...]] [--write 1] [--jobs <n>] [--manifest <file>]
@@ -83,6 +88,7 @@ public static class Program
                 "drive" => Drive(options),
                 "calibrate-ve" => CalibrateVe(options),
                 "bench" => Bench(options),
+                "derive-stage" => DeriveStage(options),
                 "calibrate-spark" => CalibrateSpark(options),
                 "calibrate-cams" => CalibrateCams(options),
                 "fingerprint" => Fingerprint(options),
@@ -397,6 +403,53 @@ public static class Program
         return 0;
     }
 
+    /// <summary>A-D1: the lower stage of a two-stage intake from a sourced switch speed (RunnerStageDerivation).</summary>
+    private static int DeriveStage(CliOptions o)
+    {
+        var db = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o)).GetOrThrow();
+        var engine = db.GetEngine(EngineId(o, db));
+        var assembly = EngineAssembly.CreateStock(engine, db, new PartInstanceFactory());
+        var geometry = EngineGeometry.TryCreate(assembly, 0, out _) ?? throw new InvalidOperationException("Incomplete geometry.");
+        var intake = assembly.SpecFor<CarSim.Core.Parts.Specs.IntakeManifoldSpec>(PartCategory.IntakeManifold, 0)
+                     ?? throw new InvalidOperationException("No intake manifold on the first bank.");
+        var last = intake.AllStages()[^1];
+        if (!o.Named.ContainsKey("switch")) return Fail("derive-stage needs --switch <rpm> (the sourced switch speed).");
+        double switchRpm = Num(o, "switch", 0), upperMm = Num(o, "upper-length", last.RunnerLengthMm);
+        double? diameterMm = o.Named.ContainsKey("diameter") ? Num(o, "diameter", 0) : last.RunnerDiameterMm;
+        double k = Num(o, "k", IntakeGasDynamics.TunedFrequencyRatio), zeta = Num(o, "damping", IntakeGasDynamics.Damping);
+        var d = RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, k, zeta);
+        double shownDiameter = diameterMm ?? Units.MToMm(RunnerStageConfiguration.DefaultDiameterPerBore * geometry.Bore);
+        Console.WriteLine($"{engine.Name}: upper stage {upperMm:F1} mm × Ø{shownDiameter:F1} mm{(diameterMm == null ? " (default 0.40 × bore)" : "")}, " +
+                          $"switch {switchRpm:F0} rpm, K {k}, ζ {zeta}, runner gas {IntakeGasDynamics.ReferenceTemperature} K");
+        Console.WriteLine($"  upper stage tuned      {d.UpperTunedRpm,8:F1} rpm");
+        Console.WriteLine($"  lower stage tuned      {d.LowerTunedRpm,8:F1} rpm");
+        Console.WriteLine($"  lower stage length     {(d.LowerLengthMm is double l ? $"{l,8:F2} mm" : "none in 50–1000 mm")}");
+        Console.WriteLine($"  gain crossover (check) {d.CrossoverRpm,8:F1} rpm");
+        Console.WriteLine();
+        Console.WriteLine("Sensitivity (each input moved alone):");
+        void Row(string label, StageDerivation r) =>
+            Console.WriteLine($"  {label,-26} upper {r.UpperTunedRpm,6:F0} rpm  lower {r.LowerTunedRpm,6:F0} rpm  length {(r.LowerLengthMm is double x ? $"{x:F1} mm" : "—")}");
+        StageDerivation? Try(Func<StageDerivation> f) { try { return f(); } catch (ArgumentException) { return null; } }
+        foreach (var (label, run) in new (string, Func<StageDerivation>)[]
+        {
+            ("switch 3,750 rpm (band low)", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, 3750, k, zeta)),
+            ("switch 4,100 rpm (band high)", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, 4100, k, zeta)),
+            ("K 2.0", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, 2.0, zeta)),
+            ("K 2.2", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, 2.2, zeta)),
+            ("ζ 0.33", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, k, 0.33)),
+            ("ζ 0.45", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, k, 0.45)),
+            ("upper 300 mm", () => RunnerStageDerivation.LowerStage(300, diameterMm, geometry, switchRpm, k, zeta)),
+            ("upper 450 mm", () => RunnerStageDerivation.LowerStage(450, diameterMm, geometry, switchRpm, k, zeta)),
+            ("diameter 30 mm", () => RunnerStageDerivation.LowerStage(upperMm, 30, geometry, switchRpm, k, zeta)),
+            ("diameter 40 mm", () => RunnerStageDerivation.LowerStage(upperMm, 40, geometry, switchRpm, k, zeta)),
+        })
+        {
+            if (Try(run) is { } r) Row(label, r);
+            else Console.WriteLine($"  {label,-26} excluded: the upper stage then tunes below the switch speed");
+        }
+        return 0;
+    }
+
     private static (double MicrosecondsPerStep, double BytesPerStep) Measure(Action step, int steps, int repeats)
     {
         for (int i = 0; i < Math.Min(steps, 2000); i++) step();
@@ -565,6 +618,20 @@ public static class Program
         }
 
         var report = AssemblyValidator.Validate(assembly);
+        // Intake gas dynamics: each bank's runner stages and the speed each tunes to (runner gas at the reference ambient).
+        if (report.CanRun && EngineConfiguration.Build(assembly, db.Fuels.Values.First()).Configuration is { } built)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"Intake runner stages (tuned speed with the runner gas at {IntakeGasDynamics.ReferenceTemperature:F2} K):");
+            foreach (var bank in built.Banks)
+                for (int s = 0; s < bank.RunnerStages.Count; s++)
+                {
+                    var stage = bank.RunnerStages[s];
+                    string which = built.Banks.Count > 1 ? $"bank {bank.Definition.Id}, " : "";
+                    Console.WriteLine($"  {which}stage {s}: L {Units.MToMm(stage.Length):F1} mm, d {Units.MToMm(stage.Diameter):F1} mm{(stage.DefaultDiameter ? " (default)" : "")}, " +
+                                      $"β {stage.VolumeRatio:F3}, x {stage.Fundamental:F4}, tuned {stage.TunedRpmAtReference:F0} rpm");
+                }
+        }
         Console.WriteLine();
         Console.WriteLine($"Compatibility: {(report.CanRun ? "can run" : "CANNOT RUN")}");
         foreach (var issue in report.Issues) Console.WriteLine($"  {issue}");

@@ -60,8 +60,7 @@ public sealed class BankConfiguration
 
         // Cam profiles (a variable-lift camshaft has two), runner stages (a variable intake has two or more).
         Profiles = new[] { new CamProfileConfiguration(Head, Cams.Profile(false)), new CamProfileConfiguration(Head, Cams.Profile(true)) };
-        RunnerStages = Intake.AllStages().Select(s => new RunnerStageConfiguration(s, g)).ToArray();
-        RunnerTuning = RunnerStages.Select(s => Math.Pow(EngineConfiguration.ReferenceRunnerLength / Units(s.Spec.RunnerLengthMm), 0.25)).ToArray();
+        RunnerStages = Intake.AllStages().Select(s => new RunnerStageConfiguration(s, Geometry)).ToArray();
         IntakePhaserRange = engine.Ecu.CamPhaseControl ? Cams.IntakePhaserRangeDeg : 0.0;
         HasVariableLift = Cams.HasVariableLift && engine.Ecu.ValveLiftControl;
         HasSwitchedRunner = RunnerStages.Count > 1 && engine.Ecu.IntakeRunnerControl;
@@ -74,8 +73,6 @@ public sealed class BankConfiguration
                                   * g.Bore * g.Bore * Cylinders;
         SweptVolume = g.SweptVolumePerCylinder * Cylinders;
     }
-
-    private static double Units(double mm) => Common.Units.MmToM(mm);
 
     private readonly double _stroke;
 
@@ -131,9 +128,6 @@ public sealed class BankConfiguration
     /// <summary>The intake's runner stages: [0] the primary runner, then the switched stages in the ECU's order.</summary>
     public IReadOnlyList<RunnerStageConfiguration> RunnerStages { get; }
 
-    /// <summary>Runner tuning factor (0.300 m / L)^0.25 per runner stage.</summary>
-    public IReadOnlyList<double> RunnerTuning { get; }
-
     /// <summary>
     /// How far the ECU can advance this bank's intake cam, crank degrees: the phaser's range when the ECU can drive
     /// it, otherwise 0 (fixed cams, or a phaser the ECU cannot control, stay at their installed position).
@@ -146,7 +140,7 @@ public sealed class BankConfiguration
     /// <summary>Whether the ECU can switch this bank's intake manifold between its runner stages.</summary>
     public bool HasSwitchedRunner { get; }
 
-    /// <summary>Speed of peak cam/runner filling with the cams at their installed (park) position, base profile and primary runner, rpm.</summary>
+    /// <summary>Speed of peak valve-event filling with the cams at their installed (park) position and on the base profile, rpm.</summary>
     public double VePeakRpm { get; }
 
     public double ScavengingRpm { get; }
@@ -167,18 +161,20 @@ public sealed class BankConfiguration
         : 0.0;
 
     /// <summary>
-    /// Tuned mean piston speed of the cam/runner filling peak (before the <see cref="EngineConfiguration.MinTunedPistonSpeed"/>
+    /// Tuned mean piston speed of the valve-event filling peak (before the <see cref="EngineConfiguration.MinTunedPistonSpeed"/>
     /// guard), m/s, on cam profile <paramref name="profile"/> (0 base, 1 high lift).
     /// </summary>
     public double TunedPistonSpeed(double intakeAdvanceDeg, int profile = 0) =>
         Profiles[profile].DurationTunedPistonSpeed + IntakeClosingShiftDeg(intakeAdvanceDeg) * EngineConfiguration.TunedPistonSpeedPerCenterlineDeg;
 
-    /// <summary>Speed of peak cam/runner filling, rpm, with the intake cam advanced, on a cam profile and runner stage.</summary>
-    public double VePeakRpmAt(double intakeAdvanceDeg, int profile = 0, int runner = 0)
+    /// <summary>
+    /// Speed of peak valve-event filling, rpm, with the intake cam advanced, on a cam profile. The runner is not in it: its
+    /// gas dynamics are a separate gain (<see cref="RunnerStageConfiguration.TunedRpm"/>) that cam timing cannot move.
+    /// </summary>
+    public double VePeakRpmAt(double intakeAdvanceDeg, int profile = 0)
     {
         double tunedPistonSpeed = Math.Max(EngineConfiguration.MinTunedPistonSpeed, TunedPistonSpeed(intakeAdvanceDeg, profile));
-        double camPeakRpm = tunedPistonSpeed * 60.0 / (2.0 * _stroke);
-        return camPeakRpm * RunnerTuning[runner];
+        return tunedPistonSpeed * 60.0 / (2.0 * _stroke);
     }
 
     /// <summary>Valve overlap with the intake cam advanced <paramref name="intakeAdvanceDeg"/>, on a cam profile, crank degrees.</summary>
@@ -218,18 +214,28 @@ public sealed class CamProfileConfiguration
     public double DurationTunedPistonSpeed { get; }
 }
 
-/// <summary>One runner stage of a bank's intake: its geometry, with the model default where the part states none.</summary>
+/// <summary>
+/// One runner stage of a bank's intake and its acoustic mode (<see cref="IntakeGasDynamics"/>): the runner with the
+/// cylinder volume behind the open valve, solved once here. Per bank: the cylinder volume is the bank's own.
+/// </summary>
 public sealed class RunnerStageConfiguration
 {
     /// <summary>Runner diameter assumed when the part states none, as a fraction of the bore (assumption A5).</summary>
     public const double DefaultDiameterPerBore = 0.40;
 
-    internal RunnerStageConfiguration(IntakeStageSpec spec, EngineGeometry geometry)
+    /// <summary>A runner stage of <paramref name="spec"/>'s geometry on a bank of <paramref name="bankGeometry"/> (also for tools that try geometry out).</summary>
+    public RunnerStageConfiguration(IntakeStageSpec spec, EngineGeometry bankGeometry)
     {
         Spec = spec;
         Length = Common.Units.MmToM(spec.RunnerLengthMm);
         DefaultDiameter = spec.RunnerDiameterMm == null;
-        Diameter = spec.RunnerDiameterMm is double d ? Common.Units.MmToM(d) : DefaultDiameterPerBore * geometry.Bore;
+        Diameter = spec.RunnerDiameterMm is double d ? Common.Units.MmToM(d) : DefaultDiameterPerBore * bankGeometry.Bore;
+        Area = Math.PI * Diameter * Diameter / 4.0;
+        EffectiveLength = Length + IntakeGasDynamics.EndCorrection * Diameter / 2.0;
+        EffectiveCylinderVolume = bankGeometry.ClearanceVolume + bankGeometry.SweptVolumePerCylinder / 2.0;
+        VolumeRatio = Area * EffectiveLength / EffectiveCylinderVolume;
+        Fundamental = IntakeGasDynamics.Fundamental(VolumeRatio);
+        TunedRpmAtReference = IntakeGasDynamics.TunedRpm(Fundamental, EffectiveLength, IntakeGasDynamics.ReferenceSpeedOfSound);
     }
 
     public IntakeStageSpec Spec { get; }
@@ -242,6 +248,28 @@ public sealed class RunnerStageConfiguration
 
     /// <summary>Whether <see cref="Diameter"/> is the model default (0.40 × bore) rather than part data.</summary>
     public bool DefaultDiameter { get; }
+
+    /// <summary>Runner cross-section A_r, m².</summary>
+    public double Area { get; }
+
+    /// <summary>L_eff = L + δ·r_r, the acoustic length with the plenum mouth's end correction, m.</summary>
+    public double EffectiveLength { get; }
+
+    /// <summary>V_eff = V_c + V_d/2 per cylinder: the cylinder's mean volume over the intake stroke (assumption A8), m³.</summary>
+    public double EffectiveCylinderVolume { get; }
+
+    /// <summary>β = A_r·L_eff/V_eff, the runner's volume over the cylinder's.</summary>
+    public double VolumeRatio { get; }
+
+    /// <summary>x, the root of x·tan x = β.</summary>
+    public double Fundamental { get; }
+
+    /// <summary>Tuned speed with the runner gas at <see cref="IntakeGasDynamics.ReferenceTemperature"/>, rpm.</summary>
+    public double TunedRpmAtReference { get; }
+
+    /// <summary>Tuned speed with the runner gas at <paramref name="runnerGasTemperature"/> (K), rpm: ∝ the speed of sound.</summary>
+    public double TunedRpm(double runnerGasTemperature) =>
+        TunedRpmAtReference * (IntakeGasDynamics.SpeedOfSound(runnerGasTemperature) / IntakeGasDynamics.ReferenceSpeedOfSound);
 }
 
 /// <summary>One installed turbocharger: its spec, part and the banks it serves (their exhaust drives it, their intake draws through it).</summary>

@@ -203,6 +203,14 @@ public static class AssemblyValidator
                 Add(IssueSeverity.Warning, "intake_runner_uncontrolled",
                     $"{On(b)}The ECU cannot switch the variable intake manifold: it stays on its primary runner.",
                     SlotOf(a, PartCategory.Ecu), intakeSlot);
+            // Intake gas dynamics needs the runner diameter; without it the model assumes a typical one (assumption A5).
+            if (a.SpecFor<IntakeManifoldSpec>(PartCategory.IntakeManifold, b) is { } intake && block != null
+                && intake.AllStages().Any(s => s.RunnerDiameterMm == null)
+                && !issues.Any(i => i.Code == "default_intake_geometry" && i.Slots.Contains(intakeSlot)))
+                Add(IssueSeverity.Info, "default_intake_geometry",
+                    $"{On(b)}The intake manifold states no runner diameter: intake tuning assumes {Simulation.RunnerStageConfiguration.DefaultDiameterPerBore:0.00} × bore " +
+                    $"({Simulation.RunnerStageConfiguration.DefaultDiameterPerBore * block.BoreMm:F1} mm).",
+                    intakeSlot);
         }
 
         // Geometry-derived checks, per bank: each bank's gasket and head set its own chamber, quench and compression

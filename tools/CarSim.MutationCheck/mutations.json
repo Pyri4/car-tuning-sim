@@ -58,16 +58,16 @@
       "id": "family-id-branch",
       "guards": "No engine or part identity in simulation code (source audit).",
       "file": "src/CarSim.Core/Simulation/AirPath.cs",
-      "find": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n",
-      "replace": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n        if (_b.CamsPart.Definition.Id == \"m54.cams.oem\") ve *= 1.0;\n",
+      "find": "        double ve = ValveEventFilling(rpm, intakeCamAdvance, camProfile) * waveGain;\n",
+      "replace": "        double ve = ValveEventFilling(rpm, intakeCamAdvance, camProfile) * waveGain;\n        if (_b.CamsPart.Definition.Id == \"m54.cams.oem\") ve *= 1.0;\n",
       "tests": "FullyQualifiedName~EngineAgnosticTests"
     },
     {
       "id": "cylinder-count-branch",
       "guards": "No cylinder-count special case in simulation code (source audit).",
       "file": "src/CarSim.Core/Simulation/AirPath.cs",
-      "find": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n",
-      "replace": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n        if (_b.Cylinders == 6) ve *= 1.0;\n",
+      "find": "        double ve = ValveEventFilling(rpm, intakeCamAdvance, camProfile) * waveGain;\n",
+      "replace": "        double ve = ValveEventFilling(rpm, intakeCamAdvance, camProfile) * waveGain;\n        if (_b.Cylinders == 6) ve *= 1.0;\n",
       "tests": "FullyQualifiedName~EngineAgnosticTests"
     },
     {
@@ -136,10 +136,10 @@
     },
     {
       "id": "runner-length-inert",
-      "guards": "The intake runner length acts on filling (fixed cams).",
+      "guards": "The intake runner length sets the runner's tuned speed.",
       "file": "src/CarSim.Core/Simulation/BankConfiguration.cs",
-      "find": "RunnerTuning = RunnerStages.Select(s => Math.Pow(EngineConfiguration.ReferenceRunnerLength / Units(s.Spec.RunnerLengthMm), 0.25)).ToArray();",
-      "replace": "RunnerTuning = RunnerStages.Select(s => 1.0).ToArray();",
+      "find": "Length = Common.Units.MmToM(spec.RunnerLengthMm);",
+      "replace": "Length = 0.300;",
       "tests": "FullyQualifiedName~EngineOutputTests|FullyQualifiedName~FingerprintK20Tests"
     },
     {
@@ -159,11 +159,35 @@
       "tests": "FullyQualifiedName~ArchitectureInvariantTests|FullyQualifiedName~IntakeGasDynamicsGuardTests"
     },
     {
+      "id": "wave-gain-cam-input",
+      "guards": "Intake Gas Dynamics 2.0: the runner wave has no cam input; a phaser moves the valve event, not the wave (proposal 5.3).",
+      "file": "src/CarSim.Core/Simulation/AirPath.cs",
+      "find": "double waveGain = WaveGain(k.Rpm, runnerGas, k.CamProfile, k.RunnerStage, out double tunedRpm);",
+      "replace": "double waveGain = WaveGain(k.Rpm * (1.0 + 0.004 * k.IntakeCamAdvance), runnerGas, k.CamProfile, k.RunnerStage, out double tunedRpm);",
+      "tests": "FullyQualifiedName~IntakeGasDynamicsTests.TheTunedSpeedAndGainHaveNoCamInput"
+    },
+    {
+      "id": "tuned-speed-without-sqrt-t",
+      "guards": "Intake Gas Dynamics 2.0: the runner's tuned speed follows the speed of sound of the runner gas, sqrt(T) (proposal 5.3).",
+      "file": "src/CarSim.Core/Simulation/AirPath.cs",
+      "find": "tunedRpm = stage.TunedRpmAtReference * (a / IntakeGasDynamics.ReferenceSpeedOfSound);",
+      "replace": "tunedRpm = stage.TunedRpmAtReference;",
+      "tests": "FullyQualifiedName~IntakeGasDynamicsTests.TheTunedSpeedScalesExactlyWithTheSpeedOfSound"
+    },
+    {
+      "id": "unnormalised-response",
+      "guards": "Intake Gas Dynamics 2.0: the response is normalised to peak at exactly the tuned speed (R~(1) = 1), so K keeps its meaning (proposal 5.3).",
+      "file": "src/CarSim.Core/Simulation/IntakeGasDynamics.cs",
+      "find": "public static double Response(double speedRatio) => Quadrature(speedRatio * ResponsePeakRatio, Damping) / ResponsePeak;",
+      "replace": "public static double Response(double speedRatio) => Quadrature(speedRatio, Damping) / ResponsePeak;",
+      "tests": "FullyQualifiedName~IntakeGasDynamicsTests.TheResponseIsOneAtTheTunedSpeedPositiveAndUnimodal"
+    },
+    {
       "id": "fingerprint-sensitivity",
       "guards": "The regression fingerprint catches a 1e-10 relative change of one shared filling constant.",
       "file": "src/CarSim.Core/Simulation/EngineConfiguration.cs",
-      "find": "public const double BaseTunedPistonSpeed = 15.0;",
-      "replace": "public const double BaseTunedPistonSpeed = 15.0000000015;",
+      "find": "public const double BaseTunedPistonSpeed = 13.64;",
+      "replace": "public const double BaseTunedPistonSpeed = 13.640000001364;",
       "tests": "FullyQualifiedName~FingerprintK20Tests|FullyQualifiedName~FingerprintM54Tests"
     },
     {
@@ -178,8 +202,8 @@
       "id": "k20-anchor-physics",
       "guards": "The K20 anchor (U7): a change of the stock K20's full-load filling beyond the 3 % physics tolerance fails the anchor, independently of the fingerprint's re-baselining.",
       "file": "src/CarSim.Core/Simulation/AirPath.cs",
-      "find": "public const double VeCeiling = 1.02;",
-      "replace": "public const double VeCeiling = 1.07;",
+      "find": "public const double VeCeiling = 0.973;",
+      "replace": "public const double VeCeiling = 1.021;",
       "tests": "FullyQualifiedName~K20AnchorGuardTests.TheStockK20FillsWithinThePhysicsTolerance"
     },
     {

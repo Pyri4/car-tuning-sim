@@ -300,10 +300,14 @@ public class EngineAgnosticTests
         // Re-pinned 2026-09-27 for a content change, not physics: the pre-physics tune regeneration (Intake Gas Dynamics
         // 2.0 design resolution, Q5) moved 11 cells of k20.stock's VE table by 0.001, so peak power moved by 2e-8 and peak
         // torque by 8e-9 relative (was 110488.59485226133 W, 189.1821087807875 N·m; the regression fingerprint has the diff).
+        // Re-pinned 2026-09-27 for a documented generic physics correction, Intake Gas Dynamics 2.0 Phase 1: the runner's
+        // wave gain split from valve-event filling, v₀ and the ceiling re-anchored on this engine's air per cycle (within the
+        // anchor's ±3 %, K20AnchorGuardTests) and the tables regenerated. Peak power −2.44 %, peak torque +2.20 % (was
+        // 110488.5926433362 W, 189.18210731949648 N·m; docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md).
         var run = new DynoRunner(SimFactory.Create(), new DynoSettings()).RunToCompletion();
         Assert.Equal(221, run.Samples.Count);
-        Assert.Equal(110488.5926433362, run.PeakPower!.Power, 1e-6);
-        Assert.Equal(189.18210731949648, run.PeakTorque!.Torque, 1e-9);
+        Assert.Equal(107789.92353732626, run.PeakPower!.Power, 1e-6);
+        Assert.Equal(193.3525607444823, run.PeakTorque!.Torque, 1e-9);
         var at2000 = SimFactory.At(SimFactory.Create(), 2000);
         Assert.Equal(0.0, at2000.IntakeCamAdvance);
         Assert.False(at2000.CamTuningFloorActive);

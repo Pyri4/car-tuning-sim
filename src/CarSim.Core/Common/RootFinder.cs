@@ -8,9 +8,16 @@ public static class RootFinder
     /// and <paramref name="f"/>(b) must have opposite signs (or one be zero). Converges superlinearly
     /// and never leaves the bracket.
     /// </summary>
-    public static double Brent(Func<double, double> f, double a, double b, double tolerance, int maxIterations = 100)
+    public static double Brent(Func<double, double> f, double a, double b, double tolerance, int maxIterations = 100) =>
+        Brent(static (x, g) => g(x), f, a, b, tolerance, maxIterations);
+
+    /// <summary>
+    /// <see cref="Brent(Func{double, double}, double, double, double, int)"/> for a function of a state passed alongside it,
+    /// so that a hot caller can use a static lambda and allocate nothing (the same iterations, bit for bit).
+    /// </summary>
+    public static double Brent<TState>(Func<double, TState, double> f, TState state, double a, double b, double tolerance, int maxIterations = 100)
     {
-        double fa = f(a), fb = f(b);
+        double fa = f(a, state), fb = f(b, state);
         if (fa == 0) return a;
         if (fb == 0) return b;
         if (fa * fb > 0) throw new ArgumentException($"Root not bracketed: f({a})={fa}, f({b})={fb}.");
@@ -68,7 +75,7 @@ public static class RootFinder
             a = b;
             fa = fb;
             b += Math.Abs(d) > tol1 ? d : (xm >= 0 ? tol1 : -tol1);
-            fb = f(b);
+            fb = f(b, state);
         }
         return b;
     }

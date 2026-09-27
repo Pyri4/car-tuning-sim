@@ -194,6 +194,12 @@ public sealed record EngineTelemetry
     /// <summary>Tuning (cam/runner/header) VE component, relative to port conditions.</summary>
     public double VeDynamic { get; init; }
 
+    /// <summary>The intake runners' wave gain G_wave in VeDynamic (1 = no ram or resonance; cylinder-weighted mean of the banks).</summary>
+    public double IntakeWaveGain { get; init; }
+
+    /// <summary>Tuned speed of the runner stage each bank runs, at its runner gas temperature, rpm (cylinder-weighted mean).</summary>
+    public double RunnerTunedRpm { get; init; }
+
     /// <summary>Residual-gas / reversion multiplier from exhaust backpressure (1 = none).</summary>
     public double ResidualFactor { get; init; }
 

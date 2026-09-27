@@ -54,6 +54,21 @@ internal static class IntakeRig
         return ContentLoader.LoadFromStrings(files.Select(d => (d.Source, d.Node.ToJsonString()))).GetOrThrow();
     }
 
+    /// <summary>An intake spec edited to one fixed runner of <paramref name="lengthMm"/> (any switched stages removed).</summary>
+    public static void SingleStage(JsonObject spec, double lengthMm)
+    {
+        spec["runner_length_mm"] = lengthMm;
+        spec.Remove("switched_runner_length_mm");
+        spec.Remove("switched_stages");
+    }
+
+    /// <summary>An intake spec edited to a two-stage runner: <paramref name="primaryMm"/> below the switch, <paramref name="switchedMm"/> above.</summary>
+    public static void TwoStage(JsonObject spec, double primaryMm, double switchedMm)
+    {
+        SingleStage(spec, primaryMm);
+        spec["switched_runner_length_mm"] = switchedMm;
+    }
+
     /// <summary>Stock engine with parts replaced by id (whatever is in the way comes out and goes back).</summary>
     public static EngineAssembly Build(ContentDatabase db, string engine, params (string Slot, string Part)[] swaps)
     {

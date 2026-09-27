@@ -244,8 +244,10 @@ public class ChassisWearTests
     [Fact]
     public void TorqueWellAboveTheGearboxRatingBreaksItWithAnExplanation()
     {
-        // The same build through a light-duty box rated 360 N·m (≈ 24 % over): fatigue breaks it within a few pulls, the report
-        // says why, the car has no drive afterwards, and the engine is untouched.
+        // The same build through a light-duty box rated 350 N·m (≈ 20 % over at the limiter): fatigue breaks it within a few
+        // pulls, the report says why, the car has no drive afterwards, and the engine is untouched. (The rating was 360 N·m
+        // until Intake Gas Dynamics 2.0 lowered this unanchored T35 build's torque at 7,300 rpm by ≈ 3.5 %, 455 → 439 N·m,
+        // which left that box only 17 % over; the fixture keeps the overload it states, the assertions are unchanged.)
         var stock = TestContent.Database.GetPart("gearbox.kestrel_6mt");
         var s = stock.GetSpec<GearboxSpec>();
         var lightDuty = new PartDefinition
@@ -254,7 +256,7 @@ public class ChassisWearTests
             Provides = stock.Provides, Requires = stock.Requires,
             Spec = new GearboxSpec
             {
-                Ratios = s.Ratios, ReverseRatio = s.ReverseRatio, Efficiency = s.Efficiency, MaxTorqueNm = 360,
+                Ratios = s.Ratios, ReverseRatio = s.ReverseRatio, Efficiency = s.Efficiency, MaxTorqueNm = 350,
                 ShiftTimeS = s.ShiftTimeS, InputInertiaKgM2 = s.InputInertiaKgM2,
             },
         };

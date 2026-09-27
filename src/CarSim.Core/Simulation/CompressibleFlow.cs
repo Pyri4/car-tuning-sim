@@ -52,7 +52,7 @@ public static class CompressibleFlow
         }
         // Ψ is monotonic decreasing in pr on [crit, 1].
         double target = massFlow * Math.Sqrt(gasConstant * tUp) / (cdA * pUp);
-        double pr = RootFinder.Brent(x => FlowFunction(x, gamma) - target, crit, 1.0, 1e-12);
+        double pr = RootFinder.Brent(static (x, s) => FlowFunction(x, s.Gamma) - s.Target, (Gamma: gamma, Target: target), crit, 1.0, 1e-12);
         return pUp * pr;
     }
 
@@ -67,7 +67,8 @@ public static class CompressibleFlow
         double hi = pDown + 2.0 * dp0 + 1.0;
         int guard = 0;
         while (MassFlow(cdA, hi, tUp, pDown, gamma, gasConstant) < massFlow && guard++ < 60) hi = pDown + (hi - pDown) * 2.0;
-        return RootFinder.Brent(p => MassFlow(cdA, p, tUp, pDown, gamma, gasConstant) - massFlow, pDown, hi, 1e-6);
+        return RootFinder.Brent(static (p, s) => MassFlow(s.CdA, p, s.TUp, s.PDown, s.Gamma, s.GasConstant) - s.MassFlow,
+            (CdA: cdA, TUp: tUp, PDown: pDown, Gamma: gamma, GasConstant: gasConstant, MassFlow: massFlow), pDown, hi, 1e-6);
     }
 
     /// <summary>

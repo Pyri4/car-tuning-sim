@@ -21,11 +21,12 @@ public sealed class EngineConfiguration
     /// <summary>Samples used to average port flow over the valve-lift profile.</summary>
     private const int LiftProfileSamples = 48;
 
-    /// <summary>Reference runner length for intake tuning, m.</summary>
-    public const double ReferenceRunnerLength = 0.300;
-
-    /// <summary>Tuned mean piston speed for a 220° (at 1 mm) intake cam, m/s.</summary>
-    public const double BaseTunedPistonSpeed = 15.0;
+    /// <summary>
+    /// v₀, the mean piston speed at which valve-event filling peaks for a 220° (at 1 mm) intake cam, m/s. Fitted: re-anchored
+    /// with <see cref="AirPath.VeCeiling"/> on the stock K20's full-load air per cycle (least squares over its 25 anchor
+    /// points, Intake Gas Dynamics 2.0); it was 15.0 while the runner's effect was folded into the same hump.
+    /// </summary>
+    public const double BaseTunedPistonSpeed = 13.64;
 
     /// <summary>Additional tuned mean piston speed per degree of intake duration above 220°, m/s.</summary>
     public const double TunedPistonSpeedPerDeg = 0.15;

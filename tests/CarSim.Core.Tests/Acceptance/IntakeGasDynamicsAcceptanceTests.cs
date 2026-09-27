@@ -48,16 +48,20 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
     [PendingAcceptanceFact]
     public void TheRunnerResponseIsNotCarriedByTheCamPhaser()
     {
-        var db = IntakeRig.Content(("m54.intake.disa", "test.intake.m54_short", s => s["runner_length_mm"] = 250)); // test-only geometry
+        // Test-only geometry: two fixed runners on the M54 (the stock part carries DISA's two stages since Phase 1).
+        var db = IntakeRig.Content(
+            ("m54.intake.disa", "test.intake.m54_long", s => IntakeRig.SingleStage(s, 380)),
+            ("m54.intake.disa", "test.intake.m54_short", s => IntakeRig.SingleStage(s, 250)));
         var tune = db.GetTune(db.GetEngine(M54).StockTune);
         double? At(double advance)
         {
             var phased = IntakeRig.WithCamAt(tune, advance);
-            var longRunner = IntakeRig.Sweep(db, IntakeRig.Build(db, M54), "gasoline_98", phased, 1000, 6400, 100);
+            var longRunner = IntakeRig.Sweep(db, IntakeRig.Build(db, M54, ("intake_manifold", "test.intake.m54_long")), "gasoline_98", phased, 1000, 6400, 100);
             var shortRunner = IntakeRig.Sweep(db, IntakeRig.Build(db, M54, ("intake_manifold", "test.intake.m54_short")), "gasoline_98", phased, 1000, 6400, 100);
             return IntakeRig.Crossover(shortRunner, longRunner, p => p.VeDynamic);
         }
         double? early = At(50), late = At(10);
+        output.WriteLine($"runner crossover 250/380 mm: {early:F0} rpm with the intake cam at 50°, {late:F0} rpm at 10°; ratio {early / late:F4}");
         Assert.True(early is >= 1500 and <= 6400, $"runner crossover with the intake cam at 50°: {early?.ToString("F0") ?? "none"} rpm");
         Assert.True(late is >= 1500 and <= 6400, $"runner crossover with the intake cam at 10°: {late?.ToString("F0") ?? "none"} rpm");
         Assert.InRange(early!.Value / late!.Value, EarlierClosingRatioMin, EarlierClosingRatioMax);
@@ -82,6 +86,7 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
         double? upper = IntakeRig.Crossover(r230, r340, p => p.VeDynamic), lower = IntakeRig.Crossover(r340, r460, p => p.VeDynamic);
         Assert.True(upper is >= 1000 and <= 8000 && lower is >= 1000 and <= 8000, $"crossovers 230/340 mm {upper:F0}, 340/460 mm {lower:F0} rpm");
         double exponent = Math.Log(upper!.Value / lower!.Value) / Math.Log(Math.Sqrt(340.0 * 460) / Math.Sqrt(230.0 * 340));
+        output.WriteLine($"crossovers: 230/340 mm {upper:F0} rpm, 340/460 mm {lower:F0} rpm; length exponent {exponent:F3}");
         Assert.InRange(exponent, 0.45, 1.1);
     }
 
@@ -107,6 +112,8 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
         var hot = At(323.15);
         double predicted = Math.Sqrt(hot.Charge / cold.Charge) - 1.0;
         double measured = hot.Rpm / cold.Rpm - 1.0;
+        output.WriteLine($"crossover {cold.Rpm:F0} rpm at 263 K ambient (charge {cold.Charge:F1} K), {hot.Rpm:F0} rpm at 323 K (charge {hot.Charge:F1} K): " +
+                         $"shift {measured:P2}, charge-temperature prediction {predicted:P2}, band {0.5 * predicted:P2}–{1.5 * predicted:P2}");
         Assert.True(predicted > 0.05, $"the charge should heat up: {cold.Charge:F0} → {hot.Charge:F0} K");
         Assert.InRange(measured, 0.5 * predicted, 1.5 * predicted);
     }
@@ -136,7 +143,7 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
     public void ASwitchedRunnerActsOnAPhasedEngine()
     {
         var db = IntakeRig.Content(
-            ("m54.intake.disa", "test.intake.m54_two_stage", s => s["switched_runner_length_mm"] = 250), // test-only geometry
+            ("m54.intake.disa", "test.intake.m54_two_stage", s => IntakeRig.TwoStage(s, 380, 250)), // test-only geometry
             ("ecu.m54_oem", "test.ecu.m54_runner_control", s => s["intake_runner_control"] = true));
         var tune = db.GetTune(db.GetEngine(M54).StockTune);
         IReadOnlyList<EngineTelemetry> Run(TuneDocument t) => IntakeRig.Sweep(db,

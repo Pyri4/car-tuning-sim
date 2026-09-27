@@ -22,9 +22,15 @@ public readonly record struct AirPathResult(
     double TurbineInletPressure,
     double TurbineOutletPressure,
     double ExhaustMassFlow,
-    double TurbineMassFlow);
+    double TurbineMassFlow,
+    double WaveGain = 1.0,
+    double RunnerTunedRpm = 0.0);
 
-/// <summary>Conditions the air path is solved for.</summary>
+/// <summary>
+/// Conditions the air path is solved for. <see cref="RunnerGasTemperature"/> is the temperature the intake runners' gas
+/// had on the previous step (the manifold temperature; 0 = ambient): the runner wave's speed of sound is taken from it so
+/// that the gain stays out of the flow root find (a one-step lag under boost, exact on a naturally aspirated engine).
+/// </summary>
 public readonly record struct AirPathConditions(
     double Rpm,
     double ThrottleArea,
@@ -41,7 +47,8 @@ public readonly record struct AirPathConditions(
     double TurbineOutletTemperature = 0.0,
     double IntakeCamAdvance = 0.0,
     int CamProfile = 0,
-    int RunnerStage = 0);
+    int RunnerStage = 0,
+    double RunnerGasTemperature = 0.0);
 
 /// <summary>
 /// One bank's air path.
@@ -55,7 +62,12 @@ public readonly record struct AirPathConditions(
 /// </summary>
 public sealed class AirPath
 {
-    public const double VeCeiling = 1.02;
+    /// <summary>
+    /// Ceiling of valve-event filling η_ve (relative to port conditions). Fitted: re-anchored with
+    /// <see cref="EngineConfiguration.BaseTunedPistonSpeed"/> on the stock K20 (Intake Gas Dynamics 2.0; it was 1.02 while the
+    /// runner's ram was folded in). The runner's wave gain multiplies it.
+    /// </summary>
+    public const double VeCeiling = 0.973;
     public const double VeHighSideCoefficient = 0.25;
     public const double VeLowSideBase = 0.50;
     public const double VeLowSidePerOverlapDeg = 0.004;
@@ -85,13 +97,20 @@ public sealed class AirPath
     public BankConfiguration Bank => _b;
 
     /// <summary>
-    /// Dynamic (tuning) volumetric efficiency relative to port conditions: cam/runner resonance shape,
-    /// header scavenging bump, valve float collapse above the float speed. <paramref name="intakeCamAdvance"/> is
-    /// the intake phaser's advance from the installed centreline (crank degrees).
+    /// Dynamic (tuning) volumetric efficiency relative to port conditions: the valve-event filling times the intake's
+    /// wave gain, plus the header scavenging bump, with the valve-float collapse above the float speed —
+    /// <c>VE_dyn = (η_ve · G_wave + scavenging) · float</c>. <paramref name="intakeCamAdvance"/> is the intake phaser's
+    /// advance from the installed centreline (crank degrees); it acts on η_ve only. <paramref name="runnerGasTemperature"/>
+    /// sets the wave's speed of sound (K).
     /// </summary>
-    public double VeDynamic(double rpm, double floatRpm, double intakeCamAdvance = 0.0, int camProfile = 0, int runnerStage = 0)
+    public double VeDynamic(double rpm, double floatRpm, double intakeCamAdvance = 0.0, int camProfile = 0, int runnerStage = 0,
+        double runnerGasTemperature = IntakeGasDynamics.ReferenceTemperature) =>
+        VeDynamic(rpm, floatRpm, intakeCamAdvance, camProfile, WaveGain(rpm, runnerGasTemperature, camProfile, runnerStage));
+
+    /// <summary><see cref="VeDynamic(double, double, double, int, int, double)"/> with the wave gain already evaluated.</summary>
+    private double VeDynamic(double rpm, double floatRpm, double intakeCamAdvance, int camProfile, double waveGain)
     {
-        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));
+        double ve = ValveEventFilling(rpm, intakeCamAdvance, camProfile) * waveGain;
         if (_b.ScavengingGain > 0)
         {
             double w = 0.25 * _b.ScavengingRpm;
@@ -111,12 +130,37 @@ public sealed class AirPath
     public const double VeShapeFloor = 0.25;
 
     /// <summary>
-    /// Cam/runner VE shape before the floor: an inverted parabola around the tuned speed (steeper below it with more
-    /// overlap), for the intake cam advance, cam profile and runner stage the bank is running.
+    /// Valve-event filling η_ve (what the cams do): the ceiling times the VE shape, above its floor. Cam phase, the cam
+    /// profile and the installed centrelines act here and only here.
     /// </summary>
-    public double VeShape(double rpm, double intakeCamAdvance = 0.0, int camProfile = 0, int runnerStage = 0)
+    public double ValveEventFilling(double rpm, double intakeCamAdvance = 0.0, int camProfile = 0) =>
+        VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile));
+
+    /// <summary>
+    /// The intake's wave gain G_wave on runner stage <paramref name="runnerStage"/> with the runner gas at
+    /// <paramref name="runnerGasTemperature"/> (K), in [1, 1 + A_max] (<see cref="IntakeGasDynamics"/>). The tuned speed
+    /// has no cam input; the cam profile enters only through the intake event's length in the runner's mean flow speed.
+    /// </summary>
+    public double WaveGain(double rpm, double runnerGasTemperature, int camProfile = 0, int runnerStage = 0) =>
+        WaveGain(rpm, runnerGasTemperature, camProfile, runnerStage, out _);
+
+    /// <summary><see cref="WaveGain(double, double, int, int)"/>, also giving the stage's tuned speed at that temperature (rpm).</summary>
+    public double WaveGain(double rpm, double runnerGasTemperature, int camProfile, int runnerStage, out double tunedRpm)
     {
-        double x = rpm / _b.VePeakRpmAt(intakeCamAdvance, camProfile, runnerStage);
+        var stage = _b.RunnerStages[runnerStage];
+        double a = IntakeGasDynamics.SpeedOfSound(runnerGasTemperature);
+        tunedRpm = stage.TunedRpmAtReference * (a / IntakeGasDynamics.ReferenceSpeedOfSound);
+        double mach = IntakeGasDynamics.RunnerMach(rpm, _g.SweptVolumePerCylinder, stage.Area, _b.Profiles[camProfile].IntakeEventFraction, a);
+        return IntakeGasDynamics.Gain(rpm, tunedRpm, mach);
+    }
+
+    /// <summary>
+    /// Valve-event VE shape before the floor: an inverted parabola around the tuned piston speed (steeper below it with
+    /// more overlap), for the intake cam advance and cam profile the bank is running.
+    /// </summary>
+    public double VeShape(double rpm, double intakeCamAdvance = 0.0, int camProfile = 0)
+    {
+        double x = rpm / _b.VePeakRpmAt(intakeCamAdvance, camProfile);
         double aLo = VeLowSideBase + VeLowSidePerOverlapDeg * _b.OverlapAt(intakeCamAdvance, camProfile);
         return x < 1.0 ? 1.0 - aLo * (1.0 - x) * (1.0 - x) : 1.0 - VeHighSideCoefficient * (x - 1.0) * (x - 1.0);
     }
@@ -163,13 +207,15 @@ public sealed class AirPath
     public AirPathResult Solve(in AirPathConditions k)
     {
         var g = _g;
+        double runnerGas = k.RunnerGasTemperature > 0 ? k.RunnerGasTemperature : k.AmbientTemperature;
+        double waveGain = WaveGain(k.Rpm, runnerGas, k.CamProfile, k.RunnerStage, out double tunedRpm);
         if (k.Rpm <= 1.0)
         {
             return new AirPathResult(0, k.AmbientPressure, k.AmbientTemperature, k.AmbientPressure, k.AmbientTemperature,
                 k.AmbientPressure, k.AmbientPressure, 0, 1, 0, k.AmbientPressure, k.AmbientPressure, k.AmbientTemperature,
-                default, k.AmbientPressure, k.AmbientPressure, 0, 0);
+                default, k.AmbientPressure, k.AmbientPressure, 0, 0, 1.0, tunedRpm);
         }
-        double veDyn = VeDynamic(k.Rpm, k.ValveFloatRpm, k.IntakeCamAdvance, k.CamProfile, k.RunnerStage);
+        double veDyn = VeDynamic(k.Rpm, k.ValveFloatRpm, k.IntakeCamAdvance, k.CamProfile, waveGain);
         double cyclesPerSecond = k.Rpm / 120.0;
         var turbo = _b.Turbo?.Spec;
         double prBound = turbo == null ? 1.0 : TurbochargerModel.MaxPressureRatio(turbo, k.TurboOmega, k.AmbientTemperature);
@@ -177,9 +223,9 @@ public sealed class AirPath
         // Upper bound: the bank's demand at the highest pressure the intake could reach, with generous VE.
         double hi = 1.3 * prBound * k.AmbientPressure / (PhysicalConstants.AirGasConstant * k.AmbientTemperature)
                     * _b.SweptVolume * cyclesPerSecond;
-        var conditions = k;
-        double flow = RootFinder.Brent(m => Evaluate(m, veDyn, in conditions).MassFlow - m, 0.0, hi, 1e-9 * hi);
-        return Evaluate(flow, veDyn, in k);
+        double flow = RootFinder.Brent(static (m, s) => s.Path.Evaluate(m, s.VeDyn, in s.Conditions).MassFlow - m,
+            (Path: this, VeDyn: veDyn, Conditions: k), 0.0, hi, 1e-9 * hi);
+        return Evaluate(flow, veDyn, in k) with { WaveGain = waveGain, RunnerTunedRpm = tunedRpm };
     }
 
     /// <summary>
