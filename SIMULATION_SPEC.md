@@ -856,6 +856,13 @@ Status: written in Phase 0 of docs/milestones/INTAKE_GAS_DYNAMICS_2.md for revie
 section runs today; the model that runs is "Volumetric efficiency (tuning component)" above. The acceptance tests that
 will hold this model are in `tests/CarSim.Core.Tests/Acceptance/` (pending until Phase 1).
 
+**Phase 1 authorization proposal (governs over this section and the design resolution):**
+[docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md).
+It locks the equations: the distributed runner fundamental `x·tan x = β`, the normalised quadrature response, and a Mach
+amplitude with no cam input. It pre-registers the parameters: K = 2.1 as an empirical shared parameter, ζ = 0.35 from the
+intake-event floor, κ = 0.5 bounded. It also sets the M54 DISA procedure, the revised acceptance tests and the K20
+anchor.
+
 **Reviewed by the design-resolution pass (2026-09-27):**
 [docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md).
 Where this section and that document differ, the document governs, and this section is rewritten when Phase 1 is

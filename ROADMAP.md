@@ -16,8 +16,8 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 651 automated tests: 646 run and 5 are the pending acceptance tests of Intake Gas Dynamics 2.0 (649 before its
-  design resolution, 586 before its Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
+- 654 automated tests: 649 run and 5 are the pending acceptance tests of Intake Gas Dynamics 2.0 (651 before its
+  authorization gate, 649 before its design resolution, 586 before its Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
   before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
   physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
   synthetic engine matrix. CI runs them, CLI content checks and dyno sweeps (with and without the matrix), and headless
@@ -212,6 +212,16 @@ Make the next physics change measurable, reproducible and reviewable before it i
   - [x] the **pre-physics tune regeneration** in its own commits. Two driver rules were added (hardware schedule first;
         only settled values written), and all 12 tunes are now fixed points of their recipes. The M54 is bit-identical;
         the K20 moved by 11 VE cells of 0.001.
+- [x] **Final authorization gate** (U1–U7; docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md):
+  - [x] K classified as an empirical shared parameter (primary source unreachable);
+  - [x] the distributed frequency model locked;
+  - [x] damping bounded by the intake-event physics, amplitude a bounded shared parameter;
+  - [x] the M54 DISA procedure locked, with every value classified;
+  - [x] tests 1, 4 and 5 rewritten as relationships;
+  - [x] the intake-closing coupling deferred;
+  - [x] the K20 anchor executable (`K20AnchorGuardTests`);
+  - [x] the project-car lap reclassified as a knife-edge fingerprint diagnostic;
+  - [x] 5 new mutants, all caught.
 
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
@@ -229,7 +239,10 @@ the next milestone).
    verification tooling into the repo (regression fingerprint, recalibration driver, mutation harness; docs/VERIFICATION.md)
    and wrote the model specification and acceptance tests. The design-resolution pass
    ([docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md))
-   answered Q1–Q5 and regenerated the tunes under the old physics; the owner decisions U1–U7 come before Phase 1. Background:
+   answered Q1–Q5 and regenerated the tunes under the old physics. The final authorization gate resolved U1–U7 into a
+   Phase 1 proposal
+   ([docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md))
+   that awaits authorization. Background:
    the M54 torque-curve investigation (SIMULATION_SPEC.md; its E10 prototype is an input, not the design).
 2. **Cylinder groups on inline engines.** Banks are the unit of per-bank parts and air paths, and an inline engine may
    declare only one. That blocks an inline twin turbo (a turbo per three cylinders on one head: RB26-, N54-, 2JZ-type

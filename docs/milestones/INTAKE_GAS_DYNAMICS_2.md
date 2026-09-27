@@ -1,7 +1,7 @@
 # Milestone: Intake Gas Dynamics 2.0
 
-**Status: PHASE 0 COMPLETE, DESIGN-RESOLUTION GATE DONE — Phase 1 (the physics) awaits the owner's explicit
-authorization.** Defined by the project gate of 2026-09-27 (after the engine-architecture milestone). The owner
+**Status: PHASE 0 COMPLETE, DESIGN RESOLVED, AT THE FINAL AUTHORIZATION GATE — Phase 1 (the physics) awaits the
+owner's explicit authorization.** Defined by the project gate of 2026-09-27 (after the engine-architecture milestone). The owner
 authorized Phase 0 (verification tooling, the pre-physics baseline, the model specification, sources and acceptance
 tests), accepted it, and asked for a design-resolution pass before Phase 1.
 
@@ -12,8 +12,17 @@ That pass is in [INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](INTAKE_GAS_DYNAMICS
 - the acceptance-test rationale;
 - the tunes regenerated under the existing physics, in their own commits.
 
-No intake gas-dynamics physics is implemented. Do not start Phase 1 until the owner authorizes it and answers the
-design resolution's open questions U1–U7; the owner may change the scope below.
+U1–U7 are resolved in [INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md](INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md), the Phase 1
+authorization proposal. It holds:
+- the locked equations and the provenance of every parameter;
+- the revised acceptance tests;
+- the regression rules (the K20 anchor);
+- the explicit assumptions and the remaining uncertainties.
+
+Where it differs from earlier documents, it governs.
+
+No intake gas-dynamics physics is implemented. Do not start Phase 1 until the owner authorizes it; the owner may change
+the scope below.
 
 ## Goal
 Separate the two things the current volumetric-efficiency model fuses into one filling hump:
@@ -181,18 +190,24 @@ The design resolution checked each test against the physics (section "Acceptance
 - test 4's 2 % threshold is a requirement on unsourced constants;
 - test 5's precondition encodes the old schema.
 
-Revisions are proposed (U5) but not applied.
+The authorization gate then revised tests 1, 4 and 5 into physical and model relationships (U5; the proposal, section 5,
+has the derivations). Tests 2 and 3 are unchanged. None of the five requires a gain of a given size or a torque-curve
+shape.
+
 Pending — `IntakeGasDynamicsAcceptanceTests`, skipped unless `CARSIM_RUN_PENDING_ACCEPTANCE=1`; each fails today as shown:
 
 | Test | Criterion (tolerance) | Today |
 |---|---|---|
-| `TheRunnerCrossoverDoesNotMoveWithTheCamPhaser` | M54, 380 vs 250 mm (test-only), intake cam held at 10° and 50°: the speed above which the short runner out-fills the long one exists (1,500–6,400 rpm) and moves ≤ 10 % | no crossover at 50° |
+| `TheRunnerResponseIsNotCarriedByTheCamPhaser` | M54, 380 vs 250 mm (test-only), intake cam held at 10° and 50°: the short-over-long crossover exists at both phases (1,500–6,400 rpm), and `x(50°)/x(10°)` lies in 0.70–1.05 (the intake-closing band: 1.00 without the coupling, ≈ 0.78–0.89 with it) | no crossover at 50° |
 | `TunedSpeedScalesWithRunnerLengthAsTheWaveModelsPredict` | K20 fixed cams, 230/340/460 mm: crossover scaling exponent against geometric-mean length in [0.45, 1.1] (Helmholtz ½ … quarter wave 1) | 0.254 |
 | `AHotterChargeRaisesTheTunedSpeedWithTheSpeedOfSound` | K20, ambient 263 → 323 K: crossover shift within [0.5, 1.5] × (√(T_hot/T_cold) − 1) of the charge temperatures | 0 |
-| `ASwitchedRunnerActsOnAPhasedEngine` | M54 + test-only 380/250 mm two-stage intake, shipped VANOS map: each stage wins by ≥ 2 % in its own range, long stage below short | < 2 % everywhere |
-| `TheM54RisesIntoAMidRangePeakWithItsDisaAuthored` | M54 with its DISA authored (provenance): peak torque at 2,750–4,750 rpm, ≥ 3 % above the 1,500 rpm torque; peak torque 270–330 N·m, power 144.5–195.5 kW | DISA not authored |
+| `ASwitchedRunnerActsOnAPhasedEngine` | M54 + test-only 380/250 mm two-stage intake, shipped VANOS map: ordered stages with a crossover; **the phaser map does not absorb the stage effect** (below 0.7 × the parked crossover: same sign, at least half the size); torque follows filling; the switched curve is the upper envelope. Every threshold is relative. | at 1,500 rpm (cam 42.5°) the stage effect is +0.20 % under the map against −2.75 % parked |
+| `TheM54DisaStagesFollowTheirProvenance` | M54 with DISA authored by the proposal's frozen procedure: the stage crossover and the tune's switch speed in the sourced band 3,750–4,100 rpm; closed below, open above; torque follows filling; upper envelope; bands 270–330 N·m and 144.5–195.5 kW. The shape is **reported** as held-out validation, not asserted. | DISA not authored |
 
-Active guards — must hold now and after Phase 1: `IntakeGasDynamicsGuardTests` (every family bounded, 0 < VE_dyn ≤ 1.35,
+Active guards — must hold now and after Phase 1:
+- **`K20AnchorGuardTests`** (the U7 anchor, frozen reference): air per cycle within ±3 %; peak torque, peak power and
+  0–100 km/h within ±3 %.
+- `IntakeGasDynamicsGuardTests` (every family bounded, 0 < VE_dyn ≤ 1.35,
 λ within 4 % of target at full load on its calibration fuel; stage switching with 150 rpm hysteresis; the phaser still
 moves the valve-event optimum ≥ 20° between 1,500 and 5,500 rpm; per-step allocation ≤ Phase 0 + 2 %), the fingerprint
 (K20 protection: any change is a measured, documented re-baseline), `TuneRegenerationTests`, the source audit

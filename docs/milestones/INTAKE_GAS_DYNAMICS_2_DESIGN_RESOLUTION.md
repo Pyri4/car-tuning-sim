@@ -1,5 +1,9 @@
 # Intake Gas Dynamics 2.0 — design resolution (before Phase 1)
 
+> **Superseded where it differs:** U1–U7 below are resolved, and tests 1, 4 and 5 revised, in the Phase 1 authorization
+> proposal, [INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md](INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md). This document is kept as
+> the analysis record.
+
 **Status: design-resolution gate, 2026-09-27. No intake gas-dynamics physics is implemented and no engine-simulation
 code changed.** The owner accepted Phase 0 and asked for a design-resolution pass: resolve Q1–Q5 of the Phase 0
 specification (SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model"), verify the literature the specification
@@ -114,7 +118,8 @@ Classes used:
 | Switching mechanism | Vacuum-actuated resonance flap (solenoid valve and vacuum accumulator), sprung open. Closed = energised. | sourced (secondary, corroborated) | Pelican Parts technical articles ([X3 M54 DISA](https://www.pelicanparts.com/techarticles/BMW-X3/26-FUEL-M54_6_Cylinder_DISA_Valve_Replacement/26-FUEL-M54_6_Cylinder_DISA_Valve_Replacement.htm), [E60 M54](https://www.pelicanparts.com/techarticles/BMW-E60/26-FUEL-M54_6_Cylinder_DISA_Valve_Replacement/26-FUEL-M54_6_Cylinder_DISA_Valve_Replacement.htm)); [BimmerFest "How the DISA works"](https://www.bimmerfest.com/threads/how-the-disa-works.531558/); [eEuroparts](https://eeuroparts.com/blog/disa-valve-rundown-symptoms-replacement). The wording traces to BMW training material. |
 | Switch speeds | Closed below ≈ 3,750 rpm, open above ≈ 4,100 rpm ("varies slightly, temperature influenced"). The ECM map uses engine speed, load, vacuum and ambient temperature. | sourced (secondary, corroborated; already in PARTS_DATABASE.md) | same sources |
 | Topology | Six runners in **two groups of three**; the flap separates or joins the groups. Closed: "air through one resonance tube"; open: "flow through both resonance tubes". | sourced **qualitatively** (secondary). The exact duct layout is **ambiguous** between sources. | Pelican Parts ("two sets of three runners"), [ASC "Evolution of BMW intake designs"](https://www.ascfabrics.com/post/intake) ("split the intake manifold into two sections of three cylinders"), the BMW training wording above |
-| Group excitation | Each group (1-2-3, 4-5-6) fires every 240°: 1.5 intake pulses per revolution | derived | firing order 1-5-3-6-2-4, sourced ([E46 Fanatics](https://www.e46fanatics.com/threads/m54-engine-cylinder-firing-order.879486/), [BimmerFest](https://www.bimmerfest.com/threads/m54-cylinder-number.512787/), several agreeing results). The model has no firing order; this matters only for a group-plenum model. |
+| Group excitation | Each group (1-2-3, 4-5-6) fires every 240°: 1.5 intake pulses per revolution | derived | firing order 1-5-3-6-2-4, sourced ([E46 Fanatics](https://www.e46fanatics.com/threads/m54-engine-cylinder-firing-order.879486/), [BimmerFest](https://www.bimmerfest.com/threads/m54-cylinder-number.512787/), several agreeing results). The schema has an optional descriptive `firing_order`, which the M54 does not author and no physics uses; the order
+matters only for a group-plenum model. |
 | DISA size | Three DISA sizes exist; the largest is on the M54B30 | sourced (enthusiast, single source) | [ZRoadster "M54B30 intake manifold"](https://zroadster.org/threads/m54b30-intake-manifold.25812/) |
 | Runner length relative to the M52TU | M54 runners ≈ 10 mm shorter; "D"-shaped ports matching the head | sourced (enthusiast, single source, relative only) | ZRoadster thread (pages 3–4) |
 | **Runner length (plenum mouth to valve, including the head port)** | not published; content has 380 mm | **estimate** (no source; PARTS_DATABASE.md already says so) | — |
@@ -503,7 +508,8 @@ N·m, power 144.5–195.5 kW.
   fits. Not needed for Phase 1.
 - Carried over from Phase 0, unchanged by this pass:
   - the hand-authored K20 spark maps above the calibrator's ceiling (74 and 80 cells; keep, lower or convert);
-  - the worn project car that never completes an autopilot lap (not investigated).
+  - the worn project car's autopilot lap. It is not a structural failure but a knife edge: the tune regeneration flipped
+    it. It is reclassified as a fingerprint diagnostic in the Phase 1 proposal.
 
 ## Phase 1 entry conditions (for authorization; nothing started)
 - U1, U3, U4, U5 and U7 answered.
