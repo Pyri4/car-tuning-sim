@@ -9,9 +9,10 @@ using CarSim.Core.Simulation;
 namespace CarSim.Core.Tests.Acceptance;
 
 /// <summary>
-/// An acceptance test of Intake Gas Dynamics 2.0 (docs/milestones/INTAKE_GAS_DYNAMICS_2.md, "Acceptance tests"). Defined
-/// in Phase 0, before the model exists: each one fails on today's single-hump VE model (recorded in the milestone
-/// document), so it is skipped unless <c>CARSIM_RUN_PENDING_ACCEPTANCE=1</c>. Phase 1 turns them into plain facts.
+/// An acceptance test defined before the physics it holds exists (docs/VERIFICATION.md, "Acceptance tests defined before
+/// the physics"): it fails on the current model by design, so it is skipped unless <c>CARSIM_RUN_PENDING_ACCEPTANCE=1</c>,
+/// and the milestone that delivers the physics turns it into a plain fact. Intake Gas Dynamics 2.0's five did so in
+/// Phase 1; none is pending now.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class PendingAcceptanceFactAttribute : FactAttribute

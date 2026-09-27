@@ -164,7 +164,7 @@
       "file": "src/CarSim.Core/Simulation/AirPath.cs",
       "find": "double waveGain = WaveGain(k.Rpm, runnerGas, k.CamProfile, k.RunnerStage, out double tunedRpm);",
       "replace": "double waveGain = WaveGain(k.Rpm * (1.0 + 0.004 * k.IntakeCamAdvance), runnerGas, k.CamProfile, k.RunnerStage, out double tunedRpm);",
-      "tests": "FullyQualifiedName~IntakeGasDynamicsTests.TheTunedSpeedAndGainHaveNoCamInput"
+      "tests": "FullyQualifiedName~IntakeGasDynamicsTests.TheTunedSpeedAndGainHaveNoCamInput|FullyQualifiedName~IntakeGasDynamicsAcceptanceTests"
     },
     {
       "id": "tuned-speed-without-sqrt-t",
@@ -173,6 +173,22 @@
       "find": "tunedRpm = stage.TunedRpmAtReference * (a / IntakeGasDynamics.ReferenceSpeedOfSound);",
       "replace": "tunedRpm = stage.TunedRpmAtReference;",
       "tests": "FullyQualifiedName~IntakeGasDynamicsTests.TheTunedSpeedScalesExactlyWithTheSpeedOfSound"
+    },
+    {
+      "id": "wave-gain-dropped",
+      "guards": "Intake Gas Dynamics 2.0: the runner's wave gain acts on filling (the acceptance tests' relationships need it).",
+      "file": "src/CarSim.Core/Simulation/AirPath.cs",
+      "find": "double ve = ValveEventFilling(rpm, intakeCamAdvance, camProfile) * waveGain;",
+      "replace": "double ve = ValveEventFilling(rpm, intakeCamAdvance, camProfile) * 1.0;",
+      "tests": "FullyQualifiedName~IntakeGasDynamicsAcceptanceTests"
+    },
+    {
+      "id": "runner-gas-temperature-ignored",
+      "guards": "Intake Gas Dynamics 2.0: the runner wave's speed of sound comes from the previous step's manifold gas, not ambient (proposal A10).",
+      "file": "src/CarSim.Core/Simulation/EngineSimulation.cs",
+      "find": "profile, bs.RunnerStage, _air[b].ManifoldTemperature));",
+      "replace": "profile, bs.RunnerStage, 0.0));",
+      "tests": "FullyQualifiedName~IntakeGasDynamicsTests.TheEngineReadsTheRunnerGasOfThePreviousStep"
     },
     {
       "id": "unnormalised-response",

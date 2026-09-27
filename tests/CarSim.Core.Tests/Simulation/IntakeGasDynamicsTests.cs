@@ -4,6 +4,8 @@ using CarSim.Core.Ecu;
 using CarSim.Core.Engines;
 using CarSim.Core.Simulation;
 using CarSim.Core.Tests.Acceptance;
+using CarSim.Verification;
+using CarSim.Verification.Calibration;
 
 namespace CarSim.Core.Tests.Simulation;
 
@@ -192,6 +194,64 @@ public class IntakeGasDynamicsTests
         var t = SimFactory.At(turbo, 6000);
         Assert.True(t.ManifoldTemperature > 300);
         Assert.Equal(turbo.Config.Banks[0].RunnerStages[0].TunedRpm(t.ManifoldTemperature), t.RunnerTunedRpm, t.RunnerTunedRpm * 1e-3);
+    }
+
+    // ---- The M54 DISA derivation (A-D1) and N-stage switch speeds -----------------------------------------------------
+
+    [Fact]
+    public void TheDisaDerivationReproducesTheSourcedSwitchSpeedFromTheFrozenGeometry()
+    {
+        // docs/milestones/intake-gas-dynamics-2/M54_DISA_DERIVATION.md: the closed stage is derived so that the two stages'
+        // gains cross at 3,925 rpm (the centre of the sourced 3,750–4,100 rpm band). The content carries it frozen at 0.1 mm.
+        var bank = EngineConfiguration.Build(TestContent.StockM54(), TestContent.Database.GetFuel("gasoline_98")).GetOrThrow().Banks[0];
+        Assert.Equal(2, bank.RunnerStages.Count);
+        var (closed, open) = (bank.RunnerStages[0], bank.RunnerStages[1]);
+        Assert.Equal(469.1, closed.Spec.RunnerLengthMm);
+        Assert.Equal(380.0, open.Spec.RunnerLengthMm);
+        Assert.Equal(closed.Diameter, open.Diameter);
+        Assert.Equal(3925.0, RunnerStageDerivation.Crossover(closed.TunedRpmAtReference, open.TunedRpmAtReference), 2.0);
+
+        var derived = RunnerStageDerivation.LowerStage(380, null, bank.Geometry, 3925);
+        Assert.Equal(open.TunedRpmAtReference, derived.UpperTunedRpm, 1e-9);
+        Assert.Equal(469.1, derived.LowerLengthMm!.Value, 0.05);
+        Assert.Equal(3925.0, derived.CrossoverRpm, 1e-3);
+        // The proposal's exclusions: a 450 mm open stage or a 30 mm runner tunes below the sourced band.
+        Assert.Throws<ArgumentException>(() => RunnerStageDerivation.LowerStage(450, null, bank.Geometry, 3925));
+        Assert.Throws<ArgumentException>(() => RunnerStageDerivation.LowerStage(380, 30, bank.Geometry, 3925));
+    }
+
+    [Fact]
+    public void TheTuneDriverSwitchesAThreeStageIntakeOntoItsUpperEnvelope()
+    {
+        // A test-only three-stage intake on the fixed-cam I6: the driver's runner_switch step sets each stage's switch speed
+        // at the crossover of the stages below and above it, and the switched engine then runs the best stage everywhere
+        // away from the switches (± the hysteresis).
+        var db = IntakeRig.Content(("syn.r6.intake", "test.intake.three_stage", s =>
+        {
+            s.Remove("switched_runner_length_mm");
+            s["switched_stages"] = new JsonArray(new JsonObject { ["runner_length_mm"] = 330 }, new JsonObject { ["runner_length_mm"] = 200 });
+        }));
+        var manifest = TuneManifest.Load(RepoPaths.TuneManifest).Tunes.Single(t => t.Tune == "syn.r6.stock");
+        var recipe = manifest with { Build = new BuildRecipe(new[] { new[] { "intake_manifold", "test.intake.three_stage" } }, null) };
+        var start = db.GetTune(recipe.Tune) with { IntakeRunnerUpperSwitchRpm = new[] { 7000.0 } };
+        var doc = TuneRegenerator.RunnerSwitchSpeeds(db, recipe, start);
+        Assert.NotNull(doc.IntakeRunnerSwitchRpm);
+        Assert.Single(doc.IntakeRunnerUpperSwitchRpm!);
+        Assert.True(doc.IntakeRunnerUpperSwitchRpm![0] > doc.IntakeRunnerSwitchRpm!.Value, $"{doc.IntakeRunnerSwitchRpm} then {doc.IntakeRunnerUpperSwitchRpm[0]} rpm");
+        Assert.Empty(doc.Validate());
+
+        var engine = IntakeRig.Build(db, "syn_i6_vis", ("intake_manifold", "test.intake.three_stage"));
+        IReadOnlyList<EngineTelemetry> Run(TuneDocument t) => IntakeRig.Sweep(db, engine, "gasoline_95", t, 1500, 6800, 100);
+        var held = Enumerable.Range(0, 3).Select(k => Run(TuneRegenerator.HoldingStage(doc, k))).ToList();
+        var switched = Run(doc);
+        double[] switches = { doc.IntakeRunnerSwitchRpm.Value, doc.IntakeRunnerUpperSwitchRpm[0] };
+        for (int i = 0; i < switched.Count; i++)
+        {
+            if (switches.Any(s => Math.Abs(switched[i].Rpm - s) <= EcuController.SwitchHysteresisRpm)) continue;
+            double best = held.Max(h => h[i].Torque);
+            Assert.True(switched[i].Torque >= best * (1 - 0.005), $"{switched[i].Rpm:F0} rpm: {switched[i].Torque:F1} N·m against the best stage's {best:F1}");
+        }
+        Assert.Equal(new[] { 0, 1, 2 }, switched.Select(p => p.RunnerStage).Distinct().OrderBy(x => x));
     }
 
     // ---- Every family, and spec fuzz over the new fields --------------------------------------------------------------

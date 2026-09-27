@@ -11,11 +11,11 @@ using Xunit.Abstractions;
 namespace CarSim.Core.Tests.Acceptance;
 
 /// <summary>
-/// System-level acceptance tests of Intake Gas Dynamics 2.0, written against today's public API before the model exists
-/// (docs/milestones/INTAKE_GAS_DYNAMICS_2.md, "Acceptance tests"; the model they will hold is locked in
-/// docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md). Each one fails on today's model, where valve timing and
-/// runner gas dynamics are one filling hump that a cam phaser moves whole; the failure of each is recorded in the
-/// milestone document. Every criterion is a physical or model relationship (a scaling law, a sign, an invariance, a
+/// System-level acceptance tests of Intake Gas Dynamics 2.0, written against the public API before the model existed
+/// (docs/milestones/INTAKE_GAS_DYNAMICS_2.md, "Acceptance tests"; the model they hold is locked in
+/// docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md). Each one failed on the pre-Phase-1 model, where valve timing
+/// and runner gas dynamics were one filling hump that a cam phaser moved whole (the failures are recorded in the milestone
+/// document); Phase 1 made them plain facts. Every criterion is a physical or model relationship (a scaling law, a sign, an invariance, a
 /// consistency between two measurements) with a tolerance derived in the proposal. None requires a torque gain of a
 /// given size or a torque-curve shape, so none depends on the unsourced amplitude and damping parameters, and none can
 /// be met by tuning them. Tests 1, 4 and 5 were revised by the design-resolution gate (U5); tests 2 and 3 are unchanged.
@@ -45,7 +45,7 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
     /// <see cref="EarlierClosingRatioMin"/>), never with the valve-event optimum. Today the phaser carries the whole hump,
     /// and at 50° there is no crossover at all.
     /// </summary>
-    [PendingAcceptanceFact]
+    [Fact]
     public void TheRunnerResponseIsNotCarriedByTheCamPhaser()
     {
         // Test-only geometry: two fixed runners on the M54 (the stock part carries DISA's two stages since Phase 1).
@@ -73,7 +73,7 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
     /// crossover of each adjacent pair scales with the pair's geometric-mean length by an exponent in [0.45, 1.1]
     /// (a small allowance for end corrections, which shorten the effective ratio). Today the tuned speed goes as L^−0.25.
     /// </summary>
-    [PendingAcceptanceFact]
+    [Fact]
     public void TunedSpeedScalesWithRunnerLengthAsTheWaveModelsPredict()
     {
         var db = IntakeRig.Content(("k20.intake.oem", "test.intake.k20_long", s => s["runner_length_mm"] = 460)); // test-only geometry
@@ -95,7 +95,7 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
     /// 323 K, fixed cams, K20 230/340 mm runners) must move the runner crossover up by between half and 1.5 times
     /// √(T_hot/T_cold) − 1, with T the charge temperature the model reports there. Today the tuned speed ignores temperature.
     /// </summary>
-    [PendingAcceptanceFact]
+    [Fact]
     public void AHotterChargeRaisesTheTunedSpeedWithTheSpeedOfSound()
     {
         var db = TestContent.Database;
@@ -139,7 +139,7 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
     /// Today the phaser re-centres the single filling hump for either runner, so below the park speed the stage effect
     /// under the map almost vanishes while it is large with the cams parked.
     /// </summary>
-    [PendingAcceptanceFact]
+    [Fact]
     public void ASwitchedRunnerActsOnAPhasedEngine()
     {
         var db = IntakeRig.Content(
@@ -199,7 +199,7 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
     /// against the reference shape. A miss is classified and documented, never closed by changing content or parameters.
     /// Today DISA is not authored.
     /// </summary>
-    [PendingAcceptanceFact]
+    [Fact]
     public void TheM54DisaStagesFollowTheirProvenance()
     {
         const double switchBandLow = 3750, switchBandHigh = 4100; // sourced: PARTS_DATABASE.md, "Isar M54 reference engine"

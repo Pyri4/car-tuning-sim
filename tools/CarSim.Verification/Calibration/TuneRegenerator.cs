@@ -238,7 +238,7 @@ public static class TuneRegenerator
     /// (<see cref="Crossover"/>). A two-stage intake has one (<c>intake_runner_switch_rpm</c>); the third and later stages'
     /// go to <c>intake_runner_upper_switch_rpm</c>, which the tune file must already have (a placeholder list is enough).
     /// </summary>
-    private static TuneDocument RunnerSwitchSpeeds(ContentDatabase db, TuneRecipe recipe, TuneDocument doc)
+    public static TuneDocument RunnerSwitchSpeeds(ContentDatabase db, TuneRecipe recipe, TuneDocument doc)
     {
         int stages = Sim(db, recipe, doc).Config.Banks.Max(b => b.RunnerStages.Count);
         var speeds = new double?[stages];
