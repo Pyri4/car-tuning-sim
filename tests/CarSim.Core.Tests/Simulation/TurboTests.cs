@@ -392,8 +392,8 @@ public class TurboTests
         var t = SimFactory.At(log, 6000, 1.0, 4.0);
         Assert.True(t.TurbineInletTemperature < t.PortGasTemperature - 10);
         var tubular = TurboSim(TurboBuild("turbo.t35_big"));
-        var pathLog = new AirPath(log.Config.Banks[0], log.Config.Geometry);
-        var pathTubular = new AirPath(tubular.Config.Banks[0], tubular.Config.Geometry);
+        var pathLog = new AirPath(log.Config.Banks[0]);
+        var pathTubular = new AirPath(tubular.Config.Banks[0]);
         Assert.True(tubular.Config.Banks[0].ExhaustManifoldHeatLoss > log.Config.Banks[0].ExhaustManifoldHeatLoss);
         Assert.True(pathTubular.ManifoldOutletTemperature(1100, 0.15, 298) < pathLog.ManifoldOutletTemperature(1100, 0.15, 298));
         // Exact pipe solution: never below ambient, however little flows.

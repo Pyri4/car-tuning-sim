@@ -25,6 +25,7 @@ public sealed class BankConfiguration
         Definition = def.Banks[index];
         Cylinders = Definition.Cylinders.Count;
         CylinderShare = (double)Cylinders / g.Cylinders;
+        Geometry = EngineGeometry.TryCreate(a, index, out _) ?? throw new InvalidOperationException($"Incomplete geometry for {Definition}.");
 
         PartInstance Need(string category) => a.PartFor(category, index)
             ?? throw new InvalidOperationException($"No {category} installed for {Definition}.");
@@ -93,6 +94,9 @@ public sealed class BankConfiguration
 
     /// <summary>Swept volume of this bank's cylinders, m³.</summary>
     public double SweptVolume { get; }
+
+    /// <summary>This bank's geometry: the shared bottom end with its own gasket and head (its compression ratio and quench).</summary>
+    public EngineGeometry Geometry { get; }
 
     public PartInstance HeadGasketPart { get; }
     public PartInstance HeadPart { get; }

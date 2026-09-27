@@ -107,7 +107,8 @@ public partial class DynoView : HSplitContainer
         _gauges = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _gauges.AddThemeConstantOverride("h_separation", 16);
         foreach (var name in new[] { "Engine speed", "Torque", "Power", "Manifold pressure", "Boost", "λ / AFR", "Injector duty",
-                     "Spark advance", "Intake cam", "Knock", "Peak cyl. pressure", "EGT", "Coolant", "Oil", "Intake air temp", "Turbo" })
+                     "Spark advance", "Intake cam", "Valve lift / runner", "Knock", "Peak cyl. pressure", "EGT", "Banks", "Coolant", "Oil",
+                     "Intake air temp", "Turbo" })
         {
             _gauges.AddChild(Ui.Label(name, 14, Ui.Muted));
             var v = Ui.Label("—", 14);
@@ -237,7 +238,16 @@ public partial class DynoView : HSplitContainer
         Set("Coolant", $"{t.CoolantC:F0} °C" + (t.CoolantLevel < 0.99 ? $"  level {t.CoolantLevel * 100:F0} %" : ""), t.CoolantC > 110 ? Ui.Danger : t.CoolantC > 100 ? Ui.Caution : null);
         Set("Oil", $"{t.OilC:F0} °C, {t.OilPressureBar:F2} bar (need {Units.PaToBar(t.OilPressureRequired):F2})", t.OilPressure < t.OilPressureRequired ? Ui.Danger : null);
         Set("Intake air temp", $"{Units.KToC(t.ManifoldTemperature):F0} °C");
-        Set("Turbo", t.TurboRpm > 1 ? $"{t.TurboRpm / 1000:F0} krpm, PR {t.CompressorPressureRatio:F2}, η {t.CompressorEfficiency * 100:F0} %, WG {t.WastegateOpening * 100:F0} %" : "—", t.TurboOverspeed ? Ui.Danger : null);
+        Set("Turbo", t.Turbos.Count > 1
+                ? string.Join("  ", t.Turbos.Select(x => $"{x.ShaftRpm / 1000:F0} krpm PR {x.PressureRatio:F2}"))
+                : t.TurboRpm > 1 ? $"{t.TurboRpm / 1000:F0} krpm, PR {t.CompressorPressureRatio:F2}, η {t.CompressorEfficiency * 100:F0} %, WG {t.WastegateOpening * 100:F0} %" : "—",
+            t.TurboOverspeed ? Ui.Danger : null);
+        // Switched valvetrain and intake stages (sensed by the ECU's own outputs), per-bank mixture and EGT on a multi-bank engine.
+        var stages = new List<string>();
+        if (_sim?.Config.Banks.Any(b => b.HasVariableLift) == true) stages.Add(t.HighValveLift ? "high lift" : "base lift");
+        if (_sim?.Config.Banks.Any(b => b.HasSwitchedRunner) == true) stages.Add(t.SwitchedRunner ? "switched runner" : "primary runner");
+        Set("Valve lift / runner", stages.Count > 0 ? string.Join(" / ", stages) : "—");
+        Set("Banks", t.Banks.Count > 1 ? string.Join("  ", t.Banks.Select(b => $"λ {b.Lambda:F2} {Units.KToC(b.ExhaustGasTemperature):F0}°C")) : "—");
     }
 
     private void UpdateWarnings(IReadOnlyList<EngineWarning> warnings)

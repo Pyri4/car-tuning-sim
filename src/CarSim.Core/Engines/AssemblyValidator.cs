@@ -205,36 +205,43 @@ public static class AssemblyValidator
                     SlotOf(a, PartCategory.Ecu), intakeSlot);
         }
 
-        // Geometry-derived checks.
-        var geometry = EngineGeometry.TryCreate(a, out _);
-        if (geometry != null)
+        // Geometry-derived checks, per bank: each bank's gasket and head set its own chamber, quench and compression
+        // ratio. Banks with the same geometry are reported once (without a bank name when every bank agrees).
+        var geometries = Enumerable.Range(0, banks).Select(b => EngineGeometry.TryCreate(a, b, out _)).ToList();
+        bool sameGeometry = geometries.Distinct().Count() == 1;
+        for (int b = 0; b < banks; b++)
         {
+            var geometry = geometries[b];
+            if (geometry == null || geometries.Take(b).Contains(geometry)) continue;
+            string on = sameGeometry ? "" : On(b);
+            string gasketSlot = a.SlotFor(PartCategory.HeadGasket, b)?.Id ?? PartCategory.HeadGasket;
+            string headSlot = a.SlotFor(PartCategory.CylinderHead, b)?.Id ?? PartCategory.CylinderHead;
             double quenchMm = Units.MToMm(geometry.PistonToHeadClearance);
             double deckMm = Units.MToMm(geometry.DeckClearance);
             if (quenchMm < 0)
                 Add(IssueSeverity.Error, "piston_head_contact",
-                    $"Pistons rise {-quenchMm:F2} mm into the cylinder head at TDC (deck clearance {deckMm:F2} mm, gasket {Units.MToMm(geometry.GasketThickness):F2} mm). Check stroke, rod length and compression height.",
+                    $"{on}Pistons rise {-quenchMm:F2} mm into the cylinder head at TDC (deck clearance {deckMm:F2} mm, gasket {Units.MToMm(geometry.GasketThickness):F2} mm). Check stroke, rod length and compression height.",
                     SlotOf(a, PartCategory.Pistons), SlotOf(a, PartCategory.ConnectingRods), SlotOf(a, PartCategory.Crankshaft));
             else if (quenchMm < MinSafeQuenchMm)
                 Add(IssueSeverity.Warning, "tight_quench",
-                    $"Piston-to-head clearance is only {quenchMm:F2} mm; rod stretch at high RPM may cause contact (safe ≥ {MinSafeQuenchMm} mm).",
-                    SlotOf(a, PartCategory.Pistons), SlotOf(a, PartCategory.HeadGasket));
+                    $"{on}Piston-to-head clearance is only {quenchMm:F2} mm; rod stretch at high RPM may cause contact (safe ≥ {MinSafeQuenchMm} mm).",
+                    SlotOf(a, PartCategory.Pistons), gasketSlot);
             if (deckMm > PoorQuenchDeckClearanceMm)
                 Add(IssueSeverity.Warning, "poor_quench",
-                    $"Pistons sit {deckMm:F2} mm below the deck at TDC; weak quench makes the engine more knock-prone.",
+                    $"{on}Pistons sit {deckMm:F2} mm below the deck at TDC; weak quench makes the engine more knock-prone.",
                     SlotOf(a, PartCategory.Pistons));
 
             double cr = geometry.CompressionRatio;
             if (double.IsInfinity(cr) || geometry.ClearanceVolume <= 0)
-                Add(IssueSeverity.Error, "no_clearance_volume", "Combustion chamber has no clearance volume; the engine cannot turn over.", SlotOf(a, PartCategory.Pistons));
+                Add(IssueSeverity.Error, "no_clearance_volume", $"{on}Combustion chamber has no clearance volume; the engine cannot turn over.", SlotOf(a, PartCategory.Pistons), headSlot);
             else
             {
                 Add(IssueSeverity.Info, "compression_ratio",
-                    $"Static compression ratio {cr:F2}:1 ({Units.M3ToLitres(geometry.Displacement):F2} L, bore {Units.MToMm(geometry.Bore):F1} × stroke {Units.MToMm(geometry.Stroke):F1} mm).");
+                    $"{on}Static compression ratio {cr:F2}:1 ({Units.M3ToLitres(geometry.Displacement):F2} L, bore {Units.MToMm(geometry.Bore):F1} × stroke {Units.MToMm(geometry.Stroke):F1} mm).");
                 if (cr > HighCompressionRatio)
-                    Add(IssueSeverity.Warning, "high_compression", $"Compression ratio {cr:F1}:1 is very high for pump fuel; expect heavy knock unless timing is pulled or octane raised.");
+                    Add(IssueSeverity.Warning, "high_compression", $"{on}Compression ratio {cr:F1}:1 is very high for pump fuel; expect heavy knock unless timing is pulled or octane raised.", headSlot, gasketSlot);
                 if (cr < LowCompressionRatio)
-                    Add(IssueSeverity.Warning, "low_compression", $"Compression ratio {cr:F1}:1 is very low; thermal efficiency and off-boost response will suffer.");
+                    Add(IssueSeverity.Warning, "low_compression", $"{on}Compression ratio {cr:F1}:1 is very low; thermal efficiency and off-boost response will suffer.", headSlot, gasketSlot);
             }
         }
 

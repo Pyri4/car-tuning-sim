@@ -147,7 +147,7 @@ public class CompressorModelTests
         // speed, wastegate, engine speed and throttle.
         var a = TurboTests.TurboBuild(id);
         var sim = TurboTests.TurboSim(a);
-        var path = new AirPath(sim.Config.Banks[0], sim.Config.Geometry);
+        var path = new AirPath(sim.Config.Banks[0]);
         foreach (double n in new[] { 0.0, 0.3, 0.6, 0.9, 1.1 })
         foreach (double rpm in new[] { 1000.0, 3000, 5000, 7000 })
         foreach (double throttle in new[] { 0.1, 1.0 })

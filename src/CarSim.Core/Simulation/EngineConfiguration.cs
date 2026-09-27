@@ -124,6 +124,11 @@ public sealed class EngineConfiguration
 
     public EngineAssembly Assembly { get; }
     public FuelDefinition Fuel { get; }
+    /// <summary>
+    /// The engine's geometry: bore, stroke, displacement and the reciprocating parts are the bottom end's and hold for every
+    /// bank. Values set by a head or gasket (compression ratio, quench, clearance) are the first bank's here; read them
+    /// from <see cref="BankConfiguration.Geometry"/> — a V engine may run different heads or gaskets per bank.
+    /// </summary>
     public EngineGeometry Geometry { get; }
 
     // Engine-wide parts (one for the whole engine; see EngineTopology.EngineWideCategories).

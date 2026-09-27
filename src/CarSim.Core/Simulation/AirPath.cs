@@ -74,10 +74,11 @@ public sealed class AirPath
     private readonly BankConfiguration _b;
     private readonly EngineGeometry _g;
 
-    public AirPath(BankConfiguration bank, EngineGeometry geometry)
+    /// <summary>The air path of <paramref name="bank"/>, with that bank's own geometry (its clearance volume sets the residual).</summary>
+    public AirPath(BankConfiguration bank)
     {
         _b = bank;
-        _g = geometry;
+        _g = bank.Geometry;
     }
 
     /// <summary>The bank this air path belongs to.</summary>

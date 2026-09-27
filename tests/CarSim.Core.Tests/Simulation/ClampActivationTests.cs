@@ -70,7 +70,7 @@ public class ClampActivationTests
                 }
                 var result = EngineConfiguration.Build(a, fuel);
                 if (!result.Success) continue;
-                var path = new AirPath(result.Configuration!.Banks[0], result.Configuration!.Geometry);
+                var path = new AirPath(result.Configuration!.Banks[0]);
                 for (double rpm = 600; rpm <= 9000; rpm += 100)
                     Assert.True(path.VeShape(rpm) > AirPath.VeShapeFloor, $"{cams.Id} + {intake.Id} at {rpm} rpm: shape {path.VeShape(rpm):F3}");
                 checkedCombos++;

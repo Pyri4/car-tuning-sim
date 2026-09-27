@@ -180,6 +180,16 @@ public static class FailureDiagnostics
     private static string Duration(double seconds) =>
         seconds < 120 ? $"{F1(seconds)} s" : seconds < 7200 ? $"{F1(seconds / 60)} min" : $"{F1(seconds / 3600)} h";
 
+    /// <summary>The highest compression ratio among the banks (the most knock-prone bank's).</summary>
+    private static double HighestCompression(EngineConfiguration c) => c.Banks.Max(b => b.Geometry.CompressionRatio);
+
+    /// <summary>"10.5:1", or each bank's ratio when their heads or gaskets differ ("left 10.5:1, right 9.6:1").</summary>
+    private static string CompressionRatios(EngineConfiguration c)
+    {
+        var each = c.Banks.Select(b => $"{F1(b.Geometry.CompressionRatio)}:1").ToList();
+        return each.Distinct().Count() == 1 ? each[0] : string.Join(", ", c.Banks.Select((b, i) => $"{b.Definition.Id} {each[i]}"));
+    }
+
     /// <summary>Speed at which rod inertia load reaches the fatigue (endurance) threshold.</summary>
     public static double SafeRpmForRods(EngineConfiguration c)
     {
@@ -198,7 +208,7 @@ public static class FailureDiagnostics
         if (t.BoostKpa > 10) f.Add($"Boost of {N0(t.BoostKpa)} kPa packs more charge into the cylinder: peak pressure scales with it.");
         if (t.IgnitionAdvance > t.MbtAdvance + 2) f.Add($"Spark advance ({F1(t.IgnitionAdvance)}°) is past MBT ({F1(t.MbtAdvance)}°): extra advance raises peak pressure without adding torque.");
         if (t.KnockIntensity > 0.3) f.Add($"Knock ({F1(t.KnockIntensity)}° past the limit) adds pressure spikes on top of normal combustion.");
-        if (x.Config.Geometry.CompressionRatio > 10 && t.BoostKpa > 20) f.Add($"Compression ratio {F1(x.Config.Geometry.CompressionRatio)}:1 is high for boost.");
+        if (HighestCompression(x.Config) > 10 && t.BoostKpa > 20) f.Add($"Compression ratio {CompressionRatios(x.Config)} is high for boost.");
         if (t.MapSensorSaturated) f.Add("The ECU's MAP sensor was saturated, so it used timing meant for a much lighter load.");
     }
 
@@ -229,11 +239,11 @@ public static class FailureDiagnostics
         m.Add(new ReportLine("Knock", $"{F1(h.MaxKnockIntensity)}° past the knock limit (peak), {F1(h.KnockSeconds)} s of knocking"));
         m.Add(new ReportLine("Spark advance", $"{F1(t.IgnitionAdvance)}° BTDC vs knock limit {F1(t.KnockLimitAdvance)}°"));
         m.Add(new ReportLine("Fuel", $"{c.Fuel.Name} (RON {N0(c.Fuel.OctaneRon)})"));
-        m.Add(new ReportLine("Compression ratio", $"{F1(c.Geometry.CompressionRatio)}:1"));
+        m.Add(new ReportLine("Compression ratio", CompressionRatios(c)));
         m.Add(new ReportLine("Charge temperature", $"{N0(Units.KToC(t.ChargeTemperature))} °C"));
         f.Add($"Spark timing ({F1(t.IgnitionAdvance)}°) was beyond what the fuel tolerates under these conditions ({F1(t.KnockLimitAdvance)}°).");
         if (c.Fuel.OctaneRon < 97) f.Add($"RON {N0(c.Fuel.OctaneRon)} fuel has limited knock resistance.");
-        if (c.Geometry.CompressionRatio > 10.5) f.Add($"High compression ({F1(c.Geometry.CompressionRatio)}:1) raises end-gas temperature and pressure.");
+        if (HighestCompression(c) > 10.5) f.Add($"High compression ({CompressionRatios(c)}) raises end-gas temperature and pressure.");
         if (t.BoostKpa > 20) f.Add($"Boost ({N0(t.BoostKpa)} kPa) raises cylinder pressure and end-gas temperature.");
         if (t.ChargeTemperature > Units.CToK(55)) f.Add($"Hot intake charge ({N0(Units.KToC(t.ChargeTemperature))} °C).");
         if (t.CoolantC > 100) f.Add($"Hot coolant ({N0(t.CoolantC)} °C).");
@@ -246,7 +256,7 @@ public static class FailureDiagnostics
             r.Add("Fit an ECU with a MAP sensor that covers the boost level (standalone ECU): until the ECU can see the boost, no timing table can be right.");
         r.Add($"Remove at least {N0(Math.Ceiling(h.MaxKnockIntensity + 2))}° of timing around {N0(t.Rpm)} rpm / {N0(t.MapKpa)} kPa.");
         r.Add("Use higher-octane fuel (RON 98, race fuel or E85 with a matching calibration).");
-        if (c.Geometry.CompressionRatio > 10 && t.BoostKpa > 20) r.Add("Lower the compression ratio (dished pistons or a thicker gasket) for boost.");
+        if (HighestCompression(c) > 10 && t.BoostKpa > 20) r.Add("Lower the compression ratio (dished pistons or a thicker gasket) for boost.");
         if (c.Banks.Any(b => b.Turbo != null && b.Intercooler == null)) r.Add("Fit an intercooler.");
         r.Add("Replace the pistons (and inspect the head gasket and rod bearings).");
     }

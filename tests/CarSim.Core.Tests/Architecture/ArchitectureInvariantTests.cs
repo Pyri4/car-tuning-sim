@@ -217,6 +217,87 @@ public class ArchitectureInvariantTests
         Assert.True(right.Lambda < left.Lambda);
     }
 
+    // ---- Per-bank geometry --------------------------------------------------------------------------------------------
+
+    [Fact]
+    public void AlikeBanksHaveTheSameGeometryAsTheEngine()
+    {
+        foreach (var family in TestContent.MatrixFamilies.Where(f => TestContent.Matrix.GetEngine(f).Banks.Count > 1))
+        {
+            var c = Sim(TestContent.Matrix, family).Config;
+            Assert.All(c.Banks, b => Assert.Equal(c.Geometry, b.Geometry));
+        }
+    }
+
+    [Theory]
+    [InlineData("head_gasket_right", "syn.v8.head_gasket", "compressed_thickness_mm", 2.0, 1)] // a thick gasket on the second bank
+    [InlineData("cylinder_head_left", "syn.v8.head", "chamber_volume_cc", 72.0, 0)]          // a big-chamber head on the first
+    public void EachBankCompressesToItsOwnHeadAndGasket(string slot, string stockPart, string field, double value, int changed)
+    {
+        int other = 1 - changed;
+        var docs = new Docs();
+        docs.Clone(stockPart, "variant.bank_part", s => s[field] = value);
+        docs.Item("engines", "syn_v8_ohv")["stock_parts"]![slot] = "variant.bank_part";
+        var db = docs.Load();
+        var stock = Sim(TestContent.Matrix, "syn_v8_ohv", "gasoline_95");
+        var variant = Sim(db, "syn_v8_ohv", "gasoline_95");
+
+        // Geometry: only the bank the part serves changes, in either direction (no bank inherits another's head or gasket).
+        var (sb, vb) = (stock.Config.Banks, variant.Config.Banks);
+        Assert.Equal(sb[other].Geometry, vb[other].Geometry);
+        Assert.True(vb[changed].Geometry.CompressionRatio < sb[changed].Geometry.CompressionRatio - 0.5);
+        Assert.Equal(sb[0].Geometry.Displacement, vb[0].Geometry.Displacement);
+
+        // Workshop: the compression test and the validator name the bank that differs.
+        var a = variant.Config.Assembly;
+        var compression = EngineDiagnostics.CompressionTestByBank(a);
+        var stockCompression = EngineDiagnostics.CompressionTestByBank(stock.Config.Assembly);
+        Assert.Equal(stockCompression[other], compression[other]);
+        Assert.True(compression[changed] < stockCompression[changed] - 1.0);
+        Assert.Contains($"{a.Definition.Banks[changed].Id} {compression[changed]:F1} bar", EngineDiagnostics.DescribeCompressionTest(a));
+        var ratios = AssemblyValidator.Validate(a).Issues.Where(i => i.Code == "compression_ratio").ToList();
+        Assert.Equal(2, ratios.Count);
+        for (int b = 0; b < 2; b++)
+            Assert.StartsWith($"Bank '{a.Definition.Banks[b].Id}': Static compression ratio {vb[b].Geometry.CompressionRatio:F2}:1", ratios[b].Message);
+        Assert.DoesNotContain("Bank", Assert.Single(AssemblyValidator.Validate(stock.Config.Assembly).Issues, i => i.Code == "compression_ratio").Message);
+
+        // Simulation: the lower-compression bank has more knock margin and a lower peak pressure; the other bank runs as before.
+        var ts = SimFactory.At(stock, 4500, 1.0, 3.0);
+        var tv = SimFactory.At(variant, 4500, 1.0, 3.0);
+        Assert.True(tv.Banks[changed].KnockLimitAdvance > ts.Banks[changed].KnockLimitAdvance + 1.0);
+        Assert.True(tv.Banks[changed].PeakCylinderPressure < ts.Banks[changed].PeakCylinderPressure * 0.95);
+        Near(ts.Banks[other].AirPerCycle, tv.Banks[other].AirPerCycle, 0.01, "other bank air");
+        Near(ts.Banks[other].PeakCylinderPressure, tv.Banks[other].PeakCylinderPressure, 0.01, "other bank peak pressure");
+        Near(ts.Banks[other].KnockLimitAdvance, tv.Banks[other].KnockLimitAdvance, 0.01, "other bank knock limit");
+    }
+
+    [Fact]
+    public void ACompressionTestFindsTheBankWithTheFailedGasket()
+    {
+        var a = Sim(TestContent.Matrix, "syn_v6_na").Config.Assembly;
+        a.PartFor(PartCategory.HeadGasket, 1)!.Damage.Fail(FailureMode.HeadGasketBreach, 0);
+        var byBank = EngineDiagnostics.CompressionTestByBank(a);
+        Assert.True(byBank[1] < 0.5 * byBank[0]);
+        Assert.Equal(byBank[1], EngineDiagnostics.CompressionTestBar(a));
+        Assert.Equal($"{a.Definition.Banks[0].Id} {byBank[0]:F1} bar, {a.Definition.Banks[1].Id} {byBank[1]:F1} bar",
+            EngineDiagnostics.DescribeCompressionTest(a));
+    }
+
+    [Theory]
+    [InlineData("kestrel_k20")]
+    [InlineData("isar_m54")]
+    public void ASingleBankEnginesGeometryIsItsOnlyBanksGeometry(string family)
+    {
+        var db = TestContent.Database;
+        var a = EngineAssembly.CreateStock(db.GetEngine(family), db, new PartInstanceFactory());
+        var c = EngineConfiguration.Build(a, db.GetFuel("gasoline_98")).GetOrThrow();
+        Assert.Equal(c.Geometry, Assert.Single(c.Banks).Geometry);
+        Assert.Equal(EngineDiagnostics.CompressionTestBar(a), Assert.Single(EngineDiagnostics.CompressionTestByBank(a)));
+        Assert.Equal($"{EngineDiagnostics.CompressionTestBar(a):F1} bar", EngineDiagnostics.DescribeCompressionTest(a));
+        Assert.StartsWith($"Static compression ratio {c.Geometry.CompressionRatio:F2}:1",
+            Assert.Single(AssemblyValidator.Validate(a).Issues, i => i.Code == "compression_ratio").Message);
+    }
+
     // ---- Air paths ---------------------------------------------------------------------------------------------------
 
     [Fact]

@@ -6,6 +6,12 @@ namespace CarSim.Core.Engines;
 /// <summary>
 /// Geometry derived from the installed block, crankshaft, rods, pistons, head gasket and head.
 /// All values SI (m, m², m³, kg). This is where compression ratio comes from — it is never authored.
+/// <para>
+/// Geometry belongs to a bank: the bottom end (block, crank, rods, pistons) is shared, but each bank has its own head
+/// gasket and cylinder head, so its own chamber, gasket volume, quench and compression ratio. The per-cylinder values
+/// are that bank's; <see cref="Cylinders"/> and <see cref="Displacement"/> stay the whole engine's. On a single-bank
+/// engine the bank's geometry is the engine's.
+/// </para>
 /// </summary>
 public sealed record EngineGeometry(
     int Cylinders,
@@ -59,15 +65,25 @@ public sealed record EngineGeometry(
     public double RodInertiaLoad(double omega) =>
         ReciprocatingMass * omega * omega * CrankRadius * (1.0 + CrankRadius / RodLength);
 
-    /// <summary>Creates geometry if every part that defines it is installed.</summary>
-    public static EngineGeometry? TryCreate(EngineAssembly a, out IReadOnlyList<string> missingCategories)
+    /// <summary>
+    /// Creates the geometry of the first bank (the whole engine's on a single-bank engine) if every part that defines it
+    /// is installed. Anything that depends on the head or gasket of a multi-bank engine must use the bank overload.
+    /// </summary>
+    public static EngineGeometry? TryCreate(EngineAssembly a, out IReadOnlyList<string> missingCategories) =>
+        TryCreate(a, 0, out missingCategories);
+
+    /// <summary>
+    /// Creates the geometry of bank <paramref name="bank"/> — the shared bottom end with the head gasket and cylinder head
+    /// that serve that bank — if every part that defines it is installed.
+    /// </summary>
+    public static EngineGeometry? TryCreate(EngineAssembly a, int bank, out IReadOnlyList<string> missingCategories)
     {
         var block = a.SpecOf<BlockSpec>(PartCategory.Block);
         var crank = a.SpecOf<CrankshaftSpec>(PartCategory.Crankshaft);
         var rods = a.SpecOf<ConnectingRodSpec>(PartCategory.ConnectingRods);
         var pistons = a.SpecOf<PistonSpec>(PartCategory.Pistons);
-        var gasket = a.SpecOf<HeadGasketSpec>(PartCategory.HeadGasket);
-        var head = a.SpecOf<CylinderHeadSpec>(PartCategory.CylinderHead);
+        var gasket = a.SpecFor<HeadGasketSpec>(PartCategory.HeadGasket, bank);
+        var head = a.SpecFor<CylinderHeadSpec>(PartCategory.CylinderHead, bank);
         var missing = new List<string>();
         if (block == null) missing.Add(PartCategory.Block);
         if (crank == null) missing.Add(PartCategory.Crankshaft);

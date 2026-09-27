@@ -224,7 +224,7 @@ public static class Program
             if (findings.All(x => x.Severity == CarSim.Core.Damage.FindingSeverity.Good)) continue;
             Console.WriteLine($"  {slot.Label}: {string.Join(" ", findings.Select(x => x.Text))}");
         }
-        Console.WriteLine($"Compression test: {CarSim.Core.Damage.EngineDiagnostics.CompressionTestBar(sim.Config.Assembly):F1} bar");
+        Console.WriteLine($"Compression test: {CarSim.Core.Damage.EngineDiagnostics.DescribeCompressionTest(sim.Config.Assembly)}");
         return sim.Damage.Failures.Count > 0 ? 3 : 0;
     }
 
@@ -440,6 +440,12 @@ public static class Program
             Console.WriteLine($"  Deck clearance      {Math.Round(Units.MToMm(g.DeckClearance), 2) + 0.0,8:F2} mm");
             Console.WriteLine($"  Piston-to-head      {Units.MToMm(g.PistonToHeadClearance),8:F2} mm");
             Console.WriteLine($"  Recip. mass / cyl   {g.ReciprocatingMass * 1000,8:F0} g");
+            // A bank with its own head or gasket has its own chamber: list each bank when they differ.
+            var banks = Enumerable.Range(0, engine.Banks.Count).Select(b => EngineGeometry.TryCreate(assembly, b, out _)).ToList();
+            if (banks.Distinct().Count() > 1)
+                for (int b = 0; b < banks.Count; b++)
+                    if (banks[b] is { } bg)
+                        Console.WriteLine($"  Bank {engine.Banks[b].Id,-14} CR {bg.CompressionRatio:F2}:1, piston-to-head {Units.MToMm(bg.PistonToHeadClearance):F2} mm");
         }
 
         var report = AssemblyValidator.Validate(assembly);

@@ -63,7 +63,7 @@ public sealed class EngineSimulation
         Ecu = new EcuController(config.Ecu, tune ?? throw new ArgumentNullException(nameof(tune)));
         State = state ?? new EngineState();
         State.EnsureShape(config.Banks.Count, config.Turbos.Count);
-        _airPaths = config.Banks.Select(b => new AirPath(b, config.Geometry)).ToArray();
+        _airPaths = config.Banks.Select(b => new AirPath(b)).ToArray();
         _air = new AirPathResult[config.Banks.Count];
         _bank = new BankStep[config.Banks.Count];
         Damage = new DamageModel(config);
@@ -293,7 +293,6 @@ public sealed class EngineSimulation
 
         // ---- Combustion and heat, bank by bank ----
         double ringWear = c.Part(PartCategory.Pistons).Wear;
-        double cr = g.CompressionRatio;
         double pistonSpeed = g.MeanPistonSpeed(rpm);
         bool firing = false;
         double torque = 0.0, fuelPower = 0.0, heatToCoolant = 0.0, heatToOil = 0.0, exhaustHeat = 0.0, portWallHeat = 0.0;
@@ -304,6 +303,7 @@ public sealed class EngineSimulation
             var bank = c.Banks[b];
             var air = _air[b];
             ref var r = ref _bank[b];
+            double cr = bank.Geometry.CompressionRatio;
             r.Firing = fuelled && air.AirPerCycle > 0;
             firing |= r.Firing;
             r.Lambda = r.Firing ? air.AirPerCycle / (fuelPerCycle * fuel.StoichiometricAfr) : double.PositiveInfinity;
@@ -312,7 +312,7 @@ public sealed class EngineSimulation
             r.KnockLimit = r.Firing
                 ? KnockModel.KnockLimitedAdvance(new CombustionModel.KnockConditions(
                     rpm, fuel.OctaneRon, cr, air.PortPressure, air.ChargeTemperature, s.CoolantTemperature,
-                    r.Lambda, Units.MToMm(g.DeckClearance), air.ExhaustPortPressure / air.PortPressure, fuel.OctaneSensitivity), advance)
+                    r.Lambda, Units.MToMm(bank.Geometry.DeckClearance), air.ExhaustPortPressure / air.PortPressure, fuel.OctaneSensitivity), advance)
                 : double.PositiveInfinity;
             r.Knock = r.Firing ? CombustionModel.KnockIntensity(advance, r.KnockLimit) : 0.0;
 

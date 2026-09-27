@@ -152,9 +152,14 @@ public partial class EngineView : HSplitContainer
         if (geometry != null)
         {
             sb.Append($"[b]{Units.M3ToCc(geometry.Displacement):F0} cc[/b]  ·  bore × stroke {Units.MToMm(geometry.Bore):F1} × {Units.MToMm(geometry.Stroke):F1} mm  ·  ");
-            sb.Append($"CR [b]{geometry.CompressionRatio:F2}:1[/b]  ·  piston-to-head {Units.MToMm(geometry.PistonToHeadClearance):F2} mm\n");
+            // Each bank's head and gasket set its own chamber: show each bank when they differ.
+            var banks = Enumerable.Range(0, G.Engine.Definition.Banks.Count).Select(b => EngineGeometry.TryCreate(G.Engine, b, out _)).ToList();
+            if (banks.Distinct().Count() > 1 && banks.All(b => b != null))
+                sb.Append("CR " + string.Join(", ", banks.Select((b, i) => $"{G.Engine.Definition.Banks[i].Id} [b]{b!.CompressionRatio:F2}:1[/b] ({Units.MToMm(b.PistonToHeadClearance):F2} mm)")) + "\n");
+            else
+                sb.Append($"CR [b]{geometry.CompressionRatio:F2}:1[/b]  ·  piston-to-head {Units.MToMm(geometry.PistonToHeadClearance):F2} mm\n");
         }
-        sb.Append($"Compression test: [b]{EngineDiagnostics.CompressionTestBar(G.Engine):F1} bar[/b]\n");
+        sb.Append($"Compression test: [b]{EngineDiagnostics.DescribeCompressionTest(G.Engine)}[/b]\n");
         if (DamageModel.IsSeized(G.Engine))
             sb.Append("[color=#f2594d]Engine is seized: replace the failed parts.[/color]\n");
         else sb.Append(report.CanRun ? "[color=#73d973]Engine can run.[/color]\n" : "[color=#f2594d]Engine cannot run:[/color]\n");
