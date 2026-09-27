@@ -16,7 +16,7 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 576 automated tests (484 before the engine-architecture milestone, 435 before the second engine family, 348
+- 586 automated tests (484 before the engine-architecture milestone, 435 before the second engine family, 348
   before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
   physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
   synthetic engine matrix. CI runs them, CLI content checks and dyno sweeps (with and without the matrix), and headless
@@ -130,7 +130,7 @@ the implementation, and new regression tests were shown to fail on the bug they 
 | 9 | Energy created with a blown head gasket; rich-EGT fudge | **FIXED** | 60 s warm-up closes the first law with stored heat; brake efficiency < Otto limit (NA and turbo); no degraded failure raises torque | — |
 | 10 | …the correction made overrun exhaust adiabatic: 1,500–4,500 °C port gas, every lift burned the T28's turbine | **FIXED** (validation pass) | Exhaust-port wall exchange (same exact-pipe law as the manifold); lift/re-apply at 3000–6500 rpm causes no failure; overrun cooler than full load; the previous physics fails all five new tests | Constant port UA (no flow dependence) — documented |
 | 11 | Valid content crashed `Build` (optional radiator, duplicate slots, hard-coded chassis ids) | **FIXED** | `EngineTopology`; every part in every slot; spec fuzz: 905 validator-accepted engine variants (0 crashes/NaN), 199 chassis variants driven (0 crashes/NaN) | — |
-| 12 | Twin turbos, per-bank air paths, superchargers, dry sumps | **INTENTIONALLY DEFERRED** | Rejected at load with a reason; docs no longer claim otherwise | Needs model work |
+| 12 | Twin turbos, per-bank air paths, superchargers, dry sumps | **PARTLY DONE** (engine-architecture milestone) | Twin turbos and per-bank air paths are supported (banks, per-turbo shafts); superchargers and dry sumps are still rejected at load with a reason | Superchargers, dry sumps: new capabilities |
 | 13 | Tyre width had no effect | **FIXED** | 165→305 mm: grip +10 %, braking 55.8→49.0 m, sub-linear, no power; with authored mass/inertia/thermal mass, 0–100 slower and warm-up slower | **PARTIAL:** width's costs are authored per part (shipped tyres checked); no aero drag, relaxation length or aligning torque |
 | 14 | Suspension had no trade-offs | **FIXED** | On kerb-grade roughness ride height, damping, camber and spring choice have interior optima; camber always costs braking; bars trade balance for bump grip | Toe and roll centres not modelled (no toe slider exists) |
 | 15 | Octane never limited the NA engine | **FIXED** | Knock-limited below ≈ 3000 rpm on RON 95; the limited range widens with compression and narrows with octane; every factor acts the same way over a 36-point grid | Mean single-zone cycle; coolant only raises knock above 90 °C |
@@ -197,35 +197,45 @@ Audit first (`docs/ENGINE_ARCHITECTURE_AUDIT.md`, two passes), then:
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
 ## Next recommended tasks
-1. **Intake gas dynamics separate from valve timing (next milestone).** The M54 torque-curve investigation
-   (SIMULATION_SPEC.md) found the shape's root cause in the VE model: one filling hump for intake closing and runner
-   gas dynamics, moved whole by a cam phaser. The prototype (E10) keeps a share of the tuning curve at the straight-up
-   cam/runner speed. The two-stage runner capability now exists (engine-architecture milestone) and acts through the
-   runner term, so once the hump is split, DISA-type intakes on phased engines are content. Prerequisites before
-   shipping:
-   - the gas-dynamic share from a source, not fitted to the M54;
-   - DISA's two effective lengths (or an M54 curve measured with the flap held open and closed);
-   - exact reuse of today's path when the two tuned speeds coincide (the prototype moved the K20 by rounding).
-2. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
-   spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are now a data change: an adjustable
-   `intake_centerline_deg`; wastegate spring preload).
+Chosen by long-term value, not ease: prefer work that improves every engine or unlocks many future systems. Each
+milestone starts only when the owner authorizes it, and ends with a project gate (verify, review, merge order, define
+the next milestone).
+
+1. **Intake Gas Dynamics 2.0 (next milestone — proposed, awaiting authorization).** Definition, phases, test matrix and
+   acceptance criteria: [docs/milestones/INTAKE_GAS_DYNAMICS_2.md](docs/milestones/INTAKE_GAS_DYNAMICS_2.md). Separates
+   valve-event filling from runner/plenum gas dynamics, so a cam phaser no longer carries the runner response, variable
+   intakes act on phased engines, and the K20-fitted correlation constants give way to sourced ones. Phase 0 brings the
+   verification tooling into the repo first (regression fingerprint, recalibration driver, mutation harness). Background:
+   the M54 torque-curve investigation (SIMULATION_SPEC.md; its E10 prototype is an input, not the design).
+2. **Cylinder groups on inline engines.** Banks are the unit of per-bank parts and air paths, and an inline engine may
+   declare only one. That blocks an inline twin turbo (a turbo per three cylinders on one head: RB26-, N54-, 2JZ-type
+   parallel twins) and split manifolds. Small: let an inline engine declare several cylinder groups that share its head
+   slot (a topology rule and its tests; the per-bank model already supports shared heads), plus a synthetic I6 twin
+   turbo in the matrix. See docs/ENGINE_ARCHITECTURE_AUDIT.md, gate review.
 3. **Engine capabilities still missing** (ENGINE_AUTHORING_GUIDE.md §7 procedure): a supercharger category (crank-driven
-   compressor with drive power), per-bank fuel trim and knock control as ECU capabilities, exhaust cam phasing (with an
-   exhaust-opening term), direct injection.
+   compressor with drive power), direct injection (charge cooling after the inlet valve closes), exhaust cam phasing
+   (with an exhaust-opening term), per-bank fuel trim and knock control as ECU capabilities, a dry sump.
 4. **Swap interfaces beyond the bellhousing:** engine mounts, clearances, cooling capacity, exhaust routing, wiring/ECU,
    driveshaft and differential; adapter parts; a swap flow in the garage.
-5. **Two-family calibration.** Re-fit the level-setting constants on both families at once (not per engine), and add an
-   exhaust-opening term so exhaust phasing and scavenging mean something.
+5. **Multi-family calibration.** Re-fit the remaining level-setting constants (Otto realisation, FMEP) on several
+   families at once, never per engine.
 6. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
    boost) using `VehicleSimulation`.
-7. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
-   record lap telemetry (speed/throttle/brake vs distance) and compare laps.
+7. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
+   skim), per-cylinder state for the key failure modes.
 8. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
    market with seeded random condition, reputation and money loop.
-9. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
-   skim), per-cylinder state for the key failure modes.
-10. **Audio.** Engine sound from rpm/load/boost (presentation only).
-11. **Exported builds.** Godot export templates in CI and downloadable artifacts.
+9. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
+   spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are a data change: an adjustable
+   `intake_centerline_deg`; wastegate spring preload).
+10. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
+    record lap telemetry (speed/throttle/brake vs distance) and compare laps.
+11. **Audio.** Engine sound from rpm/load/boost (presentation only).
+12. **Exported builds.** Godot export templates in CI and downloadable artifacts.
+
+Not yet: more real engines (the architecture is proven; more engines before the intake model is right would each need
+recalibration), bulk part catalogues, an open world, multiplayer, UI work beyond what a capability needs, matching any
+single engine's dyno curve.
 
 ## Known issues
 - Second engine family vs its reference: peak power −10 % (153 vs 170 kW) with torque +1 %. The model's curve is a plateau

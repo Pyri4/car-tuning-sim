@@ -84,3 +84,15 @@ When starting a task:
 
 Architecture work comes before content scale: do not add hundreds of parts, an open world, multiplayer or unrelated UI
 before the systems underneath can carry them.
+
+## Choosing and running milestones
+- Choose work by long-term value, not by ease: prefer what improves every engine or unlocks many future systems (a
+  generic intake model over another engine; a capability over a one-off feature). ROADMAP.md "Next recommended tasks"
+  is the ordered list; milestone definitions live in `docs/milestones/`.
+- A milestone starts only when the owner authorizes it. A milestone marked *proposed* is not authorized.
+- Every milestone ends with a **project gate**: re-verify from scratch (don't trust earlier reports), review the
+  architecture and docs for contradictions, classify remaining debt (A generic / B documented limitation / C must fix
+  before the next milestone / D future), recommend a merge order, and define — not start — the next milestone.
+- Do not chase an isolated dyno number, add engines ahead of the capabilities they need, or put UI ahead of the
+  simulation architecture. Validation (tests, CLI, Godot smoke tests, CI) is part of the work, never optional.
+- Branches may be stacked on unmerged PRs; say so in the PR, and merge in dependency order.

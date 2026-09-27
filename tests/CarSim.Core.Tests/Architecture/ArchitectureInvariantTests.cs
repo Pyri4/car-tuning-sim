@@ -52,6 +52,8 @@ public class ArchitectureInvariantTests
         public JsonArray Slots(string engine) => Item("engines", engine)["slots"]!.AsArray();
 
         public ContentDatabase Load() => ContentLoader.LoadFromStrings(Files.Select(d => (d.Source, d.Node.ToJsonString()))).GetOrThrow();
+
+        public IReadOnlyList<ContentError> Errors() => ContentLoader.LoadFromStrings(Files.Select(d => (d.Source, d.Node.ToJsonString()))).Errors;
     }
 
     private static EngineSimulation Sim(ContentDatabase db, string engine, string fuel = "gasoline_98", EcuTune? tune = null, Action<EngineAssembly>? edit = null)
@@ -112,6 +114,42 @@ public class ArchitectureInvariantTests
             stock[newId] = partId;
         }
         e["slots"] = keep;
+    }
+
+    // ---- Architecture rules ------------------------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("overlapping banks", "Cylinder 1 is in more than one bank")]
+    [InlineData("a cylinder in no bank", "Cylinder 8 is in no bank")]
+    [InlineData("a cylinder outside the engine", "Cylinder 9 is outside 1–8")]
+    [InlineData("duplicate bank ids", "Duplicate bank id 'left'")]
+    [InlineData("an inline engine with two banks", "An inline engine has one bank; this one declares 2")]
+    [InlineData("a V bank angle out of range", "A V engine's bank angle must be within (0°, 180°)")]
+    [InlineData("a flat engine not at 180°", "A flat engine's banks are 180° apart")]
+    [InlineData("a firing order repeating a cylinder", "must name each of the 8 cylinders exactly once")]
+    [InlineData("a firing order missing cylinders", "must name each of the 8 cylinders exactly once")]
+    [InlineData("a slot naming an unknown bank", "names bank 'middle', which this engine does not have")]
+    public void AnInconsistentArchitectureIsRejectedWithItsReason(string what, string expected)
+    {
+        var docs = new Docs();
+        var e = docs.Item("engines", "syn_v8_ohv");
+        var banks = e["banks"]!.AsArray();
+        JsonArray Cylinders(int bank) => banks[bank]!["cylinders"]!.AsArray();
+        switch (what)
+        {
+            case "overlapping banks": Cylinders(1).Add(1); break;
+            case "a cylinder in no bank": Cylinders(1).RemoveAt(Cylinders(1).Count - 1); break;
+            case "a cylinder outside the engine": Cylinders(1).Add(9); break;
+            case "duplicate bank ids": banks[1]!["id"] = "left"; break;
+            case "an inline engine with two banks": e["layout"] = "inline"; e.Remove("bank_angle_deg"); break;
+            case "a V bank angle out of range": e["bank_angle_deg"] = 200; break;
+            case "a flat engine not at 180°": e["layout"] = "flat"; e["bank_angle_deg"] = 170; break;
+            case "a firing order repeating a cylinder": e["firing_order"] = new JsonArray(1, 1, 2, 3, 4, 5, 6, 7); break;
+            case "a firing order missing cylinders": e["firing_order"] = new JsonArray(1, 2, 3); break;
+            case "a slot naming an unknown bank": docs.Slots("syn_v8_ohv").First(x => x!["banks"] != null)!["banks"] = new JsonArray("middle"); break;
+        }
+        var errors = docs.Errors();
+        Assert.Contains(errors, x => x.ItemId == "syn_v8_ohv" && x.Message.Contains(expected, StringComparison.Ordinal));
     }
 
     // ---- Cylinder count ------------------------------------------------------------------------------------------------

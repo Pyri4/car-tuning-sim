@@ -225,6 +225,7 @@ numbers are off. Before writing code, write down the physics and which engines h
 | Exhaust cam phasing, superchargers, direct injection, dry sump | Not modelled; the loader rejects families that need them | New capabilities (§7) |
 | Level-setting constants fitted on the K20 | Re-fitting per engine would be hidden correction | A calibration pass over several families at once |
 | Mounts, clearances, wiring, driveshafts, cooling capacity for swaps | Interfaces decide fit today (bellhousing) | Swap interfaces on mounts and chassis parts |
+| An inline engine has one bank, so one turbo and one exhaust manifold per head | Every shipped and synthetic inline engine has one air path | Cylinder groups on inline engines (ROADMAP next task 2): RB26/N54-type parallel twins |
 
 ## 10. The synthetic engine matrix
 

@@ -173,3 +173,30 @@ calibrators. Classification (the milestone brief's):
 - Per-cylinder state (misfire, one bent valve, per-cylinder knock).
 - Swap interfaces beyond the bellhousing: engine mounts, clearances, cooling capacity, fuel and exhaust routing,
   wiring and ECU compatibility, driveshaft and differential matching, adapter parts.
+
+## Gate review (2026-09-27)
+The project gate after the milestone re-verified the branch from scratch (clean build, 576 → 586 tests, both content
+validations, the K20/M54 identity probe against the PR #4 head, Godot smoke tests, CI) and tested the architecture
+against real engines it does not ship: RB26, 2JZ, LS3, B58, F20C, 4G63, EA888, K24, VR6, V10, V12, supercharged,
+direct-injection and dry-sump engines.
+
+| # | Finding | Class | Action |
+|---|---|---|---|
+| G1 | The architecture rules (bank partition, bank count per layout, bank angle, firing order, slot banks) had no negative tests | C | Fixed in the gate: `AnInconsistentArchitectureIsRejectedWithItsReason` (10 cases) |
+| G2 | An inline engine may declare only one bank, so a turbo per three cylinders on one head (RB26, N54, 2JZ parallel twins) or split manifolds on one head cannot be authored. The per-bank model already supports a head slot shared by several banks (VR6-style), so the fix is a topology rule: cylinder groups on inline engines | D, high priority | ROADMAP next task 2 |
+| G3 | The verification tools behind the milestone's claims (the K20/M54 identity probe, the mutation harness, the matrix recalibration driver) lived outside the repository | C before the next milestone | Phase 0 of Intake Gas Dynamics 2.0 (docs/milestones/INTAKE_GAS_DYNAMICS_2.md) |
+| G4 | The intake-filling correlation's constants (15 m/s tuned piston speed at 220°, 0.15 m/s per degree, 112° reference centreline, 0.300 m reference runner, shape coefficients, 1.02 ceiling) were fitted on the K20 | B → next milestone | Replaced by sourced constants in Intake Gas Dynamics 2.0 |
+| G5 | Runner and cam-profile stages are fixed two-element arrays (`RunnerTuning`, `Profiles`) | B | N runner/plenum states in Intake Gas Dynamics 2.0; continuous valve lift later |
+| G6 | Stale references in ARCHITECTURE.md (decision log) and ROADMAP.md (review table row 12) | C | Fixed in the gate |
+
+Real engines against the architecture (what already has a sane data-only path, what needs a capability first):
+- **Data today:** LS3 (pushrod V8, like `syn_v8_ohv`), F20C and K24 (VTEC: two-profile cams on intake and exhaust),
+  4G63 (turbo I4), V10/V12 (any bank count and firing order), VR6 (one head slot serving both banks at a 15° angle),
+  B58 as an approximation (one turbo; its direct injection and twin-scroll turbine are not modelled yet).
+- **After cylinder groups (G2):** RB26 (parallel twin turbo on one head; its six throttles approximated as one), N54,
+  2JZ-GTE run as a parallel twin (its sequential control is not modelled).
+- **After a capability:** superchargers (new crank-driven compressor category), direct injection (EA888, B58 DI:
+  charge cooling after IVC), exhaust cam phasing (EA888, B58, M54 double VANOS), dry sump (LS7-type), sequential
+  turbocharging, twin-scroll turbines.
+- **Outside the piston model:** rotaries, diesels (compression ignition), two-strokes, hybrids.
+
