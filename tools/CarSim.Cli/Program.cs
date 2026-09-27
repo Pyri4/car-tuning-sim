@@ -23,8 +23,9 @@ public static class Program
           carsim hold <engine-id> [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
                                                         Hold an operating point; print warnings, failure reports and inspection.
                                                         (--air-speed uses the radiator instead of test-cell coolant control.)
-          carsim drive <engine-id> [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--cold 1] [--trace <s>] [build options]
-                                                        Autopilot laps of the test facility in the engine's car: lap times,
+          carsim drive <engine-id> [--vehicle <id>] [--laps 3] [--chassis slot=part,...] [--set slot.field=value,...] [--wear slot=0.4,...] [--cold 1] [--trace <s>] [build options]
+                                                        Autopilot laps of the test facility in the engine's stock car (or --vehicle,
+                                                        if the interfaces fit): lap times,
                                                         clutch/brake temperatures, wear, warnings and failure reports.
           carsim calibrate-ve <engine-id> [--hold 1] [build options]
                                                         Measure the build's breathing on a steady-state dyno and print a
@@ -42,6 +43,8 @@ public static class Program
                                                         throttle, held speed) and per vehicle step (autopilot on the test track).
         <engine-id> (kestrel_k20, isar_m54, ...) may be left out only when the content has a single engine family.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
+        Content options (every command): --content <dir> (default content/base)  --mods <dir> (default content/mods;
+        --mods content/test loads the synthetic engine matrix)
         """;
 
     public static int Main(string[] args)
@@ -174,11 +177,12 @@ public static class Program
     private static int CalibrateCams(CliOptions o)
     {
         var (sim, tune, _, _) = BuildEngine(o);
-        if (sim.Config.IntakePhaserRange <= 0)
-            return Fail($"This build has no intake cam phaser its ECU can drive ({sim.Config.Part(PartCategory.Camshafts).Definition.Name}, {sim.Config.Part(PartCategory.Ecu).Definition.Name}).");
+        double range = sim.Config.Banks.Max(b => b.IntakePhaserRange);
+        if (range <= 0)
+            return Fail($"This build has no intake cam phaser its ECU can drive ({string.Join(", ", sim.Config.Banks.Select(b => b.CamsPart.Definition.Name).Distinct())}, {sim.Config.Part(PartCategory.Ecu).Definition.Name}).");
         var table = CamPhaseCalibrator.Calibrate(sim, Num(o, "step", 5.0), Num(o, "hold", 0.8));
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        Console.WriteLine($"// {tune.Id}: rpm {string.Join(", ", tune.IgnitionAdvance.XAxis)}; load kPa {string.Join(", ", tune.IgnitionAdvance.YAxis)}; phaser range {sim.Config.IntakePhaserRange:0.#}°");
+        Console.WriteLine($"// {tune.Id}: rpm {string.Join(", ", tune.IgnitionAdvance.XAxis)}; load kPa {string.Join(", ", tune.IgnitionAdvance.YAxis)}; phaser range {range:0.#}°");
         Console.WriteLine("\"intake_cam_advance_deg\": [");
         for (int r = 0; r < table.Length; r++)
             Console.WriteLine($"  [{string.Join(", ", table[r].Select(v => v.ToString("0.#", inv)))}]{(r < table.Length - 1 ? "," : "")}");
@@ -222,7 +226,7 @@ public static class Program
             if (findings.All(x => x.Severity == CarSim.Core.Damage.FindingSeverity.Good)) continue;
             Console.WriteLine($"  {slot.Label}: {string.Join(" ", findings.Select(x => x.Text))}");
         }
-        Console.WriteLine($"Compression test: {CarSim.Core.Damage.EngineDiagnostics.CompressionTestBar(sim.Config.Assembly):F1} bar");
+        Console.WriteLine($"Compression test: {CarSim.Core.Damage.EngineDiagnostics.DescribeCompressionTest(sim.Config.Assembly)}");
         return sim.Damage.Failures.Count > 0 ? 3 : 0;
     }
 
@@ -233,9 +237,19 @@ public static class Program
         double to = double.Parse(o.Named.GetValueOrDefault("to", "8000"), System.Globalization.CultureInfo.InvariantCulture);
         double step = double.Parse(o.Named.GetValueOrDefault("step", "500"), System.Globalization.CultureInfo.InvariantCulture);
         Console.WriteLine($"{"rpm",6} {"Nm",6} {"kW",6} {"hp",6} {"MAPkPa",7} {"VE",5} {"λ",5} {"duty",5} {"adv",5} {"MBT",5} {"KLSA",5} {"knk",4} {"PCPbar",6} {"EGT°C",6} {"oil bar",7} {"FMEPbar",7} {"limit",6} {"port",6} {"exhBP",6} {"VEdyn",5} {"resid",5} {"PMEP",5} {"turbo krpm",10} {"PR",5} {"cEff",5} {"choke",5} {"WG",4} {"IAT°C",6} {"cam°",5}");
+        // Switched valvetrain or intake stages and, on engines with several banks or turbos, their channels.
+        bool stages = sim.Config.Banks.Any(b => b.HasVariableLift || b.HasSwitchedRunner);
+        int banks = sim.Config.Banks.Count, turbos = sim.Config.Turbos.Count;
+        if (stages || banks > 1 || turbos > 1)
+            Console.WriteLine("  (then: " + string.Join(", ", new[] { stages ? "valve-lift/runner stage" : null, banks > 1 ? "λ, knock and EGT per bank" : null,
+                turbos > 1 ? "krpm per turbo" : null }.Where(x => x != null)) + ")");
         foreach (var t in SteadyStateSweep.Run(sim, from, to, step))
         {
-            Console.WriteLine($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2} {t.TurboRpm / 1000,10:F1} {t.CompressorPressureRatio,5:F2} {t.CompressorEfficiency,5:F2} {t.CompressorChokeRatio,5:F2} {t.WastegateOpening,4:F2} {Units.KToC(t.ChargeTemperature),6:F0} {t.IntakeCamAdvance,5:F1}");
+            Console.Write($"{t.Rpm,6:F0} {t.Torque,6:F1} {t.PowerKw,6:F1} {t.PowerHp,6:F1} {t.MapKpa,7:F1} {t.VolumetricEfficiency,5:F2} {t.Lambda,5:F2} {t.InjectorDuty,5:F2} {t.IgnitionAdvance,5:F1} {t.MbtAdvance,5:F1} {t.KnockLimitAdvance,5:F1} {t.KnockIntensity,4:F1} {t.PeakCylinderPressureBar,6:F1} {t.EgtC,6:F0} {t.OilPressureBar,7:F2} {Units.PaToBar(t.Fmep),7:F2} {t.FuelLimit,6} {Units.PaToKpa(t.PortPressure),6:F1} {Units.PaToKpa(t.ExhaustBackPressure),6:F1} {t.VeDynamic,5:F2} {t.ResidualFactor,5:F3} {Units.PaToBar(t.Pmep),5:F2} {t.TurboRpm / 1000,10:F1} {t.CompressorPressureRatio,5:F2} {t.CompressorEfficiency,5:F2} {t.CompressorChokeRatio,5:F2} {t.WastegateOpening,4:F2} {Units.KToC(t.ChargeTemperature),6:F0} {t.IntakeCamAdvance,5:F1}");
+            if (stages) Console.Write($"  {(t.HighValveLift ? "HI" : "lo")}/{(t.SwitchedRunner ? "sw" : "pr")}");
+            if (banks > 1) foreach (var b in t.Banks) Console.Write($"  λ{b.Lambda:F2} k{b.KnockIntensity:F1} {Units.KToC(b.ExhaustGasTemperature):F0}°C");
+            if (turbos > 1) foreach (var tt in t.Turbos) Console.Write($"  {tt.ShaftRpm / 1000:F0}k");
+            Console.WriteLine();
         }
         return 0;
     }
@@ -259,8 +273,10 @@ public static class Program
     {
         var (engineSim, _, db, factory) = BuildEngine(o);
         var engine = engineSim.Config.Assembly;
-        var vehicle = db.Vehicles.Values.FirstOrDefault(v => v.Engine == engine.Definition.Id)
-                      ?? throw new ArgumentException($"No car takes engine '{engine.Definition.Id}'.");
+        // --vehicle puts the engine in another car (an engine swap, checked by interfaces); otherwise its stock car.
+        var vehicle = o.Named.GetValueOrDefault("vehicle") is { } vehicleId ? db.GetVehicle(vehicleId)
+                      : db.Vehicles.Values.OrderBy(v => v.Id, StringComparer.Ordinal).FirstOrDefault(v => v.Engine == engine.Definition.Id)
+                        ?? throw new ArgumentException($"No car ships with engine '{engine.Definition.Id}'; name one with --vehicle <id> ({string.Join(", ", db.Vehicles.Keys.OrderBy(k => k, StringComparer.Ordinal))}).");
         var chassis = CarSim.Core.Vehicles.VehicleAssembly.CreateStock(vehicle, db, factory);
         foreach (var (slot, partId) in Pairs(o, "chassis"))
         {
@@ -283,6 +299,8 @@ public static class Program
             var part = chassis.PartIn(slot) ?? engine.PartIn(slot) ?? throw new ArgumentException($"Nothing installed in '{slot}'.");
             part.Wear = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
         }
+        var interfaces = CarSim.Core.Vehicles.VehicleCompatibility.InterfaceProblems(engine, chassis);
+        if (interfaces.Count > 0) throw new ArgumentException($"{engine.Definition.Name} does not fit the {vehicle.Name}: {string.Join(" ", interfaces)}");
         var car = new CarSim.Core.Vehicles.VehicleConfiguration(vehicle, chassis, engine, db);
         var sim = new CarSim.Core.Vehicles.VehicleSimulation(car, engineSim);
         sim.StartIdling();
@@ -398,11 +416,18 @@ public static class Program
 
         Console.WriteLine($"{engine.Name} [{engine.Id}]");
         Console.WriteLine();
+        Console.WriteLine("Architecture:");
+        Console.WriteLine($"  {string.Join(", ", EngineCapabilities.Resolve(assembly).Describe())}");
+        if (engine.Banks.Count > 1)
+            foreach (var bank in engine.Banks)
+                Console.WriteLine($"  bank '{bank.Id}': cylinders {string.Join(", ", bank.Cylinders)}");
+        Console.WriteLine();
         Console.WriteLine("Stock build (assembly order):");
         foreach (var slot in engine.AssemblyOrder())
         {
             var part = assembly.PartIn(slot.Id);
-            Console.WriteLine($"  {slot.Label,-18} {(part == null ? "(empty)" : part.Definition.Name)}");
+            string banks = slot.Banks.Count > 0 && engine.Banks.Count > 1 ? $" [{string.Join(", ", slot.Banks)}]" : "";
+            Console.WriteLine($"  {slot.Label + banks,-28} {(part == null ? "(empty)" : part.Definition.Name)}");
         }
 
         var g = EngineGeometry.TryCreate(assembly, out _);
@@ -417,6 +442,12 @@ public static class Program
             Console.WriteLine($"  Deck clearance      {Math.Round(Units.MToMm(g.DeckClearance), 2) + 0.0,8:F2} mm");
             Console.WriteLine($"  Piston-to-head      {Units.MToMm(g.PistonToHeadClearance),8:F2} mm");
             Console.WriteLine($"  Recip. mass / cyl   {g.ReciprocatingMass * 1000,8:F0} g");
+            // A bank with its own head or gasket has its own chamber: list each bank when they differ.
+            var banks = Enumerable.Range(0, engine.Banks.Count).Select(b => EngineGeometry.TryCreate(assembly, b, out _)).ToList();
+            if (banks.Distinct().Count() > 1)
+                for (int b = 0; b < banks.Count; b++)
+                    if (banks[b] is { } bg)
+                        Console.WriteLine($"  Bank {engine.Banks[b].Id,-14} CR {bg.CompressionRatio:F2}:1, piston-to-head {Units.MToMm(bg.PistonToHeadClearance):F2} mm");
         }
 
         var report = AssemblyValidator.Validate(assembly);

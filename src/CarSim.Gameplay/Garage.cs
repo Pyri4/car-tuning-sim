@@ -198,11 +198,24 @@ public sealed class Garage
     public IReadOnlyList<string> FitProblems(PartDefinition part, string slotId)
     {
         var problems = new List<string>();
-        var others = Engine.Installed.Concat(Chassis?.Installed ?? Enumerable.Empty<KeyValuePair<string, PartInstance>>())
-            .Where(kv => kv.Key != slotId).Select(kv => kv.Value.Definition);
-        var provided = new HashSet<string>(others.SelectMany(d => d.Provides), StringComparer.Ordinal);
+        // As the validator resolves them: an engine slot serving some banks takes its keys from engine-wide parts or
+        // parts serving one of the same banks (the right exhaust manifold bolts to the right head); car slots and the
+        // car's parts see the whole engine (a gearbox takes the block's bellhousing).
+        var def = Engine.Definition;
+        var banks = def.FindSlot(slotId) is { } engineSlot ? def.BanksServedBy(engineSlot) : null;
+        bool SameBanks(string otherSlot) => banks == null || def.BanksServedBy(def.GetSlot(otherSlot)).Intersect(banks).Any();
+        var engineParts = Engine.Installed.Where(kv => kv.Key != slotId).ToList();
+        var chassisParts = (Chassis?.Installed ?? Enumerable.Empty<KeyValuePair<string, PartInstance>>()).Where(kv => kv.Key != slotId).ToList();
+        var provided = new HashSet<string>(engineParts.Where(kv => SameBanks(kv.Key)).Concat(chassisParts)
+            .SelectMany(kv => kv.Value.Definition.Provides), StringComparer.Ordinal);
         var missing = part.Requires.Where(r => !provided.Contains(r)).ToList();
-        if (missing.Count > 0) problems.Add($"needs {string.Join(", ", missing)}, which nothing fitted provides");
+        if (missing.Count > 0)
+        {
+            bool elsewhere = missing.All(r => engineParts.Any(kv => kv.Value.Definition.Provides.Contains(r, StringComparer.Ordinal)));
+            problems.Add(elsewhere
+                ? $"needs {string.Join(", ", missing)} on {string.Join(", ", def.FindSlot(slotId)!.Banks.Select(b => $"bank '{b}'"))}, which only another bank's parts provide"
+                : $"needs {string.Join(", ", missing)}, which nothing fitted provides");
+        }
         int? count = part.Spec switch
         {
             CarSim.Core.Parts.Specs.PistonSpec p => p.Count,
@@ -297,6 +310,8 @@ public sealed class Garage
         if (missing.Count > 0) return (null, $"The car is missing: {string.Join(", ", missing.Select(s => s.Label))}.");
         var brokenChassis = Chassis.Installed.Values.Where(p => p.IsFailed).Select(p => p.Definition.Name).ToList();
         if (brokenChassis.Count > 0) return (null, $"Replace the broken parts first: {string.Join(", ", brokenChassis)}.");
+        var interfaces = VehicleCompatibility.InterfaceProblems(Engine, Chassis);
+        if (interfaces.Count > 0) return (null, "The engine does not fit this car: " + string.Join(" ", interfaces));
         var (engineSim, report) = CreateSimulation();
         if (engineSim == null) return (null, "The engine cannot run: " + string.Join(" ", report.Errors.Select(e => e.Message)));
         if (engineSim.Damage.Seized) return (null, "The engine is seized. Replace the broken parts first.");

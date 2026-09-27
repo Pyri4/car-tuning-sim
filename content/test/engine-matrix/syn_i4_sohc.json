@@ -1,0 +1,280 @@
+// Synthetic engine matrix: content-only test engines proving that families are data (ENGINE_AUTHORING_GUIDE.md).
+// Generated once from a spec sheet, then calibrated with the dev tools; no simulation code knows these ids.
+{
+  "engines": [
+    {
+      "id": "syn_i4_sohc",
+      "name": "Synth S16 1.6 SOHC",
+      "cylinders": 4,
+      "layout": "inline",
+      "firing_order": [1, 3, 4, 2],
+      "description": "1.6-litre single-cam eight-valve four: a plain economy engine (synthetic test content).",
+      "slots": [
+        {"id": "block", "category": "block", "display_name": "Cylinder block"},
+        {"id": "main_bearings", "category": "main_bearings", "display_name": "Main bearings", "install_after": ["block"]},
+        {"id": "crankshaft", "category": "crankshaft", "display_name": "Crankshaft", "install_after": ["main_bearings"]},
+        {"id": "rod_bearings", "category": "rod_bearings", "display_name": "Rod bearings", "install_after": ["crankshaft"]},
+        {"id": "connecting_rods", "category": "connecting_rods", "display_name": "Connecting rods", "install_after": ["rod_bearings"]},
+        {"id": "pistons", "category": "pistons", "display_name": "Pistons", "install_after": ["connecting_rods"]},
+        {"id": "oil_pump", "category": "oil_pump", "display_name": "Oil pump", "install_after": ["crankshaft"]},
+        {"id": "oil_pan", "category": "oil_pan", "display_name": "Sump", "install_after": ["oil_pump", "connecting_rods"]},
+        {"id": "flywheel", "category": "flywheel", "display_name": "Flywheel", "install_after": ["crankshaft"]},
+        {"id": "head_gasket", "category": "head_gasket", "display_name": "Head gasket", "install_after": ["pistons"], "accessible_in_vehicle": true},
+        {"id": "cylinder_head", "category": "cylinder_head", "display_name": "Cylinder head", "install_after": ["head_gasket"], "accessible_in_vehicle": true},
+        {"id": "valve_springs", "category": "valve_springs", "display_name": "Valve springs", "install_after": ["cylinder_head"], "accessible_in_vehicle": true},
+        {"id": "camshafts", "category": "camshafts", "display_name": "Camshafts", "install_after": ["valve_springs"], "accessible_in_vehicle": true},
+        {"id": "intake_manifold", "category": "intake_manifold", "display_name": "Intake manifold", "install_after": ["cylinder_head"], "accessible_in_vehicle": true},
+        {"id": "throttle_body", "category": "throttle_body", "display_name": "Throttle body", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "injectors", "category": "injectors", "display_name": "Fuel injectors", "install_after": ["intake_manifold"], "accessible_in_vehicle": true},
+        {"id": "fuel_pump", "category": "fuel_pump", "display_name": "Fuel pump", "accessible_in_vehicle": true},
+        {"id": "exhaust_manifold", "category": "exhaust_manifold", "display_name": "Exhaust manifold", "install_after": ["cylinder_head"], "accessible_in_vehicle": true},
+        {"id": "exhaust", "category": "exhaust", "display_name": "Exhaust system", "install_after": ["exhaust_manifold"], "accessible_in_vehicle": true},
+        {"id": "radiator", "category": "radiator", "display_name": "Radiator", "accessible_in_vehicle": true},
+        {"id": "ecu", "category": "ecu", "display_name": "ECU", "accessible_in_vehicle": true}
+      ],
+      "stock_parts": {
+        "block": "syn.s16.block",
+        "main_bearings": "syn.s16.main_bearings",
+        "crankshaft": "syn.s16.crankshaft",
+        "rod_bearings": "syn.s16.rod_bearings",
+        "connecting_rods": "syn.s16.rods",
+        "pistons": "syn.s16.pistons",
+        "oil_pump": "syn.s16.oil_pump",
+        "oil_pan": "syn.s16.oil_pan",
+        "flywheel": "m54.flywheel.single_mass",
+        "head_gasket": "syn.s16.head_gasket",
+        "cylinder_head": "syn.s16.head",
+        "valve_springs": "syn.s16.valve_springs",
+        "camshafts": "syn.s16.cams",
+        "intake_manifold": "syn.s16.intake",
+        "throttle_body": "throttle.60mm",
+        "injectors": "injectors.310cc",
+        "fuel_pump": "fuel_pump.oem_170",
+        "exhaust_manifold": "syn.s16.exhaust_manifold",
+        "exhaust": "exhaust.oem_57mm",
+        "radiator": "radiator.oem",
+        "ecu": "syn.ecu.basic"
+      },
+      "stock_tune": "syn.s16.stock"
+    }
+  ],
+  "parts": [
+    {
+      "id": "syn.s16.block",
+      "name": "Synth S16 1.6 SOHC block",
+      "category": "block",
+      "manufacturer": "Synth",
+      "price": 3100,
+      "mass_kg": 32,
+      "provides": ["syn.s16.deck", "syn.s16.sump_flange", "m54.bellhousing"],
+      "description": "4 cylinders, 79.0 mm bore; its bellhousing takes the Isar (m54) pattern, so it bolts to the C30's gearbox.",
+      "spec": {
+        "cylinders": 4,
+        "bore_mm": 79.0,
+        "deck_height_mm": 203.05,
+        "main_journal_diameter_mm": 50.0,
+        "max_cylinder_pressure_bar": 140,
+        "coolant_capacity_l": 2.4,
+        "material": "aluminium"
+      }
+    },
+    {
+      "id": "syn.s16.main_bearings",
+      "name": "Synth S16 1.6 SOHC main bearings",
+      "category": "main_bearings",
+      "manufacturer": "Synth",
+      "price": 200,
+      "mass_kg": 0.4,
+      "spec": {"journal_diameter_mm": 50.0, "clearance_mm": 0.04, "max_load_kn": 65, "material": "bi-metal"}
+    },
+    {
+      "id": "syn.s16.crankshaft",
+      "name": "Synth S16 1.6 SOHC crankshaft",
+      "category": "crankshaft",
+      "manufacturer": "Synth",
+      "price": 1500,
+      "mass_kg": 14.4,
+      "spec": {"stroke_mm": 81.5, "main_journal_diameter_mm": 50.0, "rod_journal_diameter_mm": 45.0, "max_rpm": 8000, "max_torque_nm": 250, "inertia_kg_m2": 0.031, "material": "cast"}
+    },
+    {
+      "id": "syn.s16.rod_bearings",
+      "name": "Synth S16 1.6 SOHC rod bearings",
+      "category": "rod_bearings",
+      "manufacturer": "Synth",
+      "price": 160,
+      "mass_kg": 0.3,
+      "spec": {"journal_diameter_mm": 45.0, "clearance_mm": 0.04, "max_load_kn": 55, "material": "bi-metal"}
+    },
+    {
+      "id": "syn.s16.rods",
+      "name": "Synth S16 1.6 SOHC connecting rods",
+      "category": "connecting_rods",
+      "manufacturer": "Synth",
+      "price": 240,
+      "mass_kg": 1.92,
+      "spec": {
+        "count": 4,
+        "length_mm": 133.0,
+        "big_end_diameter_mm": 45.0,
+        "pin_diameter_mm": 19.0,
+        "mass_each_g": 480,
+        "max_tensile_load_kn": 32,
+        "max_compressive_load_kn": 76,
+        "beam": "i-beam"
+      }
+    },
+    {
+      "id": "syn.s16.pistons",
+      "name": "Synth S16 1.6 SOHC pistons",
+      "category": "pistons",
+      "manufacturer": "Synth",
+      "price": 280,
+      "mass_kg": 1.2,
+      "spec": {
+        "count": 4,
+        "bore_mm": 79.0,
+        "pin_diameter_mm": 19.0,
+        "compression_height_mm": 29.0,
+        "dish_volume_cc": 5.5,
+        "mass_each_g": 300,
+        "max_cylinder_pressure_bar": 120,
+        "max_crown_temperature_c": 300,
+        "material": "cast"
+      }
+    },
+    {
+      "id": "syn.s16.oil_pump",
+      "name": "Synth S16 1.6 SOHC oil pump",
+      "category": "oil_pump",
+      "manufacturer": "Synth",
+      "price": 180,
+      "mass_kg": 1.5,
+      "requires": ["syn.s16.sump_flange"],
+      "spec": {"displacement_cc_per_rev": 8.1, "relief_pressure_kpa": 480}
+    },
+    {
+      "id": "syn.s16.oil_pan",
+      "name": "Synth S16 1.6 SOHC sump",
+      "category": "oil_pan",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 3.5,
+      "requires": ["syn.s16.sump_flange"],
+      "spec": {"capacity_l": 4.1, "max_sustained_g": 1.0, "baffled": false}
+    },
+    {
+      "id": "syn.s16.head",
+      "name": "Synth S16 1.6 SOHC cylinder head",
+      "category": "cylinder_head",
+      "manufacturer": "Synth",
+      "price": 1900,
+      "mass_kg": 13.8,
+      "requires": ["syn.s16.deck"],
+      "provides": ["syn.s16.cam_carrier", "syn.s16.intake_flange", "syn.s16.exhaust_flange"],
+      "spec": {
+        "valvetrain": "sohc",
+        "chamber_volume_cc": 36.0,
+        "valve_moving_mass_g": 100,
+        "valves_per_cylinder": 2,
+        "intake_port_flow_cfm": [[1, 19], [2, 39], [3, 58], [4, 74], [5, 88], [6, 99], [7, 108], [8, 114], [9, 119], [10, 122], [11, 124], [12, 125]],
+        "exhaust_port_flow_cfm": [[1, 16], [2, 32], [3, 46], [4, 59], [5, 69], [6, 77], [7, 83], [8, 87], [9, 91], [10, 92], [11, 94], [12, 94]]
+      }
+    },
+    {
+      "id": "syn.s16.head_gasket",
+      "name": "Synth S16 1.6 SOHC head gasket",
+      "category": "head_gasket",
+      "manufacturer": "Synth",
+      "price": 90,
+      "mass_kg": 0.3,
+      "requires": ["syn.s16.deck"],
+      "spec": {"bore_mm": 80.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 130}
+    },
+    {
+      "id": "syn.s16.cams",
+      "name": "Synth S16 1.6 SOHC camshafts",
+      "category": "camshafts",
+      "manufacturer": "Synth",
+      "price": 600,
+      "mass_kg": 4.0,
+      "requires": ["syn.s16.cam_carrier"],
+      "spec": {"valvetrain": "sohc", "intake_duration_deg": 216, "intake_lift_mm": 8.5, "exhaust_duration_deg": 214, "exhaust_lift_mm": 8.0, "lobe_separation_deg": 112}
+    },
+    {
+      "id": "syn.s16.valve_springs",
+      "name": "Synth S16 1.6 SOHC valve springs",
+      "category": "valve_springs",
+      "manufacturer": "Synth",
+      "price": 150,
+      "mass_kg": 0.9,
+      "requires": ["syn.s16.cam_carrier"],
+      "spec": {"seat_force_n": 180, "open_force_n": 460, "max_lift_mm": 10.0}
+    },
+    {
+      "id": "syn.s16.intake",
+      "name": "S16 intake manifold",
+      "category": "intake_manifold",
+      "manufacturer": "Synth",
+      "price": 500,
+      "mass_kg": 5.0,
+      "requires": ["syn.s16.intake_flange"],
+      "spec": {"runner_length_mm": 380, "flow_cfm": 360}
+    },
+    {
+      "id": "syn.s16.exhaust_manifold",
+      "name": "S16 cast manifold",
+      "category": "exhaust_manifold",
+      "manufacturer": "Synth",
+      "price": 450,
+      "mass_kg": 6.0,
+      "requires": ["syn.s16.exhaust_flange"],
+      "spec": {"flow_cfm": 380, "primary_length_mm": 320, "scavenging_gain": 0.01}
+    }
+  ],
+  "tunes": [
+    {
+      "id": "syn.s16.stock",
+      "name": "Synth S16 1.6 SOHC base calibration",
+      "description": "Base map from the dev calibrators on RON 95: calibrate-ve → calibrate-spark → calibrate-ve.",
+      "rpm_axis": [700, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500],
+      "load_axis_kpa": [10, 20, 30, 40, 60, 80, 100, 110],
+      "target_lambda": [
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88],
+        [0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88]
+      ],
+      "volumetric_efficiency": [
+        [0.598, 0.48, 0.5, 0.541, 0.57, 0.595, 0.614, 0.62, 0.619, 0.612, 0.602, 0.588, 0.566, 0.566, 0.566],
+        [0.598, 0.54, 0.599, 0.644, 0.684, 0.713, 0.727, 0.734, 0.733, 0.724, 0.708, 0.689, 0.661, 0.661, 0.661],
+        [0.598, 0.585, 0.65, 0.7, 0.741, 0.769, 0.783, 0.789, 0.786, 0.774, 0.755, 0.733, 0.703, 0.703, 0.703],
+        [0.598, 0.615, 0.68, 0.734, 0.774, 0.804, 0.818, 0.821, 0.815, 0.801, 0.781, 0.759, 0.729, 0.729, 0.729],
+        [0.605, 0.649, 0.716, 0.774, 0.813, 0.842, 0.859, 0.859, 0.851, 0.834, 0.811, 0.786, 0.756, 0.756, 0.756],
+        [0.623, 0.67, 0.741, 0.797, 0.84, 0.867, 0.881, 0.883, 0.873, 0.854, 0.83, 0.802, 0.773, 0.773, 0.773],
+        [0.636, 0.685, 0.757, 0.814, 0.857, 0.884, 0.898, 0.898, 0.887, 0.867, 0.841, 0.813, 0.783, 0.783, 0.783],
+        [0.637, 0.686, 0.757, 0.815, 0.857, 0.885, 0.898, 0.898, 0.887, 0.867, 0.841, 0.813, 0.783, 0.783, 0.783]
+      ],
+      "displacement_cc": 1597.9,
+      "ignition_advance_deg": [
+        [11.5, 25, 26.5, 27.5, 28.5, 29, 30, 31, 31.5, 32, 33, 33.5, 33.5, 33.5, 33.5],
+        [11.5, 24.5, 25.5, 26.5, 27.5, 28.5, 29.5, 30, 31, 31.5, 32, 33, 33, 33, 33],
+        [11.5, 23.5, 25, 26, 27, 28, 28.5, 29.5, 30, 31, 31.5, 32, 32, 32, 32],
+        [11.5, 23, 24.5, 25.5, 26.5, 27.5, 28, 29, 29.5, 30.5, 31, 31.5, 31.5, 31.5, 31.5],
+        [9, 15.5, 21, 24, 25, 26, 27, 27.5, 28.5, 29, 30, 30.5, 30.5, 30.5, 30.5],
+        [3, 9.5, 16.5, 21, 23.5, 24.5, 25.5, 26.5, 27, 28, 28.5, 29.5, 29.5, 29.5, 29.5],
+        [1, 6.5, 14.5, 19, 22.5, 23.5, 24, 25, 26, 26.5, 27.5, 28, 28, 28, 28],
+        [0.5, 6.5, 14, 18.5, 22.5, 23.5, 24, 25, 26, 26.5, 27.5, 28, 28, 28, 28]
+      ],
+      "rev_limit_rpm": 6500,
+      "idle_rpm": 800,
+      "injector_flow_cc_min": 310,
+      "injector_dead_time_ms": 0.9,
+      "fuel_stoich_afr": 14.7,
+      "fuel_density_kg_l": 0.745
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+// Synthetic engine matrix: content-only test engines proving that families are data (ENGINE_AUTHORING_GUIDE.md).
+// Generated once from a spec sheet, then calibrated with the dev tools; no simulation code knows these ids.
+{
+  "scenarios": [
+    {
+      "id": "syn_i4_sohc_bench",
+      "name": "Synth S16 1.6 SOHC on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_i4_sohc",
+      "money": 5000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_i3_turbo_vvl_bench",
+      "name": "Synth T3 1.2 turbo VVL on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_i3_turbo_vvl",
+      "money": 5000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i4_turbo_bench",
+      "name": "Synth T20 2.0 turbo on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_i4_turbo",
+      "money": 5000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i6_vis_bench",
+      "name": "Synth R6 2.5 variable intake on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_i6_vis",
+      "money": 5000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_h4_turbo_bench",
+      "name": "Synth B20 2.0 turbo flat-4 on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_h4_turbo",
+      "money": 5000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_v6_na_bench",
+      "name": "Synth V6 3.5 on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_v6_na",
+      "money": 5000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_v6_tt_bench",
+      "name": "Synth V6 3.0 twin turbo on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_v6_tt",
+      "money": 5000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_v8_ohv_bench",
+      "name": "Synth V8 3.9 pushrod on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_v8_ohv",
+      "money": 5000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_v8_dohc_vvt_bench",
+      "name": "Synth V8 4.0 DOHC VVT on the engine stand",
+      "description": "Engine-only test scenario: the stock build on the stand (synthetic test content).",
+      "engine": "syn_v8_dohc_vvt",
+      "money": 5000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_v6_swap",
+      "name": "Synth V6 in the Isar C30",
+      "description": "Engine-swap test: a synthetic 3.5 V6 in the Isar C30 (its bellhousing takes the Isar gearbox).",
+      "engine": "syn_v6_na",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_v8_swap",
+      "name": "Synth pushrod V8 in the Isar C30",
+      "description": "Engine-swap test: a synthetic 3.9 pushrod V8 in the Isar C30.",
+      "engine": "syn_v8_ohv",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_v6_tt_swap",
+      "name": "Synth twin-turbo V6 in the Isar C30",
+      "description": "Engine-swap test: twin turbos in a car whose clutch and gearbox were never meant for them.",
+      "engine": "syn_v6_tt",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i4_sohc_swap",
+      "name": "Synth SOHC four in the Isar C30",
+      "description": "Engine-swap test: a 1.6 SOHC two-valve four in a car built for a 3.0 six.",
+      "engine": "syn_i4_sohc",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_i3_turbo_vvl_swap",
+      "name": "Synth turbo VVL triple in the Isar C30",
+      "description": "Engine-swap test: a turbocharged 1.2 triple with variable valve lift.",
+      "engine": "syn_i3_turbo_vvl",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i4_turbo_swap",
+      "name": "Synth turbo four in the Isar C30",
+      "description": "Engine-swap test: a turbocharged four with an intake cam phaser.",
+      "engine": "syn_i4_turbo",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_i6_vis_swap",
+      "name": "Synth variable-intake six in the Isar C30",
+      "description": "Engine-swap test: a 2.5 six with a two-stage intake.",
+      "engine": "syn_i6_vis",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_95"
+    },
+    {
+      "id": "syn_h4_turbo_swap",
+      "name": "Synth turbo flat-four in the Isar C30",
+      "description": "Engine-swap test: a flat-four with one turbo fed by both banks.",
+      "engine": "syn_h4_turbo",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    },
+    {
+      "id": "syn_v8_dohc_vvt_swap",
+      "name": "Synth DOHC V8 in the Isar C30",
+      "description": "Engine-swap test: a DOHC V8 with intake cam phasers on both banks.",
+      "engine": "syn_v8_dohc_vvt",
+      "vehicle": "isar_c30",
+      "money": 10000,
+      "fuel": "gasoline_98"
+    }
+  ]
+}

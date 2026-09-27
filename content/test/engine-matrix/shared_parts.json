@@ -1,0 +1,107 @@
+// Synthetic engine matrix: content-only test engines proving that families are data (ENGINE_AUTHORING_GUIDE.md).
+// Generated once from a spec sheet, then calibrated with the dev tools; no simulation code knows these ids.
+{
+  "parts": [
+    {
+      "id": "syn.ecu.basic",
+      "name": "Synth basic ECU",
+      "category": "ecu",
+      "manufacturer": "Synth",
+      "price": 500,
+      "mass_kg": 0.8,
+      "description": "Fuel and spark maps, knock control; no variable valvetrain or boost outputs.",
+      "spec": {"map_sensor_max_kpa": 105, "boost_control": false, "knock_control": true, "max_rev_limit_rpm": 8000, "tables_editable": true}
+    },
+    {
+      "id": "syn.ecu.full",
+      "name": "Synth full-function ECU",
+      "category": "ecu",
+      "manufacturer": "Synth",
+      "price": 1400,
+      "mass_kg": 0.8,
+      "description": "Drives cam phasers, variable-lift camshafts and variable intake runners; 3-bar MAP sensor and boost control.",
+      "spec": {
+        "map_sensor_max_kpa": 300,
+        "boost_control": true,
+        "knock_control": true,
+        "max_rev_limit_rpm": 9500,
+        "tables_editable": true,
+        "cam_phase_control": true,
+        "valve_lift_control": true,
+        "intake_runner_control": true
+      }
+    },
+    {
+      "id": "syn.injectors.3x380cc",
+      "name": "380 cc/min injectors (set of 3)",
+      "category": "injectors",
+      "manufacturer": "Synth",
+      "price": 240,
+      "mass_kg": 0.3,
+      "spec": {"count": 3, "flow_cc_min": 380, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 0.9}
+    },
+    {
+      "id": "syn.injectors.6x330cc",
+      "name": "330 cc/min injectors (set of 6)",
+      "category": "injectors",
+      "manufacturer": "Synth",
+      "price": 420,
+      "mass_kg": 0.5,
+      "spec": {"count": 6, "flow_cc_min": 330, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 0.9}
+    },
+    {
+      "id": "syn.injectors.6x550cc",
+      "name": "550 cc/min injectors (set of 6)",
+      "category": "injectors",
+      "manufacturer": "Synth",
+      "price": 720,
+      "mass_kg": 0.5,
+      "spec": {"count": 6, "flow_cc_min": 550, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 1.0}
+    },
+    {
+      "id": "syn.injectors.8x260cc",
+      "name": "260 cc/min injectors (set of 8)",
+      "category": "injectors",
+      "manufacturer": "Synth",
+      "price": 520,
+      "mass_kg": 0.6,
+      "spec": {"count": 8, "flow_cc_min": 260, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 0.9}
+    },
+    {
+      "id": "syn.injectors.8x330cc",
+      "name": "330 cc/min injectors (set of 8)",
+      "category": "injectors",
+      "manufacturer": "Synth",
+      "price": 560,
+      "mass_kg": 0.6,
+      "spec": {"count": 8, "flow_cc_min": 330, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 0.9}
+    },
+    {
+      "id": "syn.throttle.75mm",
+      "name": "75 mm throttle body",
+      "category": "throttle_body",
+      "manufacturer": "Synth",
+      "price": 320,
+      "mass_kg": 1.6,
+      "spec": {"bore_mm": 75, "flow_cfm": 820}
+    },
+    {
+      "id": "syn.throttle.85mm",
+      "name": "85 mm throttle body",
+      "category": "throttle_body",
+      "manufacturer": "Synth",
+      "price": 420,
+      "mass_kg": 1.9,
+      "spec": {"bore_mm": 85, "flow_cfm": 1050}
+    },
+    {
+      "id": "syn.exhaust.y_76mm",
+      "name": "76 mm Y-pipe exhaust",
+      "category": "exhaust",
+      "manufacturer": "Synth",
+      "price": 700,
+      "mass_kg": 16.0,
+      "spec": {"flow_cfm": 900, "diameter_mm": 76, "has_catalyst": true}
+    }
+  ]
+}

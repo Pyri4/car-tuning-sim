@@ -119,7 +119,8 @@ rings), `max_cylinder_pressure_bar`, `max_crown_temperature_c`, `material`.
 ### `cylinder_head`
 `chamber_volume_cc`, `intake_port_flow_cfm` and `exhaust_port_flow_cfm` (flow-bench curves: arrays
 of `[lift_mm, cfm]` per cylinder, lift strictly increasing), `valve_moving_mass_g` (valve + retainer +
-follower + ⅓ spring), `valves_per_cylinder`, `material`.
+follower + ⅓ spring), `valves_per_cylinder`, `material`, `valvetrain` (`dohc` default, `sohc`, `ohv`: must match the
+camshafts serving the same bank).
 
 ### `camshafts` (intake + exhaust pair)
 `intake_duration_deg`, `exhaust_duration_deg` (crank degrees at 1 mm lift), `intake_lift_mm`,
@@ -131,12 +132,21 @@ Cam timing (optional; see SIMULATION_SPEC.md, "Cam timing"): `intake_centerline_
 on its lobe separation, as every K20 cam does. `intake_phaser_range_deg` (default 0) is how far an intake phaser can
 advance the intake cam from park; it needs the centrelines and an ECU with `cam_phase_control`.
 
+`valvetrain` (`dohc` default, `sohc`, `ohv`) must match the head's on each bank it serves. A pushrod (OHV) camshaft
+lives in the block: give it a `requires` on the block's cam tunnel and one slot serving every bank.
+
+Variable valve lift (optional): `high_lift_profile` — `{intake_duration_deg, intake_lift_mm, exhaust_duration_deg,
+exhaust_lift_mm}` — is the second cam profile a two-stage (VTEC-type) camshaft switches to. It needs an ECU with
+`valve_lift_control` and the tune's `valve_lift_switch_rpm`; the springs must clear its lift.
+
 ### `valve_springs`
 `seat_force_n`, `open_force_n` (force at full lift; sets valve-float speed), `max_lift_mm` (coil bind
 / retainer clearance).
 
 ### `intake_manifold`
-`runner_length_mm` (tunes the torque peak), `flow_cfm` (includes filter/inlet).
+`runner_length_mm` (tunes the torque peak), `flow_cfm` (includes filter/inlet), optional `switched_runner_length_mm`
+(50–1000: the second runner length of a two-stage variable intake, used above the tune's `intake_runner_switch_rpm` by
+an ECU with `intake_runner_control`).
 
 ### `throttle_body`
 `bore_mm`, `flow_cfm` (wide open).
@@ -174,7 +184,9 @@ tuning, 0–0.15).
 `map_sensor_max_kpa` (absolute; above this the ECU cannot see load), `boost_control`,
 `knock_control`, `max_rev_limit_rpm`, `tables_editable`, `cam_phase_control` (default false: can drive an intake cam
 phaser from the tune's `intake_cam_advance_deg`; without it a phaser stays parked and the validator warns
-`cam_phaser_uncontrolled`).
+`cam_phaser_uncontrolled`), `valve_lift_control` (default false: can switch a two-stage camshaft; else
+`valve_lift_uncontrolled`), `intake_runner_control` (default false: can switch a variable intake; else
+`intake_runner_uncontrolled`).
 
 ### `turbocharger`
 `compressor_wheel_diameter_mm` (exducer; tip speed → pressure ratio), `compressor_choke_flow_kg_s`
@@ -217,7 +229,8 @@ Requires `boost.source`.
   temperature), `front_heat_capacity_j_per_k`, `rear_heat_capacity_j_per_k` (disc thermal mass).
 
 ## Vehicles (`vehicles`)
-`id`, `name`, `description`, `engine` (engine family id), `drivetrain` (`rwd`|`fwd`), `curb_mass_kg`
+`id`, `name`, `description`, `engine` (the **stock** engine family: what the car ships with and what its curb mass
+includes — not a restriction on which engines fit), `drivetrain` (`rwd`|`fwd`), `curb_mass_kg`
 and `front_weight_fraction` (factory build), `wheelbase_m`, `track_front_m`, `track_rear_m`,
 `cg_height_m`, `yaw_inertia_kg_m2`, `drag_coefficient`, `frontal_area_m2`, `max_steer_deg`,
 `bump_travel_mm` (wheel travel from factory ride height to the bump stops, default 75; lowering
@@ -227,29 +240,39 @@ Slot ids are free; the vehicle model finds each part by its role: exactly one re
 of `clutch`, `gearbox`, `differential`, `suspension` and `brakes`, and one required `tires` slot per
 axle, marked `"axle": "front"` / `"axle": "rear"` (`axle` is only valid on tyre slots).
 
+Whether an engine fits a car is decided by interfaces (`VehicleCompatibility`): every chassis part's `requires` must be
+provided by the engine's parts or the car's other parts. Gearboxes require their bellhousing pattern
+(`k20.bellhousing`, `m54.bellhousing`), which the block provides — so an engine with another pattern needs a matching
+gearbox (or, later, an adapter part). Checked when a scenario loads, when the garage builds the car and by
+`carsim drive --vehicle`.
+
 ## Engine families (`engines`)
 
 | Field | Meaning |
 |---|---|
 | `id`, `name`, `description` | Identity |
-| `cylinders`, `layout` | `cylinders` must match the installed block; `layout` is `inline`, `v` or `flat` (descriptive for now) |
-| `slots[]` | `id`, `category`, `display_name`, `required` (default true), `install_after` (slot ids that must be installed first — also defines removal order), `accessible_in_vehicle` |
+| `cylinders`, `layout` | `cylinders` must match the installed block; `layout` is `inline` (one bank), `v` (two or more banks) or `flat` (two banks) |
+| `banks[]` | optional: `{id, cylinders: [1-based cylinder numbers]}` per bank, together covering 1..N once. Omitted = one bank `main` holding every cylinder |
+| `bank_angle_deg` | optional: V engines (0, 180), flat engines 180, not on inline engines |
+| `firing_order[]` | optional: a permutation of 1..N (validated data; no physics yet) |
+| `slots[]` | `id`, `category`, `display_name`, `required` (default true), `install_after` (slot ids that must be installed first — also defines removal order), `accessible_in_vehicle`, `banks` (bank-scoped categories only: the bank ids the slot serves; omitted = every bank) |
 | `stock_parts` | slot id → part id (factory build) |
 | `stock_tune` | tune id (factory calibration) |
 
 The `install_after` graph must be acyclic. A slot can be filled only when all of its
 `install_after` slots are filled; it can be emptied only when no filled slot lists it.
 
-The family must fit the engine model (`EngineTopology`), or it fails to load:
-- one **required** slot for each of `block`, `main_bearings`, `crankshaft`, `rod_bearings`,
-  `connecting_rods`, `pistons`, `head_gasket`, `cylinder_head`, `valve_springs`, `camshafts`,
-  `intake_manifold`, `throttle_body`, `injectors`, `fuel_pump`, `exhaust_manifold`, `exhaust`, `oil_pump`,
-  `oil_pan`, `radiator`, `flywheel`, `ecu` — the model has no fallback without them;
-- at most one slot each for the optional `turbocharger` (empty = naturally aspirated) and
-  `intercooler` (empty = none);
-- no category the model reads in more than one slot. Per-cylinder and per-bank parts are sold as a
-  set in one slot (four pistons; a V engine's pair of heads). Twin turbos, per-bank intake/exhaust,
-  dry sumps and superchargers need model work first.
+The family must fit the engine model (`EngineTopology`), or it fails to load with a message naming the problem:
+- **engine-wide** categories — `block`, `main_bearings`, `crankshaft`, `rod_bearings`, `connecting_rods`, `pistons`,
+  `injectors`, `fuel_pump`, `oil_pump`, `oil_pan`, `radiator`, `flywheel`, `ecu` — exactly one required slot each,
+  serving the whole engine (no `banks`). Per-cylinder parts are one set of N;
+- **bank-scoped** categories — `head_gasket`, `cylinder_head`, `valve_springs`, `camshafts`, `intake_manifold`,
+  `throttle_body`, `exhaust_manifold`, `exhaust` — every bank served by exactly one required slot of each; the optional
+  `turbocharger` (empty = that bank is naturally aspirated) and `intercooler` serve each bank at most once. One slot may
+  serve several banks (a pushrod V8's camshaft, a common plenum, one turbo for both banks of a flat-four);
+- the architecture is consistent: bank cylinder lists partition 1..N, bank ids are unique, the layout agrees with the
+  bank count, the bank angle suits the layout, the firing order is a permutation, slot banks exist.
+Superchargers, dry sumps, direct injection and exhaust cam phasing need model work first (ENGINE_AUTHORING_GUIDE.md).
 
 Other slots (categories the model does not read) are free-form.
 
@@ -266,7 +289,9 @@ engine size the ECU assumes), `injector_flow_cc_min`, `injector_dead_time_ms`, `
 `fuel_density_kg_l` (the injector and fuel calibration: the ECU meters with these beliefs, never the installed
 injectors or the fuel in the tank), optional `boost_target_kpa[rpm]` (closed loop on the ECU's MAP sensor above
 80 % pedal), optional `intake_cam_advance_deg[load][rpm]` (crank degrees of intake advance from the phaser's park
-position, 0–80, looked up at the MAP the ECU last read), `rev_limit_rpm`, `idle_rpm`, `knock_control_enabled`.
+position, 0–80, looked up at the MAP the ECU last read), optional `valve_lift_switch_rpm` and `intake_runner_switch_rpm`
+(500–25,000: where a two-stage camshaft or variable intake switches, with 150 rpm hysteresis), `rev_limit_rpm`,
+`idle_rpm`, `knock_control_enabled`.
 
 The VE table, displacement, dead time and fuel density are required (saves older than version 4 get the
 installed injectors' dead time and their fuel's density on load). Generate a base table for the build the tune is meant
@@ -277,8 +302,9 @@ most air at each point), `calibrate-ve`, `calibrate-spark` (`min(best-torque −
 given), then `calibrate-ve` once more.
 
 ## Scenarios (`scenarios`)
-New-game starting points: `id`, `name`, `description`, `engine`, `vehicle` (optional car id; its
-`engine` must match the scenario's), `money`, `fuel`, `tune` (empty = the engine's stock tune), `wear`
+New-game starting points: `id`, `name`, `description`, `engine`, `vehicle` (optional car id; the engine must fit the
+car by interfaces — any engine whose block provides the car's gearbox bellhousing, not only the car's stock engine),
+`money`, `fuel`, `tune` (empty = the engine's stock tune), `wear`
 (engine or chassis slot → 0–1), `fatigue` (slot → {failure_mode: 0–1}), `inventory` (part ids on the
 shelf). Failure modes use snake_case names (`detonation`, `head_gasket_breach`, ...). With a vehicle,
 the garage holds the car's stock chassis parts alongside the engine; the car can be driven only with
@@ -288,17 +314,22 @@ the engine installed in it, every required chassis slot filled, and a runnable, 
 Two mechanisms, both validated by `AssemblyValidator`:
 
 1. **Interfaces** (data): a part's `requires` keys must be `provides`d by another installed part.
-   Used for mounting patterns (`k20.deck`, `k20.cam_carrier`, turbo flanges, ...).
+   Used for mounting patterns (`k20.deck`, `k20.cam_carrier`, turbo flanges, bellhousings, ...). Bank-aware: a part
+   serving some banks needs its keys from an engine-wide part or one serving one of the same banks (the right exhaust
+   manifold's flange from the right head). Chassis parts' keys may come from the engine (a gearbox's bellhousing).
 2. **Physical rules** (code reading spec values, never part ids):
    - set counts equal the cylinder count;
    - crank main journals = block saddles = main bearings; crank pins = rod big ends = rod bearings;
      piston pin = rod small end (±0.01 mm);
    - piston bore = block bore (±0.05 mm);
-   - gasket bore ≥ cylinder bore;
+   - gasket bore ≥ cylinder bore (per bank);
+   - head and camshaft valvetrain types match (per bank);
    - piston-to-head clearance > 0 (error), ≥ 0.6 mm (else warning); deck clearance ≤ 1.5 mm (else
-     knock-prone warning);
-   - compression ratio derived from geometry; warnings above 13.5:1 and below 7.5:1;
-   - cam lift ≤ spring usable lift (coil bind);
+     knock-prone warning) — per bank, since each bank has its own gasket and head;
+   - compression ratio derived from each bank's geometry; warnings above 13.5:1 and below 7.5:1 (reported once when
+     every bank agrees, per bank with the bank named when they differ);
+   - cam lift (either profile) ≤ spring usable lift (coil bind, per bank);
+   - variable hardware (phaser, two-stage cams, variable intake) needs the matching ECU output (warnings);
    - with a rev limit: valve-float speed, crank and flywheel ratings vs the limit (warnings).
 
 Errors mean the engine cannot be started. Warnings mean it will run, with risk.
@@ -363,6 +394,15 @@ flywheels now require the K20 keys too (they had none, so they would have bolted
 mounting interface stay universal and fit both families: throttles, injector sets (the count must match), fuel pumps,
 radiators, ECUs and exhaust systems (`throttle.68mm`, `injectors.6x230cc`, `exhaust.twin_50mm`, `fuel_pump.m54_oem`,
 `radiator.m54_oem`, `ecu.m54_oem` are the M54's).
+
+## Synthetic engine matrix (`content/test/engine-matrix/`)
+Nine fictional engines that exist to prove the engine architecture (ENGINE_AUTHORING_GUIDE.md §10): SOHC 2-valve I4,
+turbo I3 with variable valve lift, turbo I4 with a phaser, I6 with a variable intake, turbo flat-4 with one turbo for
+both banks, 60° V6 with a Y-pipe, twin-turbo 60° V6, 90° pushrod V8, 90° DOHC V8 with phasers — with shared parts
+(`shared_parts.json`: a basic and a full-function ECU, injector sets, throttles, a Y-pipe) and engine-only and swap
+scenarios. Every block provides `m54.bellhousing` so the engines can be swapped into the Isar C30. The layer is test
+content: loaded with `--mods content/test` or `CARSIM_MODS_DIR`, never by the base game. Tunes were generated with the
+dev calibrators.
 
 ## Content strategy
 Two engine families: the Kestrel K20 (fictional four, the prototype's engine) and the Isar M54 (a real engine used to

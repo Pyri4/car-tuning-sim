@@ -6,6 +6,10 @@ game-engine-agnostic C# (.NET 8) simulation core** (no Godot dependency; the *ca
 in `EngineTopology` and SIMULATION_SPEC.md). Sections below marked *(planned)* describe intended
 structure that does not exist yet; everything else reflects the repository as it is.
 
+What the architecture is for: [GAME_VISION.md](GAME_VISION.md) (the North Star — hundreds of engines and thousands of
+parts, "adding the 100th engine should be almost as easy as adding the 2nd"). How engines are represented and authored:
+[ENGINE_AUTHORING_GUIDE.md](ENGINE_AUTHORING_GUIDE.md) and §4.1 below.
+
 ---
 
 ## 1. Engine / framework decision
@@ -92,16 +96,18 @@ beyond the content loader. Namespaces:
 - `CarSim.Core.Parts` – part definitions (typed per category), part instances (wear), spec registry.
 - `CarSim.Core.Content` – JSON content loading, validation and the content database.
 - `CarSim.Core.Fuels` – fuel definitions.
-- `CarSim.Core.Engines` – engine family definitions (slot graph), engine assembly (install/remove
-  order), compatibility validation, derived geometry, valvetrain limits.
+- `CarSim.Core.Engines` – engine family definitions (banks, slot graph with bank scopes), topology rules
+  (`EngineTopology`), engine assembly (install/remove order, per-bank part lookup), bank-aware compatibility
+  validation, derived per-bank geometry, valvetrain limits, the derived capability summary (`EngineCapabilities`).
 - `CarSim.Core.Ecu` – editable tunes (tables + calibration) and the runtime ECU controller.
 - `CarSim.Core.Simulation` – the mean-value engine model: configuration, air path, fuel system,
   combustion, thermal, lubrication, telemetry.
 - `CarSim.Core.Dyno` – incremental dyno runner (sweep/steady-state), run records, comparison, CSV.
 - `CarSim.Core.Damage` – stress evaluation, fatigue accumulation, failures, diagnostic reports,
   inspection findings, warnings.
-- `CarSim.Core.Vehicles` – vehicle definitions and chassis assemblies, tyre model, planar vehicle
-  dynamics with load transfer, clutch/gearbox/differential driveline, brakes, engine coupling.
+- `CarSim.Core.Vehicles` – vehicle definitions and chassis assemblies, engine ↔ car fit by interfaces
+  (`VehicleCompatibility`), tyre model, planar vehicle dynamics with load transfer, clutch/gearbox/differential
+  driveline, brakes, engine coupling.
 
 ### Domain / data
 Content (parts, engines, fuels, tunes, vehicles) is JSON under `content/`. Definitions are immutable
@@ -180,6 +186,35 @@ need Forward+.
 
 See SIMULATION_SPEC.md for equations and PARTS_DATABASE.md for the data schema.
 
+### 4.1 Engine architecture
+Engines are data; the code knows categories, capabilities and topology rules, never engine families
+(ENGINE_AUTHORING_GUIDE.md is the full reference).
+
+- **Family → architecture → slots → parts.** An `EngineDefinition` has banks (ids and cylinder numbers; one implicit
+  bank if none are authored), a layout that must agree with them, an optional bank angle and firing order, and slots.
+  Each slot has a category and, for bank-scoped categories, the banks it serves (none listed = all).
+- **Scopes** (`EngineTopology`): engine-wide categories (rotating assembly, lubrication, cooling, fuel system, ECU) have
+  one part for the engine; bank-scoped categories (gasket, head, springs, cams, intake, throttle, exhaust manifold,
+  exhaust, turbo, intercooler) serve each bank exactly once (optional ones at most once), and one part may serve
+  several banks. Families that break the rules are rejected at load with a diagnostic.
+- **Configuration.** `EngineConfiguration` (engine-wide specs, geometry of the bottom end) holds one
+  `BankConfiguration` per bank (its parts, its geometry with its own head and gasket, flow areas scaled by its share of
+  shared elements, cam profiles, runner stages, capability hardware) and one `TurboConfiguration` per turbocharger
+  (which banks feed it). Nothing reads "the first bank" except where the model has one of something by design (the MAP
+  sensor).
+- **Simulation.** One `AirPath` per bank; combustion, knock, heat, friction and exhaust per bank; one shaft per turbo;
+  engine-wide speed, coolant, oil, knock retard and crown temperature. Telemetry aggregates explicitly (sums,
+  cylinder-weighted means, worst-bank limits) and carries `Banks[]`/`Turbos[]`. With one bank every weight is exactly
+  1, which keeps single-bank engines bit-identical to the pre-bank model.
+- **Capabilities** (cam phasing, variable valve lift, variable intake runner, turbocharging, valvetrain type) are part
+  spec fields + ECU outputs + tune fields. `EngineCapabilities` is a derived summary for UI, CLI and tests; the physics
+  reads the part data, never the flags.
+- **Compatibility** is interface keys (`provides`/`requires`), resolved bank by bank inside the engine and across
+  engine and car (`VehicleCompatibility`: a gearbox requires the block's bellhousing). A car names only its stock engine.
+- **Proof** is the synthetic engine matrix (`content/test/engine-matrix/`, a content layer the base game never loads):
+  nine architectures run the same pipeline as the real engines, and architecture tests edit their JSON to show the
+  simulation follows the data.
+
 ---
 
 ## 5. Content and modding
@@ -193,7 +228,9 @@ See SIMULATION_SPEC.md for equations and PARTS_DATABASE.md for the data schema.
   as overrides); duplicates within one layer are errors; cross-references are validated once all
   layers are loaded. See PARTS_DATABASE.md, "Mods".
 - New part *categories* require code (the simulation must know what the properties mean); new
-  *parts* in existing categories require only data.
+  *parts* in existing categories require only data, and so do new engine families (ENGINE_AUTHORING_GUIDE.md).
+- `content/test/` holds content layers for tests and development only (the synthetic engine matrix). It is loaded like
+  a mods folder (`--mods content/test`, `CARSIM_MODS_DIR`) and never ships.
 
 ---
 
@@ -248,13 +285,24 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
   renamed ids bit-identical; a content-only variant (8 cylinders, other bore/stroke/CR/limit/cam) that the physics
   follows; a source audit of `src/` for family tokens, content ids and size-specific branches; the first family's
   output pinned to its pre-milestone value. The audit and identity tests were mutation-checked with injected hacks.
+- **Engine architecture** (2026-09-27): a synthetic engine matrix (nine content-only architectures: SOHC/OHV/DOHC,
+  inline/V/flat, 3–8 cylinders, NA/turbo/twin turbo, VVT, VVL, variable intake, shared and split air paths) through the
+  whole pipeline (load, validate, strip and rebuild, start, idle, dyno, tune, save/load, wear, failure, driving in a
+  car it was not built for); architecture invariants as properties (two alike banks = one bank of all cylinders, a part
+  on one bank changes only that bank — including its compression — counts and types follow the data, a renamed
+  multi-bank family is bit-identical); mutation checks of the hacks they guard (the first bank's air, head or
+  compression for every bank, unshared shared elements, four hard-coded cylinders, interfaces from any bank, one turbo
+  state for all, an engine-id branch).
 - **Content tests** load every file under `content/` and validate references, ranges and that the
   stock engine assembles and runs.
-- **CLI**: CI runs `carsim validate` and a short `carsim sweep` after the tests.
+- **CLI**: CI runs `carsim validate` (with and without the synthetic matrix), short `carsim sweep`s of both real families
+  and of a twin-turbo V6, and `carsim inspect` of a pushrod V8 after the tests.
 - **Godot**: the game project is part of the solution, so every `dotnet build` compiles it
   (Godot.NET.Sdk from NuGet). CI also downloads Godot 4.7.2 .NET and runs
   `godot --headless --path game -- --smoke-test`, which loads content, builds the garage and runs a
-  dyno pull through the game layer. Screenshots for visual review: `-- --screenshot=file.png`.
+  dyno pull through the game layer, and `--drive --smoke-test`, for both real families and for synthetic engines swapped
+  into a car (`CARSIM_MODS_DIR=content/test`, `--scenario=syn_v8_swap`). Screenshots for visual review:
+  `-- --screenshot=file.png`.
 
 ---
 
@@ -304,4 +352,11 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
 | 2026-09-26 | Parts with a mounting interface must declare it (K20 gaskets, oil pumps, flywheels gained `requires`); parts without one are universal | With two families, interface-less family parts bolted across (a K20 gasket passes the bore check on the 84 mm six) |
 | 2026-09-26 | Post-shift sync slip limited by the engagement controller is not a "clutch slipping" warning | A heavier flywheel and wider ratio step (the second family's car) made every upshift a Danger warning; the slip still heats and wears |
 | 2026-09-26 | The CLI requires an engine-family id when several families are loaded; the game picks scenarios (`--scenario=<id>` headless) | The first family in load order became the M54, so id-less CLI commands would silently have switched engines; the Garage tab titled every game after the first scenario |
-| 2026-09-26 | The M54's torque-curve shape discrepancy is classified as missing generic physics — one VE filling hump for intake closing and runner gas dynamics, moved whole by a cam phaser — and documented and pinned (`TorqueCurveDiagnosisTests`) rather than fixed in this PR | A prototype of the missing term (a gas-dynamic share tuned at the straight-up cam/runner speed) makes the low end rise as the real engine's does, but without DISA's open stage it cuts M54 power to 139.5 kW (−18 %). Completing it needs a new shared constant with no source and DISA's unpublished geometry; choosing them to match the reference would be per-engine fitting. SIMULATION_SPEC.md, "M54 torque-curve investigation"; ROADMAP next task 2 |
+| 2026-09-26 | The M54's torque-curve shape discrepancy is classified as missing generic physics — one VE filling hump for intake closing and runner gas dynamics, moved whole by a cam phaser — and documented and pinned (`TorqueCurveDiagnosisTests`) rather than fixed in this PR | A prototype of the missing term (a gas-dynamic share tuned at the straight-up cam/runner speed) makes the low end rise as the real engine's does, but without DISA's open stage it cuts M54 power to 139.5 kW (−18 %). Completing it needs a new shared constant with no source and DISA's unpublished geometry; choosing them to match the reference would be per-engine fitting. SIMULATION_SPEC.md, "M54 torque-curve investigation"; now ROADMAP next task 1 (Intake Gas Dynamics 2.0, docs/milestones/INTAKE_GAS_DYNAMICS_2.md) |
+| 2026-09-27 | Engines have **banks**: families declare banks (cylinders per bank), bank angle and firing order; bank-scoped slots; one air path, geometry and combustion state per bank; one shaft per turbo. Supersedes the "one part or set per category" topology rule above | Multi-bank engines, twin turbos and per-bank air paths are ordinary engines; the old rule made every V engine a special case. Banks (not cylinders) are the resolution: enough for per-bank parts, failures and air paths without a per-cylinder model |
+| 2026-09-27 | Shared elements are split by cylinders (area × share; a shared compressor at flow ÷ share), with no cross-feed between dissimilar banks | Exact for alike banks (tested against one bank of all cylinders) and bit-identical for single-bank engines; a network solve of shared plenums and collectors is deferred until an engine needs it |
+| 2026-09-27 | Geometry is per bank: the shared bottom end with each bank's own head and gasket | A thicker gasket or another head on one bank of a V engine silently did nothing (geometry came from the first slot); compression ratio, quench and residuals now follow each bank's parts |
+| 2026-09-27 | Capabilities are part data + ECU outputs + tune fields; `EngineCapabilities` is a derived summary the physics never reads. New: valvetrain type, two-stage variable valve lift, two-stage variable intake runner | A capability exists exactly when a part provides it; no engine-level flags that could disagree with the hardware |
+| 2026-09-27 | `TuneDocument` is a record copied with `with` (the loader and the save migration no longer rebuild it field by field) | New tune fields were silently dropped by the field-by-field copies (the cam map was, in PR #4) |
+| 2026-09-27 | A car names only its stock engine; whether an engine fits a car is decided by interfaces (gearboxes require a bellhousing pattern), checked by scenarios, the garage and the CLI | Engine swaps are a core feature; a car hard-wired to an engine family made them impossible |
+| 2026-09-27 | A synthetic engine matrix lives in `content/test/` as a content layer, calibrated with the dev calibrators; its ids are forbidden in `src/` | Genericity is demonstrated, not claimed: architectures the code was never written for must run as data |

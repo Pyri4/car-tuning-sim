@@ -83,6 +83,12 @@ public sealed class EcuSpec : PartSpec
     /// </summary>
     public bool CamPhaseControl { get; init; }
 
+    /// <summary>Whether the ECU can switch a variable-valve-lift camshaft to its high-lift profile (tune: valve_lift_switch_rpm).</summary>
+    public bool ValveLiftControl { get; init; }
+
+    /// <summary>Whether the ECU can switch a variable intake manifold's runner (tune: intake_runner_switch_rpm).</summary>
+    public bool IntakeRunnerControl { get; init; }
+
     [JsonIgnore] public double MapSensorMax => Units.KpaToPa(MapSensorMaxKpa);
 
     protected override void Validate(SpecChecker check)

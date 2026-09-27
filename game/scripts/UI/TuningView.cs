@@ -91,16 +91,29 @@ public partial class TuningView : HSplitContainer
             (hw.MapSensorMaxKpa < 150 ? " — cannot measure boost." : ""), 13, hw.MapSensorMaxKpa < 150 ? Ui.Caution : Ui.Muted));
         _left.AddChild(Ui.Label($"Boost control: {(hw.BoostControl ? "yes" : "no (wastegate spring only)")}", 13, Ui.Muted));
         _left.AddChild(Ui.Label($"Knock control: {(hw.KnockControl ? "yes" : "no")}", 13, Ui.Muted));
-        var cams = State.Garage.Engine.FindByCategory(PartCategory.Camshafts)?.Spec<CamshaftSpec>();
-        if (cams is { IntakePhaserRangeDeg: > 0 })
-            _left.AddChild(Ui.Label(hw.CamPhaseControl ? $"Cam phasing: intake phaser, {cams.IntakePhaserRangeDeg:F0}° of advance"
+        var caps = CarSim.Core.Engines.EngineCapabilities.Resolve(State.Garage.Engine);
+        if (caps.IntakeCamPhasers)
+        {
+            double phaserRange = State.Garage.Engine.PartsOf(PartCategory.Camshafts).Max(p => p.Part.Spec<CamshaftSpec>().IntakePhaserRangeDeg);
+            _left.AddChild(Ui.Label(hw.CamPhaseControl ? $"Cam phasing: intake phaser, {phaserRange:F0}° of advance"
                 : "Cam phasing: this ECU cannot drive the intake phaser (it stays parked)", 13, hw.CamPhaseControl ? Ui.Muted : Ui.Caution));
+        }
+        if (caps.VariableLiftCams)
+            _left.AddChild(Ui.Label(hw.ValveLiftControl ? "Variable valve lift: two cam profiles, switched by engine speed"
+                : "Variable valve lift: this ECU cannot switch the cams (base profile only)", 13, hw.ValveLiftControl ? Ui.Muted : Ui.Caution));
+        if (caps.SwitchedRunners)
+            _left.AddChild(Ui.Label(hw.IntakeRunnerControl ? "Variable intake: two runner lengths, switched by engine speed"
+                : "Variable intake: this ECU cannot switch the runners (primary only)", 13, hw.IntakeRunnerControl ? Ui.Muted : Ui.Caution));
         _left.AddChild(Ui.Label($"Max rev limit: {hw.MaxRevLimitRpm:F0} rpm", 13, Ui.Muted));
 
         _left.AddChild(Ui.Heading("Calibration"));
         _left.AddChild(Ui.Label($"Tune: {Tune.Name}", 13, Ui.Muted));
         AddSpin("Rev limit (rpm)", 3000, hw.MaxRevLimitRpm, 100, Tune.RevLimitRpm, v => Tune.RevLimitRpm = v);
         AddSpin("Idle speed (rpm)", 600, 1500, 25, Tune.IdleRpm, v => Tune.IdleRpm = v);
+        if (caps.VariableValveLift)
+            AddSpin("Valve-lift switch (rpm)", 1000, hw.MaxRevLimitRpm, 50, Tune.ValveLiftSwitchRpm ?? hw.MaxRevLimitRpm, v => Tune.ValveLiftSwitchRpm = v);
+        if (caps.VariableIntakeRunner)
+            AddSpin("Intake runner switch (rpm)", 1000, hw.MaxRevLimitRpm, 50, Tune.IntakeRunnerSwitchRpm ?? hw.MaxRevLimitRpm, v => Tune.IntakeRunnerSwitchRpm = v);
         var knock = new CheckBox { Text = "Knock control enabled", ButtonPressed = Tune.KnockControlEnabled, Disabled = !hw.KnockControl };
         knock.Toggled += on => { Tune.KnockControlEnabled = on; State.Garage.TuneChanged(); };
         _left.AddChild(knock);

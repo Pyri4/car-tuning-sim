@@ -124,7 +124,7 @@ public class TurboTests
         var tune = Ecu.EcuTune.FromDocument(TestContent.Database.GetTune("k20.turbo_base"));
         var sim = SimFactory.Create(TurboBuild(ecu: "ecu.k20_oem"), "gasoline_98", tune);
         var t = SimFactory.At(sim, 6000, 1.0, 3.0);
-        double spring = Units.PaToKpa(sim.Config.Turbo!.WastegateSpring);
+        double spring = Units.PaToKpa(sim.Config.Turbos[0].Spec.WastegateSpring);
         Assert.InRange(t.BoostKpa, spring - 5, spring + 25);
     }
 
@@ -213,8 +213,8 @@ public class TurboTests
         sim.DamageEnabled = false;
         var t = SimFactory.At(sim, 7000, 1.0, 4.0);
         Assert.True(t.TurboOverspeed);
-        double tipSpeed = sim.State.TurboOmega * sim.Config.Turbo!.CompressorTipRadius;
-        double ratedTip = sim.Config.Turbo.MaxShaftSpeed * sim.Config.Turbo.CompressorTipRadius;
+        double tipSpeed = sim.State.Turbos[0].Omega * sim.Config.Turbos[0].Spec.CompressorTipRadius;
+        double ratedTip = sim.Config.Turbos[0].Spec.MaxShaftSpeed * sim.Config.Turbos[0].Spec.CompressorTipRadius;
         Assert.InRange(tipSpeed / ratedTip, 1.0, 1.3);
     }
 
@@ -283,10 +283,10 @@ public class TurboTests
     {
         var sim = TurboSim(TurboBuild());
         SimFactory.At(sim, 6000, 1.0, 2.0);
-        double spinning = sim.State.TurboOmega;
+        double spinning = sim.State.Turbos[0].Omega;
         var input = new EngineInputs { Ignition = false };
         for (int i = 0; i < 4000; i++) sim.Step(0.005, input);
-        Assert.True(sim.State.TurboOmega < 0.5 * spinning);
+        Assert.True(sim.State.Turbos[0].Omega < 0.5 * spinning);
     }
 
     [Fact]
@@ -365,14 +365,14 @@ public class TurboTests
                 {
                     var t = sim.Step(0.002, input);
                     maxTurbineInlet = Math.Max(maxTurbineInlet, t.TurbineInletTemperature);
-                    maxShaft = Math.Max(maxShaft, sim.State.TurboOmega);
+                    maxShaft = Math.Max(maxShaft, sim.State.Turbos[0].Omega);
                 }
                 input.Throttle = 0.0;
                 for (int i = 0; i < 500; i++) maxTurbineInlet = Math.Max(maxTurbineInlet, sim.Step(0.002, input).TurbineInletTemperature);
             }
             Assert.Empty(sim.Damage.Failures);
-            Assert.True(maxTurbineInlet < sim.Config.Turbo!.MaxTurbineInletTemperature, $"{rpm} rpm: {Units.KToC(maxTurbineInlet):F0} °C");
-            Assert.True(maxShaft < sim.Config.Turbo.MaxShaftSpeed, $"{rpm} rpm: shaft at {maxShaft / sim.Config.Turbo.MaxShaftSpeed:P0} of its rating");
+            Assert.True(maxTurbineInlet < sim.Config.Turbos[0].Spec.MaxTurbineInletTemperature, $"{rpm} rpm: {Units.KToC(maxTurbineInlet):F0} °C");
+            Assert.True(maxShaft < sim.Config.Turbos[0].Spec.MaxShaftSpeed, $"{rpm} rpm: shaft at {maxShaft / sim.Config.Turbos[0].Spec.MaxShaftSpeed:P0} of its rating");
         }
     }
 
@@ -381,7 +381,7 @@ public class TurboTests
     {
         var sim = TurboSim(TurboBuild());
         var t = SimFactory.At(sim, 6000, 1.0, 5.0);
-        double friction = TurbochargerModel.FrictionPower(sim.Config.Turbo!, sim.State.TurboOmega, sim.Config.Part("turbocharger").Wear);
+        double friction = TurbochargerModel.FrictionPower(sim.Config.Turbos[0].Spec, sim.State.Turbos[0].Omega, sim.Config.Part("turbocharger").Wear);
         Assert.Equal(t.TurbinePower, t.CompressorPower + friction, 0.01 * t.TurbinePower);
     }
 
@@ -392,9 +392,9 @@ public class TurboTests
         var t = SimFactory.At(log, 6000, 1.0, 4.0);
         Assert.True(t.TurbineInletTemperature < t.PortGasTemperature - 10);
         var tubular = TurboSim(TurboBuild("turbo.t35_big"));
-        var pathLog = new AirPath(log.Config);
-        var pathTubular = new AirPath(tubular.Config);
-        Assert.True(tubular.Config.ExhaustManifoldHeatLoss > log.Config.ExhaustManifoldHeatLoss);
+        var pathLog = new AirPath(log.Config.Banks[0]);
+        var pathTubular = new AirPath(tubular.Config.Banks[0]);
+        Assert.True(tubular.Config.Banks[0].ExhaustManifoldHeatLoss > log.Config.Banks[0].ExhaustManifoldHeatLoss);
         Assert.True(pathTubular.ManifoldOutletTemperature(1100, 0.15, 298) < pathLog.ManifoldOutletTemperature(1100, 0.15, 298));
         // Exact pipe solution: never below ambient, however little flows.
         Assert.InRange(pathLog.ManifoldOutletTemperature(1100, 1e-6, 298), 298, 298.0001);

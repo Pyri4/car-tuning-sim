@@ -39,14 +39,19 @@ public readonly record struct AirPathConditions(
     double WastegateOpening = 0.0,
     double CoolingAirSpeed = 10.0,
     double TurbineOutletTemperature = 0.0,
-    double IntakeCamAdvance = 0.0);
+    double IntakeCamAdvance = 0.0,
+    int CamProfile = 0,
+    int RunnerStage = 0);
 
 /// <summary>
+/// One bank's air path.
 /// Intake: ambient → intake/filter → [compressor → intercooler] → throttle → manifold → intake ports → cylinder.
 /// Exhaust: cylinder → exhaust ports → manifold → [turbine ∥ wastegate] → exhaust system → ambient.
-/// Every restriction is a compressible orifice; the compressor adds pressure and heat. The engine acts
-/// as a pump whose demand is VE · ρ_port · V_d · rpm/120. The through-flow is the root of
-/// f(ṁ) = demand(ṁ) − ṁ (Brent's method).
+/// Every restriction is a compressible orifice; the compressor adds pressure and heat. The bank's cylinders act
+/// as a pump whose demand is VE · ρ_port · V_d,bank · rpm/120. The through-flow is the root of
+/// f(ṁ) = demand(ṁ) − ṁ (Brent's method). Elements the bank shares with others enter at its share (see
+/// <see cref="BankConfiguration"/>): restrictions as its share of their area, a shared compressor or turbine at the
+/// whole device's flow (ṁ / share).
 /// </summary>
 public sealed class AirPath
 {
@@ -66,23 +71,32 @@ public sealed class AirPath
     /// <summary>Charge-pipe heat loss for a turbo without intercooler (fraction of the compressor's temperature rise).</summary>
     public const double ChargePipeCooling = 0.10;
 
-    private readonly EngineConfiguration _c;
+    private readonly BankConfiguration _b;
+    private readonly EngineGeometry _g;
 
-    public AirPath(EngineConfiguration config) => _c = config;
+    /// <summary>The air path of <paramref name="bank"/>, with that bank's own geometry (its clearance volume sets the residual).</summary>
+    public AirPath(BankConfiguration bank)
+    {
+        _b = bank;
+        _g = bank.Geometry;
+    }
+
+    /// <summary>The bank this air path belongs to.</summary>
+    public BankConfiguration Bank => _b;
 
     /// <summary>
     /// Dynamic (tuning) volumetric efficiency relative to port conditions: cam/runner resonance shape,
     /// header scavenging bump, valve float collapse above the float speed. <paramref name="intakeCamAdvance"/> is
     /// the intake phaser's advance from the installed centreline (crank degrees).
     /// </summary>
-    public double VeDynamic(double rpm, double floatRpm, double intakeCamAdvance = 0.0)
+    public double VeDynamic(double rpm, double floatRpm, double intakeCamAdvance = 0.0, int camProfile = 0, int runnerStage = 0)
     {
-        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance));
-        if (_c.ScavengingGain > 0)
+        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));
+        if (_b.ScavengingGain > 0)
         {
-            double w = 0.25 * _c.ScavengingRpm;
-            double d = (rpm - _c.ScavengingRpm) / w;
-            ve += _c.ScavengingGain * Math.Exp(-d * d);
+            double w = 0.25 * _b.ScavengingRpm;
+            double d = (rpm - _b.ScavengingRpm) / w;
+            ve += _b.ScavengingGain * Math.Exp(-d * d);
         }
         if (rpm > floatRpm)
             ve *= 1.0 - 0.6 * MathUtil.SmoothStep(floatRpm, floatRpm * 1.08, rpm);
@@ -96,11 +110,14 @@ public sealed class AirPath
     /// </summary>
     public const double VeShapeFloor = 0.25;
 
-    /// <summary>Cam/runner VE shape before the floor: an inverted parabola around the tuned speed (steeper below it with more overlap).</summary>
-    public double VeShape(double rpm, double intakeCamAdvance = 0.0)
+    /// <summary>
+    /// Cam/runner VE shape before the floor: an inverted parabola around the tuned speed (steeper below it with more
+    /// overlap), for the intake cam advance, cam profile and runner stage the bank is running.
+    /// </summary>
+    public double VeShape(double rpm, double intakeCamAdvance = 0.0, int camProfile = 0, int runnerStage = 0)
     {
-        double x = rpm / _c.VePeakRpmAt(intakeCamAdvance);
-        double aLo = VeLowSideBase + VeLowSidePerOverlapDeg * _c.OverlapAt(intakeCamAdvance);
+        double x = rpm / _b.VePeakRpmAt(intakeCamAdvance, camProfile, runnerStage);
+        double aLo = VeLowSideBase + VeLowSidePerOverlapDeg * _b.OverlapAt(intakeCamAdvance, camProfile);
         return x < 1.0 ? 1.0 - aLo * (1.0 - x) * (1.0 - x) : 1.0 - VeHighSideCoefficient * (x - 1.0) * (x - 1.0);
     }
 
@@ -121,13 +138,13 @@ public sealed class AirPath
     /// long-overlap cam's VE falls smoothly instead of kinking onto a limit no fuel map can follow.
     /// Below 1 exhaust-to-intake ratio the residual shrinks (f slightly above 1, at most 1/(1 − c)).
     /// </summary>
-    public double ResidualFactor(double exhaustPortPressure, double portPressure, double intakeCamAdvance = 0.0)
+    public double ResidualFactor(double exhaustPortPressure, double portPressure, double intakeCamAdvance = 0.0, int camProfile = 0)
     {
-        var g = _c.Geometry;
+        var g = _g;
         double clearanceShare = g.ClearanceVolume / (g.ClearanceVolume + g.SweptVolumePerCylinder);
         double ratio = exhaustPortPressure / Math.Max(1.0, portPressure);
         double expansion = Math.Pow(ratio, 1.0 / PhysicalConstants.CompressionPolytropicExponent) - 1.0;
-        double reversion = _c.OverlapAt(intakeCamAdvance) / 15.0 * Math.Max(0.0, ratio - ReversionPressureRatioMargin);
+        double reversion = _b.OverlapAt(intakeCamAdvance, camProfile) / 15.0 * Math.Max(0.0, ratio - ReversionPressureRatioMargin);
         return 1.0 / (1.0 + clearanceShare * (expansion + reversion));
     }
 
@@ -140,25 +157,26 @@ public sealed class AirPath
     {
         double excess = Math.Max(0.0, portGasTemperature - ambientTemperature);
         if (exhaustFlow <= 0) return ambientTemperature;
-        return ambientTemperature + excess * Math.Exp(-_c.ExhaustManifoldHeatLoss / (exhaustFlow * PhysicalConstants.ExhaustCp));
+        return ambientTemperature + excess * Math.Exp(-_b.ExhaustManifoldHeatLoss / (exhaustFlow * PhysicalConstants.ExhaustCp));
     }
 
     public AirPathResult Solve(in AirPathConditions k)
     {
-        var g = _c.Geometry;
+        var g = _g;
         if (k.Rpm <= 1.0)
         {
             return new AirPathResult(0, k.AmbientPressure, k.AmbientTemperature, k.AmbientPressure, k.AmbientTemperature,
                 k.AmbientPressure, k.AmbientPressure, 0, 1, 0, k.AmbientPressure, k.AmbientPressure, k.AmbientTemperature,
                 default, k.AmbientPressure, k.AmbientPressure, 0, 0);
         }
-        double veDyn = VeDynamic(k.Rpm, k.ValveFloatRpm, k.IntakeCamAdvance);
+        double veDyn = VeDynamic(k.Rpm, k.ValveFloatRpm, k.IntakeCamAdvance, k.CamProfile, k.RunnerStage);
         double cyclesPerSecond = k.Rpm / 120.0;
-        double prBound = _c.Turbo == null ? 1.0 : TurbochargerModel.MaxPressureRatio(_c.Turbo, k.TurboOmega, k.AmbientTemperature);
+        var turbo = _b.Turbo?.Spec;
+        double prBound = turbo == null ? 1.0 : TurbochargerModel.MaxPressureRatio(turbo, k.TurboOmega, k.AmbientTemperature);
 
-        // Upper bound: engine demand at the highest pressure the intake could reach, with generous VE.
+        // Upper bound: the bank's demand at the highest pressure the intake could reach, with generous VE.
         double hi = 1.3 * prBound * k.AmbientPressure / (PhysicalConstants.AirGasConstant * k.AmbientTemperature)
-                    * g.Displacement * cyclesPerSecond;
+                    * _b.SweptVolume * cyclesPerSecond;
         var conditions = k;
         double flow = RootFinder.Brent(m => Evaluate(m, veDyn, in conditions).MassFlow - m, 0.0, hi, 1e-9 * hi);
         return Evaluate(flow, veDyn, in k);
@@ -170,25 +188,28 @@ public sealed class AirPath
     /// </summary>
     internal AirPathResult Evaluate(double massFlow, double veDyn, in AirPathConditions k)
     {
-        var g = _c.Geometry;
+        var g = _g;
         const double gamma = PhysicalConstants.AirGamma;
         const double rAir = PhysicalConstants.AirGasConstant;
-        int n = g.Cylinders;
+        int n = _b.Cylinders;
+        var turbo = _b.Turbo?.Spec;
+        var profile = _b.Profiles[k.CamProfile];
 
         // Intake side.
         double tIn = k.AmbientTemperature;
-        double p1 = CompressibleFlow.DownstreamPressure(_c.IntakeCdA, k.AmbientPressure, tIn, massFlow, gamma, rAir, out _);
+        double p1 = CompressibleFlow.DownstreamPressure(_b.IntakeCdA, k.AmbientPressure, tIn, massFlow, gamma, rAir, out _);
         double pBoost = p1, tBoost = tIn;
         CompressorPoint comp = default;
-        if (_c.Turbo != null)
+        if (turbo != null)
         {
-            comp = TurbochargerModel.Compressor(_c.Turbo, k.TurboOmega, massFlow, p1, tIn);
+            // A compressor shared with other banks runs at the whole device's flow (ṁ / share).
+            comp = TurbochargerModel.Compressor(turbo, k.TurboOmega, massFlow / _b.TurboShare, p1, tIn);
             double p2 = p1 * comp.PressureRatio;
             double t2 = comp.OutletTemperature;
-            if (_c.Intercooler != null)
+            if (_b.Intercooler != null)
             {
-                pBoost = CompressibleFlow.DownstreamPressure(_c.IntercoolerCdA, p2, t2, massFlow, gamma, rAir, out _);
-                double eff = TurbochargerModel.IntercoolerEffectiveness(_c.Intercooler, massFlow, k.CoolingAirSpeed);
+                pBoost = CompressibleFlow.DownstreamPressure(_b.IntercoolerCdA, p2, t2, massFlow, gamma, rAir, out _);
+                double eff = TurbochargerModel.IntercoolerEffectiveness(_b.Intercooler, massFlow / _b.IntercoolerShare, k.CoolingAirSpeed);
                 tBoost = t2 - eff * (t2 - k.AmbientTemperature);
             }
             else
@@ -199,8 +220,8 @@ public sealed class AirPath
         }
         double pMan = CompressibleFlow.DownstreamPressure(k.ThrottleArea, pBoost, tBoost, massFlow, gamma, rAir, out _);
         double tMan = tBoost;
-        double portEventFlow = massFlow / n / _c.IntakeEventFraction;
-        double pPort = CompressibleFlow.DownstreamPressure(_c.IntakePortCdA, pMan, tMan, portEventFlow, gamma, rAir, out _);
+        double portEventFlow = massFlow / n / profile.IntakeEventFraction;
+        double pPort = CompressibleFlow.DownstreamPressure(profile.IntakePortCdA, pMan, tMan, portEventFlow, gamma, rAir, out _);
 
         double tCharge = tMan + 0.12 * Math.Max(0.0, k.CoolantTemperature - tMan) - k.EvaporativeCooling;
         tCharge = Math.Max(200.0, tCharge);
@@ -211,13 +232,14 @@ public sealed class AirPath
         const double gE = PhysicalConstants.ExhaustGamma;
         const double rE = PhysicalConstants.ExhaustGasConstant;
         double pSystemIn, pTurbineIn, turbineFlow = 0.0;
-        if (_c.Turbo != null)
+        if (turbo != null)
         {
             double tAfterTurbine = k.TurbineOutletTemperature > 0 ? k.TurbineOutletTemperature : tExh;
             double tPipe = Math.Max(k.AmbientTemperature, tAfterTurbine - ExhaustPipeCooling);
-            pSystemIn = CompressibleFlow.UpstreamPressure(_c.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
-            double turbineArea = _c.Turbo.TurbineFlowArea;
-            double totalArea = turbineArea + _c.Turbo.WastegateFlowArea * MathUtil.Clamp01(k.WastegateOpening);
+            pSystemIn = CompressibleFlow.UpstreamPressure(_b.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
+            // This bank's share of a turbine (and wastegate) it shares with other banks.
+            double turbineArea = turbo.TurbineFlowArea * _b.TurboShare;
+            double totalArea = turbineArea + turbo.WastegateFlowArea * _b.TurboShare * MathUtil.Clamp01(k.WastegateOpening);
             double tTurbineIn = ManifoldOutletTemperature(tExh, exhaustFlow, k.AmbientTemperature);
             pTurbineIn = CompressibleFlow.UpstreamPressure(totalArea, pSystemIn, tTurbineIn, exhaustFlow, gE, rE);
             turbineFlow = exhaustFlow * turbineArea / totalArea;
@@ -225,18 +247,18 @@ public sealed class AirPath
         else
         {
             double tPipe = Math.Max(k.AmbientTemperature, tExh - ExhaustPipeCooling);
-            pSystemIn = CompressibleFlow.UpstreamPressure(_c.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
+            pSystemIn = CompressibleFlow.UpstreamPressure(_b.ExhaustSystemCdA, k.AmbientPressure, tPipe, exhaustFlow, gE, rE);
             pTurbineIn = pSystemIn;
         }
-        double pExhManifold = CompressibleFlow.UpstreamPressure(_c.ExhaustManifoldCdA, pTurbineIn, tExh, exhaustFlow, gE, rE);
-        double exhaustEventFlow = exhaustFlow * (1.0 - BlowdownFraction) / n / _c.ExhaustEventFraction;
-        double pExhPort = CompressibleFlow.UpstreamPressure(_c.ExhaustPortCdA, pExhManifold, tExh, exhaustEventFlow, gE, rE);
+        double pExhManifold = CompressibleFlow.UpstreamPressure(_b.ExhaustManifoldCdA, pTurbineIn, tExh, exhaustFlow, gE, rE);
+        double exhaustEventFlow = exhaustFlow * (1.0 - BlowdownFraction) / n / profile.ExhaustEventFraction;
+        double pExhPort = CompressibleFlow.UpstreamPressure(profile.ExhaustPortCdA, pExhManifold, tExh, exhaustEventFlow, gE, rE);
 
-        double residual = ResidualFactor(pExhPort, pPort, k.IntakeCamAdvance);
+        double residual = ResidualFactor(pExhPort, pPort, k.IntakeCamAdvance, k.CamProfile);
         double airPerCycle = veDyn * residual * pPort * g.SweptVolumePerCylinder / (rAir * tCharge);
         double demand = airPerCycle * n * k.Rpm / 120.0;
         return new AirPathResult(demand, pMan, tMan, pPort, tCharge, pExhPort, pExhManifold, veDyn, residual, airPerCycle,
-            p1, _c.Turbo != null ? p1 * comp.PressureRatio : p1, _c.Turbo != null ? comp.OutletTemperature : tIn, comp,
+            p1, turbo != null ? p1 * comp.PressureRatio : p1, turbo != null ? comp.OutletTemperature : tIn, comp,
             pTurbineIn, pSystemIn, exhaustFlow, turbineFlow);
     }
 }

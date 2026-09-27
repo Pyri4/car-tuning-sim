@@ -134,6 +134,13 @@ public static class ContentLoader
         public List<string>? InstallAfter { get; set; }
         public bool AccessibleInVehicle { get; set; }
         public string? Axle { get; set; }
+        public List<string>? Banks { get; set; }
+    }
+
+    private sealed class BankDto
+    {
+        public string? Id { get; set; }
+        public List<int>? Cylinders { get; set; }
     }
 
     private sealed class EngineDto
@@ -142,6 +149,9 @@ public static class ContentLoader
         public string? Name { get; set; }
         public int Cylinders { get; set; }
         public string? Layout { get; set; }
+        public List<BankDto>? Banks { get; set; }
+        public double? BankAngleDeg { get; set; }
+        public List<int>? FiringOrder { get; set; }
         public string? Description { get; set; }
         public List<SlotDto>? Slots { get; set; }
         public Dictionary<string, string>? StockParts { get; set; }
@@ -352,6 +362,7 @@ public static class ContentLoader
                     Required = s.Required,
                     InstallAfter = s.InstallAfter?.ToArray() ?? Array.Empty<string>(),
                     AccessibleInVehicle = s.AccessibleInVehicle,
+                    Banks = s.Banks?.ToArray() ?? Array.Empty<string>(),
                 });
             }
             var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -361,12 +372,16 @@ public static class ContentLoader
                 foreach (var dep in s.InstallAfter)
                     if (!ids.Contains(dep)) Error(source, dto.Id, $"Slot '{s.Id}' install_after references unknown slot '{dep}'.");
 
+            var banks = dto.Banks?.Select(b => new EngineBankDefinition { Id = b.Id ?? "", Cylinders = b.Cylinders?.ToArray() ?? Array.Empty<int>() }).ToArray();
             var engine = new EngineDefinition
             {
                 Id = dto.Id,
                 Name = dto.Name ?? dto.Id,
                 Cylinders = dto.Cylinders,
                 Layout = dto.Layout ?? "inline",
+                Banks = banks is { Length: > 0 } ? banks : null!,
+                BankAngleDeg = dto.BankAngleDeg,
+                FiringOrder = dto.FiringOrder?.ToArray() ?? Array.Empty<int>(),
                 Description = dto.Description ?? "",
                 Slots = slots,
                 StockParts = dto.StockParts ?? new Dictionary<string, string>(),
@@ -402,17 +417,7 @@ public static class ContentLoader
             if (tune == null) { Error(source, peekId, "Tune entry is null."); return; }
             foreach (var p in tune.Validate()) Error(source, tune.Id, p);
             if (!Claim("tune", tune.Id, source)) return;
-            _tunes[tune.Id] = new TuneDocument
-            {
-                Id = tune.Id, Name = tune.Name, Description = tune.Description,
-                RpmAxis = tune.RpmAxis, LoadAxisKpa = tune.LoadAxisKpa,
-                TargetLambda = tune.TargetLambda, IgnitionAdvanceDeg = tune.IgnitionAdvanceDeg,
-                VolumetricEfficiency = tune.VolumetricEfficiency, DisplacementCc = tune.DisplacementCc,
-                BoostTargetKpa = tune.BoostTargetKpa, IntakeCamAdvanceDeg = tune.IntakeCamAdvanceDeg, RevLimitRpm = tune.RevLimitRpm,
-                IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
-                InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = source,
-                InjectorDeadTimeMs = tune.InjectorDeadTimeMs, FuelDensityKgL = tune.FuelDensityKgL,
-            };
+            _tunes[tune.Id] = tune with { Source = source };
         }
 
         public ContentLoadResult Build()
@@ -438,7 +443,15 @@ public static class ContentLoader
                 if (sc.Vehicle.Length > 0)
                 {
                     if (!_vehicles.TryGetValue(sc.Vehicle, out vehicle)) Error(sc.Source, sc.Id, $"Unknown vehicle '{sc.Vehicle}'.");
-                    else if (vehicle.Engine != sc.Engine) Error(sc.Source, sc.Id, $"Vehicle '{sc.Vehicle}' takes engine '{vehicle.Engine}', not '{sc.Engine}'.");
+                    else
+                    {
+                        // Any engine whose stock parts provide what the car's stock parts require fits (an engine swap is
+                        // an interface question, not an engine id).
+                        var engineParts = engine.StockParts.Where(kv => _parts.ContainsKey(kv.Value)).Select(kv => (kv.Key, _parts[kv.Value]));
+                        var carParts = vehicle.StockParts.Where(kv => _parts.ContainsKey(kv.Value)).Select(kv => (kv.Key, _parts[kv.Value]));
+                        foreach (var problem in Vehicles.VehicleCompatibility.InterfaceProblems(engineParts, carParts, $"engine '{sc.Engine}'"))
+                            Error(sc.Source, sc.Id, $"Vehicle '{sc.Vehicle}' cannot take engine '{sc.Engine}': {problem}");
+                    }
                 }
                 bool KnownSlot(string slot) => engine.FindSlot(slot) != null || vehicle?.FindSlot(slot) != null;
                 if (!_fuels.ContainsKey(sc.Fuel)) Error(sc.Source, sc.Id, $"Unknown fuel '{sc.Fuel}'.");

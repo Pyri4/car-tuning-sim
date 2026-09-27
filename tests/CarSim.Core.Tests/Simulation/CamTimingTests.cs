@@ -56,10 +56,10 @@ public class CamTimingTests
             var spec = cams.GetSpec<CamshaftSpec>();
             Assert.False(spec.HasCenterlines);
             var sim = SimFactory.Create(SimFactory.Assembly(("valve_springs", "k20.valve_springs.performance"), ("camshafts", cams.Id)));
-            Assert.Equal(0.0, sim.Config.IntakePhaserRange);
-            Assert.Equal(0.0, sim.Config.IntakeClosingShiftDeg(0.0));
-            Assert.Equal(0.0, sim.Config.IntakeClosingShiftDeg(25.0)); // no centreline, nothing to shift
-            Assert.Equal(sim.Config.VePeakRpm, sim.Config.VePeakRpmAt(25.0));
+            Assert.Equal(0.0, sim.Config.Banks[0].IntakePhaserRange);
+            Assert.Equal(0.0, sim.Config.Banks[0].IntakeClosingShiftDeg(0.0));
+            Assert.Equal(0.0, sim.Config.Banks[0].IntakeClosingShiftDeg(25.0)); // no centreline, nothing to shift
+            Assert.Equal(sim.Config.Banks[0].VePeakRpm, sim.Config.Banks[0].VePeakRpmAt(25.0));
         }
     }
 
@@ -131,7 +131,7 @@ public class CamTimingTests
     public void AnEcuThatCannotDriveThePhaserLeavesItParked()
     {
         var withoutControl = M54(swaps: ("ecu", "ecu.k20_oem"));
-        Assert.Equal(0.0, withoutControl.Config.IntakePhaserRange);
+        Assert.Equal(0.0, withoutControl.Config.Banks[0].IntakePhaserRange);
         var tune = SimFactory.StockTuneOf(TestContent.M54);
         Assert.True(AssemblyValidator.Validate(withoutControl.Config.Assembly, new ValidationContext(tune.RevLimitRpm, null)).Has("cam_phaser_uncontrolled"));
         var parked = SimFactory.At(withoutControl, 2000);

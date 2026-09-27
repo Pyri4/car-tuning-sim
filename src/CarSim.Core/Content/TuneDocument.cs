@@ -2,9 +2,10 @@ namespace CarSim.Core.Content;
 
 /// <summary>
 /// Authored ECU calibration as stored in content/save files. Tables are rows over the load axis
-/// (manifold absolute pressure, kPa) and columns over the RPM axis.
+/// (manifold absolute pressure, kPa) and columns over the RPM axis. A record, so the loader, the save migration and
+/// tools copy it with <c>with</c> instead of field by field (a new field can no longer be dropped by one copy).
 /// </summary>
-public sealed class TuneDocument
+public sealed record TuneDocument
 {
     public required string Id { get; init; }
     public required string Name { get; init; }
@@ -63,6 +64,15 @@ public sealed class TuneDocument
     public double IdleRpm { get; init; } = 850;
     public bool KnockControlEnabled { get; init; } = true;
 
+    /// <summary>
+    /// Engine speed above which the ECU switches variable-valve-lift camshafts to their high-lift profile, rpm (back
+    /// below it less <see cref="Ecu.EcuController.SwitchHysteresisRpm"/>). Null = never switch.
+    /// </summary>
+    public double? ValveLiftSwitchRpm { get; set; }
+
+    /// <summary>Engine speed above which the ECU switches a variable intake manifold to its switched runner, rpm. Null = never.</summary>
+    public double? IntakeRunnerSwitchRpm { get; set; }
+
     public string Source { get; init; } = "";
 
     public IReadOnlyList<string> Validate()
@@ -84,6 +94,8 @@ public sealed class TuneDocument
         if (IntakeCamAdvanceDeg != null) CheckTable(p, "intake_cam_advance_deg", IntakeCamAdvanceDeg, 0, 80);
         if (!(RevLimitRpm >= 1000 && RevLimitRpm <= 25000)) p.Add($"rev_limit_rpm out of range: {RevLimitRpm}");
         if (!(IdleRpm >= 300 && IdleRpm < RevLimitRpm)) p.Add($"idle_rpm out of range: {IdleRpm}");
+        if (ValveLiftSwitchRpm is double vl && !(vl >= 500 && vl <= 25000)) p.Add($"valve_lift_switch_rpm out of range: {vl}");
+        if (IntakeRunnerSwitchRpm is double ir && !(ir >= 500 && ir <= 25000)) p.Add($"intake_runner_switch_rpm out of range: {ir}");
         if (!(InjectorFlowCcMin >= 50 && InjectorFlowCcMin <= 5000)) p.Add($"injector_flow_cc_min out of range: {InjectorFlowCcMin}");
         if (!(FuelStoichAfr >= 3 && FuelStoichAfr <= 20)) p.Add($"fuel_stoich_afr out of range: {FuelStoichAfr}");
         if (InjectorDeadTimeMs is not double dead) p.Add("injector_dead_time_ms missing (the injector dead time the ECU adds to each pulse).");

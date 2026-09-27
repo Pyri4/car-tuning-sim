@@ -28,12 +28,26 @@ public static class ValvetrainModel
     public static double SpringForceN(ValveSpringSpec springs, double springWear) =>
         springs.OpenForceN * (1.0 - SpringForceLossAtFullWear * Math.Clamp(springWear, 0.0, 1.0));
 
-    /// <summary>Float speed of the whole valvetrain: the lower of the intake and exhaust sides.</summary>
-    public static double FloatRpm(CamshaftSpec cams, ValveSpringSpec springs, CylinderHeadSpec head, double springWear = 0.0)
+    /// <summary>Float speed of the whole valvetrain on the camshafts' base profile: the lower of the intake and exhaust sides.</summary>
+    public static double FloatRpm(CamshaftSpec cams, ValveSpringSpec springs, CylinderHeadSpec head, double springWear = 0.0) =>
+        FloatRpm(cams.Profile(false), springs, head, springWear);
+
+    /// <summary>
+    /// Float speed on one cam profile. A variable-lift camshaft's high-lift profile may float earlier or later on the
+    /// same springs: its longer event gives them more time (float ∝ duration), its extra lift asks for more force
+    /// (float ∝ 1/√lift).
+    /// </summary>
+    public static double FloatRpm(CamProfileSpec profile, ValveSpringSpec springs, CylinderHeadSpec head, double springWear = 0.0)
     {
         double force = SpringForceN(springs, springWear);
-        double intake = FloatRpm(cams.IntakeDurationDeg, cams.IntakeLift, force, head.ValveMovingMass);
-        double exhaust = FloatRpm(cams.ExhaustDurationDeg, cams.ExhaustLift, force, head.ValveMovingMass);
+        double intake = FloatRpm(profile.IntakeDurationDeg, Common.Units.MmToM(profile.IntakeLiftMm), force, head.ValveMovingMass);
+        double exhaust = FloatRpm(profile.ExhaustDurationDeg, Common.Units.MmToM(profile.ExhaustLiftMm), force, head.ValveMovingMass);
         return Math.Min(intake, exhaust);
     }
+
+    /// <summary>The lowest float speed over every profile the camshafts can run (what a rev limit must respect).</summary>
+    public static double LowestFloatRpm(CamshaftSpec cams, ValveSpringSpec springs, CylinderHeadSpec head, double springWear = 0.0) =>
+        cams.HighLiftProfile == null
+            ? FloatRpm(cams, springs, head, springWear)
+            : Math.Min(FloatRpm(cams, springs, head, springWear), FloatRpm(cams.HighLiftProfile, springs, head, springWear));
 }

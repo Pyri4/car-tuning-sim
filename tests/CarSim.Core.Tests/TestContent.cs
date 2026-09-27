@@ -27,6 +27,22 @@ public static class TestContent
 
     public static ContentDatabase Database => Base.Value;
 
+    /// <summary>
+    /// The synthetic engine matrix: content-only test engines (content/test/engine-matrix, loaded as a content layer after
+    /// base, like a mod). Nothing in src/ knows these ids (ENGINE_AUTHORING_GUIDE.md).
+    /// </summary>
+    public static string MatrixLayersPath => Path.Combine(RepoRoot, "content", "test");
+
+    private static readonly Lazy<ContentDatabase> MatrixDb = new(() =>
+        ContentLoader.LoadWithMods(BaseContentPath, MatrixLayersPath).GetOrThrow());
+
+    /// <summary>Base content plus the synthetic engine matrix.</summary>
+    public static ContentDatabase Matrix => MatrixDb.Value;
+
+    /// <summary>Engine families of the synthetic matrix (every family the test layer adds).</summary>
+    public static IReadOnlyList<string> MatrixFamilies => Matrix.Engines.Keys.Where(id => !Database.Engines.ContainsKey(id))
+        .OrderBy(id => id, StringComparer.Ordinal).ToList();
+
     public const string K20 = "kestrel_k20";
 
     /// <summary>The second engine family (real-engine reference: BMW M54B30).</summary>

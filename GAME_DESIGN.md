@@ -1,5 +1,11 @@
 # Game Design
 
+What the game should feel like and which systems carry it. [GAME_VISION.md](GAME_VISION.md) is the North Star this
+serves (the game, the long-term loop, the scale goal and the principles that do not change).
+
+## Loop
+BUY → INSPECT → DISASSEMBLE → DIAGNOSE → REPAIR → BUILD → MODIFY → SWAP → TUNE → DYNO → DRIVE → BREAK → DIAGNOSE → REBUILD
+
 ## Pillars
 1. Mechanical authenticity
 2. Experimentation
@@ -12,6 +18,16 @@ Start with an imperfect or cheap car, diagnose it, rebuild it, choose a directio
 
 ## Vehicle progression
 Vehicles and parts should create different engineering problems rather than simply increasing a numerical power tier.
+
+## Engine variety and swaps
+The game should eventually offer hundreds of engine families that differ the way real engines do — layout (inline, V,
+flat), banks, cylinder count, valvetrain (OHV, SOHC, DOHC) and valves per cylinder, cam phasing, variable valve lift,
+variable intakes, natural aspiration, single and twin turbocharging (later supercharging), one or several intake and
+exhaust paths — and let the player swap them between cars. An engine goes into a car when its interfaces match
+(bellhousing today; mounts, clearances, cooling, fuel, exhaust routing, wiring, driveshaft and differential later), not
+because a list says it may. Each engine brings its own engineering problems: a pushrod V8's single cam feeds both
+banks, a twin-turbo V6 can lose one turbo, a variable intake needs an ECU that can switch it, a different head on one
+bank changes only that bank's compression. How engines are authored: ENGINE_AUTHORING_GUIDE.md.
 
 ## Engine building
 An engine is assembled from real-ish subsystems:
@@ -29,7 +45,7 @@ An engine is assembled from real-ish subsystems:
 - injectors
 - fuel pump
 - exhaust
-- turbocharger/supercharger
+- turbocharger(s)/supercharger
 - intercooler
 - ignition
 - ECU
@@ -45,7 +61,7 @@ Tunables should include, where supported:
 - idle
 - rev limiter
 - launch control
-- cam timing
+- cam timing (phaser maps), valve-lift and intake-runner switch speeds
 - fuel pressure
 - sensor calibration
 

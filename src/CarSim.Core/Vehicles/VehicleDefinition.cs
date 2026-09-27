@@ -4,15 +4,20 @@ using CarSim.Core.Parts;
 namespace CarSim.Core.Vehicles;
 
 /// <summary>
-/// A car model: body geometry and mass properties, which engine family it takes, and its chassis
+/// A car model: body geometry and mass properties, the engine family it ships with, and its chassis
 /// slots (clutch, gearbox, differential, tyres, suspension, brakes). Mass and weight distribution are
-/// for the factory build; part swaps adjust them by the parts' mass differences.
+/// for the factory build; part swaps adjust them by the parts' mass differences. Which engines fit is decided by
+/// mounting interfaces (<see cref="VehicleCompatibility"/>), not by <see cref="Engine"/>.
 /// </summary>
 public sealed class VehicleDefinition
 {
     public required string Id { get; init; }
     public required string Name { get; init; }
     public string Description { get; init; } = "";
+    /// <summary>
+    /// The engine family the car ships with (its stock engine). Other engines fit when their parts provide what the
+    /// car's parts require (<see cref="VehicleCompatibility"/>): nothing in the simulation checks this id.
+    /// </summary>
     public required string Engine { get; init; }
 
     /// <summary>"rwd" or "fwd".</summary>

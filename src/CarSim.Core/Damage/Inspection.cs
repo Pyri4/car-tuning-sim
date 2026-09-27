@@ -117,24 +117,51 @@ public static class PartInspector
 public static class EngineDiagnostics
 {
     /// <summary>
-    /// Cranking compression pressure (gauge, bar). Healthy K20: ~13–14 bar. Worn rings, a blown gasket,
-    /// bent valves or a holed piston all show up here.
+    /// Cranking compression pressure (gauge, bar): the lowest bank's reading (what the mechanic writes down first).
+    /// Healthy K20: ~13–14 bar. Worn rings, a blown gasket, bent valves or a holed piston all show up here.
     /// </summary>
-    public static double CompressionTestBar(EngineAssembly a)
+    public static double CompressionTestBar(EngineAssembly a) =>
+        CompressionTestByBank(a) is { Count: > 0 } banks ? banks.Min() : 0.0;
+
+    /// <summary>
+    /// Cranking compression pressure per bank (gauge, bar; bank declaration order). A failed gasket or head shows on
+    /// its own bank's cylinders; the pistons, rods and rings are one set and show on every bank.
+    /// </summary>
+    public static IReadOnlyList<double> CompressionTestByBank(EngineAssembly a)
     {
-        var g = EngineGeometry.TryCreate(a, out _);
-        if (g == null) return 0.0;
-        // Cranking speed is slow, so the effective compression is lower than the static ratio suggests.
-        double absolute = 1.0 * Math.Pow(g.CompressionRatio, 1.2) * 0.85;
-        double factor = 1.0;
-        var pistons = a.FindByCategory(PartCategory.Pistons);
-        if (pistons != null) factor *= 1.0 - 0.3 * pistons.Wear;
-        if (pistons?.IsFailed == true) factor *= 0.1;
-        if (a.FindByCategory(PartCategory.HeadGasket)?.IsFailed == true) factor *= 0.35;
-        var head = a.FindByCategory(PartCategory.CylinderHead);
-        if (head?.Damage.Failure?.Mode == FailureMode.ValvePistonContact) factor *= 0.15;
-        if (head?.Damage.Failure?.Mode == FailureMode.CylinderHeadWarp) factor *= 0.6;
-        if (a.FindByCategory(PartCategory.ConnectingRods)?.IsFailed == true) factor = 0.0;
-        return Math.Max(0.0, absolute * factor - 1.0);
+        var geometries = Enumerable.Range(0, a.Definition.Banks.Count).Select(b => EngineGeometry.TryCreate(a, b, out _)).ToList();
+        if (geometries.Any(g => g == null)) return Array.Empty<double>();
+        var result = new double[geometries.Count];
+        for (int b = 0; b < result.Length; b++)
+        {
+            // Each bank compresses to its own head and gasket's ratio. Cranking speed is slow, so the effective
+            // compression is lower than the static ratio suggests.
+            var g = geometries[b]!;
+            double absolute = 1.0 * Math.Pow(g.CompressionRatio, 1.2) * 0.85;
+            double factor = 1.0;
+            var pistons = a.FindByCategory(PartCategory.Pistons);
+            if (pistons != null) factor *= 1.0 - 0.3 * pistons.Wear;
+            if (pistons?.IsFailed == true) factor *= 0.1;
+            if (a.PartFor(PartCategory.HeadGasket, b)?.IsFailed == true) factor *= 0.35;
+            var head = a.PartFor(PartCategory.CylinderHead, b);
+            if (head?.Damage.Failure?.Mode == FailureMode.ValvePistonContact) factor *= 0.15;
+            if (head?.Damage.Failure?.Mode == FailureMode.CylinderHeadWarp) factor *= 0.6;
+            if (a.FindByCategory(PartCategory.ConnectingRods)?.IsFailed == true) factor = 0.0;
+            result[b] = Math.Max(0.0, absolute * factor - 1.0);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// The compression test as written on the job sheet: one reading, or each bank's when they differ
+    /// ("left 13.1 bar, right 4.2 bar" — the low bank is where to look).
+    /// </summary>
+    public static string DescribeCompressionTest(EngineAssembly a)
+    {
+        var banks = CompressionTestByBank(a);
+        if (banks.Count == 0) return "not possible (engine incomplete)";
+        var each = banks.Select(v => $"{v:F1} bar").ToList();
+        return each.Distinct().Count() == 1 ? each[0]
+            : string.Join(", ", each.Select((v, b) => $"{a.Definition.Banks[b].Id} {v}"));
     }
 }

@@ -91,8 +91,8 @@ public sealed class DamageModel
             foreach (var r in readings)
             {
                 var info = FailureModeInfo.Of(r.Mode);
-                var part = _c.Assembly.FindByCategory(r.Category);
-                if (part == null || part.IsFailed) continue;
+                var part = r.Part;
+                if (part.IsFailed) continue;
                 if (info.IsInstant(r.Ratio, r.Load, r.Rating))
                 {
                     part.Damage.RecordExposure(r.Mode, r.Ratio, dt);
@@ -114,22 +114,29 @@ public sealed class DamageModel
 
     private void ApplySpecialProcesses(EngineTelemetry t, double dt, IReadOnlyList<StressReading> readings, double revLimit, List<FailureReport> failures)
     {
+        var a = _c.Assembly;
+        var def = a.Definition;
         var pistons = _c.Part(PartCategory.Pistons);
-        var gasket = _c.Part(PartCategory.HeadGasket);
         var rodBearings = _c.Part(PartCategory.RodBearings);
         var mainBearings = _c.Part(PartCategory.MainBearings);
-        var head = _c.Part(PartCategory.CylinderHead);
-        var springs = _c.Part(PartCategory.ValveSprings);
+        // A bank's channels (telemetry without per-bank channels reads as one bank).
+        double BankKnock(int b) => t.Banks.Count > b ? t.Banks[b].KnockIntensity : t.KnockIntensity;
+        double BankFloat(int b) => t.Banks.Count > b ? t.Banks[b].ValveFloatRpm : t.ValveFloatRpm;
 
         // Detonation: each knocking combustion erodes the crown, with the square of knock intensity;
-        // stronger pistons tolerate it better.
+        // stronger pistons tolerate it better. The pistons are one set: the worst bank's knock counts. Each head
+        // gasket takes the knock of the banks it seals.
         double ki = t.KnockIntensity;
         if (ki > 0 && t.Firing)
         {
             double knockingCycles = t.Rpm / 120.0 * dt;
             double pistonTolerance = Math.Pow(120.0 / _c.Pistons.MaxCylinderPressureBar, 1.5);
             TryAccumulate(pistons, FailureMode.Detonation, KnockPistonDamagePerCycle * ki * ki * pistonTolerance * knockingCycles, dt, t, readings, revLimit, failures);
-            TryAccumulate(gasket, FailureMode.HeadGasketBreach, KnockGasketDamagePerCycle * ki * ki * knockingCycles, dt, t, readings, revLimit, failures);
+            foreach (var (slot, gasket) in a.PartsOf(PartCategory.HeadGasket))
+            {
+                double kg = def.BanksServedBy(slot).Max(BankKnock);
+                if (kg > 0) TryAccumulate(gasket, FailureMode.HeadGasketBreach, KnockGasketDamagePerCycle * kg * kg * knockingCycles, dt, t, readings, revLimit, failures);
+            }
             TryAccumulate(rodBearings, FailureMode.RodBearingFatigue, KnockBearingDamagePerCycle * ki * ki * knockingCycles, dt, t, readings, revLimit, failures);
             pistons.Wear += KnockRingWearRate * ki * dt;
         }
@@ -145,22 +152,32 @@ public sealed class DamageModel
         if (!rodBearings.IsFailed && rodBearings.Wear >= 1.0)
             Fail(rodBearings, FailureMode.OilStarvation, t, readings, revLimit, failures);
 
-        // Overheating: hot coolant loosens the gasket's clamp; boiled-off coolant leaves hot spots in the head.
+        // Overheating: hot coolant loosens every gasket's clamp; boiled-off coolant leaves hot spots in every head.
         double coolantC = t.CoolantC;
         double lost = 1.0 - t.CoolantLevel;
         double gasketRate = Math.Max(0.0, coolantC - 115.0) / 10.0 * OverheatGasketRate + CoolantLossGasketRate * lost;
-        TryAccumulate(gasket, FailureMode.HeadGasketBreach, gasketRate * dt, dt, t, readings, revLimit, failures);
+        foreach (var (_, gasket) in a.PartsOf(PartCategory.HeadGasket))
+            TryAccumulate(gasket, FailureMode.HeadGasketBreach, gasketRate * dt, dt, t, readings, revLimit, failures);
         if (lost > 0.2)
-            TryAccumulate(head, FailureMode.CylinderHeadWarp, CoolantLossHeadRate * (lost - 0.2) / 0.1 * dt, dt, t, readings, revLimit, failures);
+            foreach (var (_, head) in a.PartsOf(PartCategory.CylinderHead))
+                TryAccumulate(head, FailureMode.CylinderHeadWarp, CoolantLossHeadRate * (lost - 0.2) / 0.1 * dt, dt, t, readings, revLimit, failures);
 
         // Compressor surge reverses the flow through the wheel every few milliseconds, hammering the
         // turbo's thrust bearing; the worn bearing lets the shaft drag (slower spool).
-        if (t.CompressorSurgeDepth > 0 && _c.Turbo != null && _c.Assembly.FindByCategory(PartCategory.Turbocharger) is { } turbo)
-            turbo.Wear += SurgeBearingWearRate * t.CompressorSurgeDepth * Math.Max(0.0, t.CompressorPressureRatio - 1.0) * dt;
+        foreach (var turbo in _c.Turbos)
+        {
+            double depth = t.Turbos.Count > turbo.Index ? t.Turbos[turbo.Index].CompressorSurgeDepth : t.CompressorSurgeDepth;
+            double pr = t.Turbos.Count > turbo.Index ? t.Turbos[turbo.Index].PressureRatio : t.CompressorPressureRatio;
+            if (depth > 0) turbo.Part.Wear += SurgeBearingWearRate * depth * Math.Max(0.0, pr - 1.0) * dt;
+        }
 
-        // Valve float hammers and fatigues the springs.
-        if (t.ValveFloat && t.ValveFloatRpm > 0)
-            springs.Wear += SpringFloatWearRate * (t.Rpm / t.ValveFloatRpm - 1.0) * dt;
+        // Valve float hammers and fatigues the springs (each set at its banks' float speed).
+        foreach (var (slot, springs) in a.PartsOf(PartCategory.ValveSprings))
+        {
+            double floatRpm = def.BanksServedBy(slot).Min(BankFloat);
+            if (t.Rpm > floatRpm && floatRpm > 0)
+                springs.Wear += SpringFloatWearRate * (t.Rpm / floatRpm - 1.0) * dt;
+        }
     }
 
     private void TryAccumulate(PartInstance part, FailureMode mode, double amount, double dt, EngineTelemetry t,
@@ -180,27 +197,38 @@ public sealed class DamageModel
         double prior = _fatigueAtStart.TryGetValue(part, out var start) ? start.GetValueOrDefault(mode) : 0.0;
         var report = FailureDiagnostics.Build(new FailureContext(_c, part, slot, mode, t, readings, History, revLimit, Array.Empty<string>(), prior));
         part.Damage.Fail(mode, t.Time);
-        var collateral = ApplyCollateral(mode, t.Time);
+        var collateral = ApplyCollateral(slot, mode, t.Time);
         failures.Add(report with { CollateralDamage = collateral });
     }
 
-    /// <summary>What else a failure destroys. Collateral damage is part of what makes failures expensive.</summary>
-    private IReadOnlyList<string> ApplyCollateral(FailureMode mode, double time)
+    /// <summary>
+    /// What else a failure destroys. Collateral damage is part of what makes failures expensive. It stays on the failed
+    /// part's banks: a valve strike on the left bank damages the left springs, not the right.
+    /// </summary>
+    private IReadOnlyList<string> ApplyCollateral(Engines.EngineSlotDefinition failedSlot, FailureMode mode, double time)
     {
         var notes = new List<string>();
+        var def = _c.Assembly.Definition;
+        var failedBanks = def.BanksServedBy(failedSlot);
+        IEnumerable<PartInstance> Affected(string category) => _c.Assembly.PartsOf(category)
+            .Where(x => def.BanksServedBy(x.Slot).Intersect(failedBanks).Any()).Select(x => x.Part);
         void Destroy(string category, string note)
         {
-            var p = _c.Assembly.FindByCategory(category);
-            if (p == null || p.IsFailed) return;
-            p.Damage.Fail(mode, time, collateral: true, note: note);
-            notes.Add($"{p.Definition.Name}: {note}");
+            foreach (var p in Affected(category))
+            {
+                if (p.IsFailed) continue;
+                p.Damage.Fail(mode, time, collateral: true, note: note);
+                notes.Add($"{p.Definition.Name}: {note}");
+            }
         }
         void Wear(string category, double amount, string note)
         {
-            var p = _c.Assembly.FindByCategory(category);
-            if (p == null || p.IsFailed) return;
-            p.Wear += amount;
-            notes.Add($"{p.Definition.Name}: {note}");
+            foreach (var p in Affected(category))
+            {
+                if (p.IsFailed) continue;
+                p.Wear += amount;
+                notes.Add($"{p.Definition.Name}: {note}");
+            }
         }
         switch (mode)
         {
@@ -267,9 +295,13 @@ public sealed class DamageModel
             w.Add(new("coolant_loss", WarningLevel.Danger, $"Coolant boiling off: {t.CoolantLevel:P0} left."));
         if (t.OilC > 135)
             w.Add(new("oil_temp", t.OilC > 150 ? WarningLevel.Danger : WarningLevel.Caution, $"Oil temperature {t.OilC:F0} °C."));
-        if (t.Firing && t.ManifoldPressure > 90_000 && t.Lambda > t.TargetLambda + 0.07)
-            w.Add(new("lean", t.Lambda > 1.0 ? WarningLevel.Danger : WarningLevel.Caution,
-                $"Running lean under load: λ {t.Lambda:F2} (target {t.TargetLambda:F2})."));
+        // The leanest bank (one wideband per bank on a multi-bank engine).
+        int leanBank = 0;
+        for (int b = 1; b < t.Banks.Count; b++) if (t.Banks[b].Lambda > t.Banks[leanBank].Lambda) leanBank = b;
+        double leanest = t.Banks.Count > 1 ? t.Banks[leanBank].Lambda : t.Lambda;
+        if (t.Firing && t.ManifoldPressure > 90_000 && leanest > t.TargetLambda + 0.07)
+            w.Add(new("lean", leanest > 1.0 ? WarningLevel.Danger : WarningLevel.Caution,
+                $"Running lean under load: λ {leanest:F2}{(t.Banks.Count > 1 ? $" on bank '{_c.Banks[leanBank].Definition.Id}'" : "")} (target {t.TargetLambda:F2})."));
         if (t.FuelLimit != FuelLimit.None)
             w.Add(new("fuel_limit", WarningLevel.Caution, t.FuelLimit == FuelLimit.InjectorCapacity
                 ? $"Injectors static: commanded duty {t.InjectorDuty:P0}."
@@ -287,8 +319,8 @@ public sealed class DamageModel
         foreach (var r in readings)
         {
             var info = FailureModeInfo.Of(r.Mode);
-            var part = _c.Assembly.FindByCategory(r.Category);
-            if (part == null || part.IsFailed) continue;
+            var part = r.Part;
+            if (part.IsFailed) continue;
             double rate = info.DamageRate(r.Ratio, r.Load, r.Rating, t.Rpm, _c.Geometry.Cylinders);
             double life = info.IsInstant(r.Ratio, r.Load, r.Rating) ? 0.0
                 : rate > 0 ? (1.0 - part.Damage.FatigueOf(r.Mode)) / rate : double.PositiveInfinity;

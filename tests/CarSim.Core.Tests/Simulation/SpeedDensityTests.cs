@@ -121,7 +121,7 @@ public class SpeedDensityTests
         // The residual factor used to be 1 − x clamped at 0.4: with long-overlap cams at part load VE sat flat
         // on the clamp and then jumped (0.39 → 0.60 between 31 and 45 kPa), which no fuel map could follow.
         var config = SimFactory.Create(("valve_springs", "k20.valve_springs.performance"), ("camshafts", "k20.cams.race")).Config;
-        var air = new AirPath(config);
+        var air = new AirPath(config.Banks[0]);
         double previous = double.PositiveInfinity;
         for (double port = 101_000; port >= 5_000; port -= 1_000)
         {

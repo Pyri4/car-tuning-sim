@@ -57,8 +57,9 @@ public class TorqueCurveDiagnosisTests
     }
 
     /// <summary>The intake advance that puts the filling peak at <paramref name="rpm"/>, within the phaser's range.</summary>
-    private static double PhaseTunedTo(EngineConfiguration c, double rpm)
+    private static double PhaseTunedTo(EngineConfiguration config, double rpm)
     {
+        var c = config.Banks[0]; // these engines have one bank
         double lo = 0, hi = c.IntakePhaserRange;
         if (c.VePeakRpmAt(lo) <= rpm) return lo;
         if (c.VePeakRpmAt(hi) >= rpm) return hi;
@@ -77,7 +78,7 @@ public class TorqueCurveDiagnosisTests
         return SimFactory.At(Build(db, engineId, fuel, AtPhase(stock, advance)), rpm).AirPerCycle;
     }
 
-    private static double ShapeAt(EngineSimulation sim, EngineTelemetry t) => new AirPath(sim.Config).VeShape(t.Rpm, t.IntakeCamAdvance);
+    private static double ShapeAt(EngineSimulation sim, EngineTelemetry t) => sim.AirPathOf(0).VeShape(t.Rpm, t.IntakeCamAdvance);
 
     // ---- The generic filling model and the phaser ---------------------------------------------------------------
 
@@ -90,7 +91,7 @@ public class TorqueCurveDiagnosisTests
         var parkedM54 = SimFactory.Create(TestContent.StockM54(), M54Fuel, AtPhase(SimFactory.StockTuneOf(TestContent.M54), null));
         foreach (var sim in new[] { k20, parkedM54 })
         {
-            double peak = sim.Config.VePeakRpm;
+            double peak = sim.Config.Banks[0].VePeakRpm;
             Assert.True(ShapeAt(sim, SimFactory.At(sim, 1500)) < 0.8, $"{sim.Config.Geometry.Cylinders} cyl at 1,500 rpm");
             Assert.True(ShapeAt(sim, SimFactory.At(sim, 3000)) < 0.95);
             Assert.True(ShapeAt(sim, SimFactory.At(sim, peak)) > 0.999);
@@ -109,7 +110,7 @@ public class TorqueCurveDiagnosisTests
         {
             Assert.InRange(ShapeAt(sim, t), 0.99, 1.0);
             // The filling peak follows the speed wherever the phaser can reach (below the parked peak).
-            if (t.Rpm is >= 1500 and <= 5000) Assert.Equal(t.Rpm, sim.Config.VePeakRpmAt(t.IntakeCamAdvance), t.Rpm * 0.06);
+            if (t.Rpm is >= 1500 and <= 5000) Assert.Equal(t.Rpm, sim.Config.Banks[0].VePeakRpmAt(t.IntakeCamAdvance), t.Rpm * 0.06);
         }
     }
 

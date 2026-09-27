@@ -24,6 +24,11 @@ jobs:
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep kestrel_k20 --from 2000 --to 7000 --step 1000
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep isar_m54 --fuel gasoline_98 --from 2000 --to 6000 --step 1000
+      - name: CLI smoke (synthetic engine matrix as a content layer)
+        run: |
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate --mods content/test
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- inspect syn_v8_ohv --mods content/test
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep syn_v6_tt --mods content/test --fuel gasoline_98 --from 2000 --to 7000 --step 1000
 
   godot-smoke:
     name: Godot headless smoke test
@@ -59,3 +64,15 @@ jobs:
           grep -q "SMOKE TEST PASSED.*Isar M54" smoke-m54.log
           timeout 300 "$GODOT_BIN" --headless --path game -- --drive --smoke-test --scenario=isar_c30_six | tee drive-m54.log
           grep -q "DRIVE SMOKE TEST PASSED" drive-m54.log
+      - name: Synthetic engines through the same game layer (pushrod V8 and twin-turbo V6 swapped into the Isar, dyno and drive)
+        env:
+          CARSIM_MODS_DIR: ${{ github.workspace }}/content/test
+        run: |
+          for s in syn_v8_swap syn_v6_tt_swap; do
+            timeout 300 "$GODOT_BIN" --headless --path game -- --smoke-test --scenario=$s | tee smoke-$s.log
+            grep -q "SMOKE TEST PASSED.*Synth" smoke-$s.log
+            if grep -q "ERROR" smoke-$s.log; then echo "script errors in the dyno smoke test"; exit 1; fi
+            timeout 300 "$GODOT_BIN" --headless --path game -- --drive --smoke-test --scenario=$s | tee drive-$s.log
+            grep -q "DRIVE SMOKE TEST PASSED" drive-$s.log
+            if grep -q "ERROR" drive-$s.log; then echo "script errors in the drive smoke test"; exit 1; fi
+          done

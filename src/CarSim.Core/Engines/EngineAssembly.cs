@@ -36,7 +36,11 @@ public sealed class EngineAssembly
 
     public bool IsInstalled(string slotId) => _installed.ContainsKey(slotId);
 
-    /// <summary>First installed part of <paramref name="category"/>, in slot declaration order.</summary>
+    /// <summary>
+    /// First installed part of <paramref name="category"/>, in slot declaration order. Meant for engine-wide categories
+    /// (<see cref="EngineTopology.EngineWideCategories"/>), which have one slot; a bank-scoped category can have a part
+    /// per bank — use <see cref="PartFor"/> or <see cref="PartsOf"/> for those.
+    /// </summary>
     public PartInstance? FindByCategory(string category)
     {
         foreach (var slot in Definition.Slots)
@@ -44,8 +48,42 @@ public sealed class EngineAssembly
         return null;
     }
 
-    /// <summary>Spec of the first installed part of <paramref name="category"/>, or null.</summary>
+    /// <summary>Spec of the (engine-wide) installed part of <paramref name="category"/>, or null (see <see cref="FindByCategory"/>).</summary>
     public T? SpecOf<T>(string category) where T : PartSpec => FindByCategory(category)?.EffectiveSpec as T;
+
+    /// <summary>The slot of <paramref name="category"/> that serves bank <paramref name="bank"/>, or null.</summary>
+    public EngineSlotDefinition? SlotFor(string category, int bank)
+    {
+        foreach (var slot in Definition.Slots)
+            if (slot.Category == category && Definition.Serves(slot, bank)) return slot;
+        return null;
+    }
+
+    /// <summary>The installed part of <paramref name="category"/> that serves bank <paramref name="bank"/>, or null.</summary>
+    public PartInstance? PartFor(string category, int bank)
+    {
+        foreach (var slot in Definition.Slots)
+            if (slot.Category == category && Definition.Serves(slot, bank) && _installed.TryGetValue(slot.Id, out var p)) return p;
+        return null;
+    }
+
+    /// <summary>Spec of the part of <paramref name="category"/> serving bank <paramref name="bank"/>, or null.</summary>
+    public T? SpecFor<T>(string category, int bank) where T : PartSpec => PartFor(category, bank)?.EffectiveSpec as T;
+
+    /// <summary>Every installed part of <paramref name="category"/> with its slot, in slot declaration order.</summary>
+    public IEnumerable<(EngineSlotDefinition Slot, PartInstance Part)> PartsOf(string category)
+    {
+        foreach (var slot in Definition.Slots)
+            if (slot.Category == category && _installed.TryGetValue(slot.Id, out var p)) yield return (slot, p);
+    }
+
+    /// <summary>The slot <paramref name="part"/> is installed in, or null.</summary>
+    public EngineSlotDefinition? SlotOf(PartInstance part)
+    {
+        foreach (var (slotId, p) in _installed)
+            if (ReferenceEquals(p, part)) return Definition.GetSlot(slotId);
+        return null;
+    }
 
     public IEnumerable<PartInstance> AllParts => Definition.Slots
         .Where(s => _installed.ContainsKey(s.Id)).Select(s => _installed[s.Id]);

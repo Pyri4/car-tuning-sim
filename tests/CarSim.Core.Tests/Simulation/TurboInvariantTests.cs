@@ -86,24 +86,24 @@ public class TurboInvariantTests
         SimFactory.At(sim, rpm, 1.0, 5.0);
         var input = new EngineInputs { Throttle = 1, SpeedMode = SpeedMode.Held, HeldRpm = rpm, CoolantTemperatureOverride = 363.15 };
         var map = new List<double>();
-        double maxShaft = 0, shaftBefore = sim.State.TurboOmega;
+        double maxShaft = 0, shaftBefore = sim.State.Turbos[0].Omega;
         EngineTelemetry t = null!;
         for (int i = 0; i < 500; i++)
         {
             t = sim.Step(0.002, input);
-            Assert.True(double.IsFinite(t.Torque) && double.IsFinite(t.ManifoldPressure) && double.IsFinite(sim.State.TurboOmega));
+            Assert.True(double.IsFinite(t.Torque) && double.IsFinite(t.ManifoldPressure) && double.IsFinite(sim.State.Turbos[0].Omega));
             map.Add(t.ManifoldPressure);
-            maxShaft = Math.Max(maxShaft, sim.State.TurboOmega);
+            maxShaft = Math.Max(maxShaft, sim.State.Turbos[0].Omega);
         }
         string at = $"{turbo} {targetKpa} kPa {rpm} rpm";
         Assert.Equal(0, Chatter(map));
         // Unreachable targets over-spin small turbos (a failure the damage model reports), but the shaft settles where
         // the compressor's work balances the turbine: bounded by physics, not by a clamp.
-        Assert.True(maxShaft < 1.25 * sim.Config.Turbo!.MaxShaftSpeed, $"{at}: shaft {maxShaft / sim.Config.Turbo.MaxShaftSpeed:P0} of rated");
+        Assert.True(maxShaft < 1.25 * sim.Config.Turbos[0].Spec.MaxShaftSpeed, $"{at}: shaft {maxShaft / sim.Config.Turbos[0].Spec.MaxShaftSpeed:P0} of rated");
         // Where the shaft has settled, the powers on it balance.
-        if (Math.Abs(sim.State.TurboOmega - shaftBefore) < 5e-4 * shaftBefore)
+        if (Math.Abs(sim.State.Turbos[0].Omega - shaftBefore) < 5e-4 * shaftBefore)
         {
-            double friction = TurbochargerModel.FrictionPower(sim.Config.Turbo, sim.State.TurboOmega, sim.Config.Part("turbocharger").Wear);
+            double friction = TurbochargerModel.FrictionPower(sim.Config.Turbos[0].Spec, sim.State.Turbos[0].Omega, sim.Config.Part("turbocharger").Wear);
             Assert.True(Math.Abs(t.TurbinePower - t.CompressorPower - friction) < 0.005 * t.TurbinePower + 1.0,
                 $"{at}: turbine {t.TurbinePower:F0} W, compressor {t.CompressorPower:F0} W, friction {friction:F0} W");
         }
@@ -123,12 +123,12 @@ public class TurboInvariantTests
         for (int i = 0; i < 5000 && sim.Damage.Failures.Count == 0; i++)
         {
             sim.Step(0.002, input);
-            maxShaft = Math.Max(maxShaft, sim.State.TurboOmega);
+            maxShaft = Math.Max(maxShaft, sim.State.Turbos[0].Omega);
         }
         var report = Assert.Single(sim.Damage.Failures);
         Assert.Equal(CarSim.Core.Damage.FailureMode.TurboOverspeed, report.Mode);
         Assert.Contains(report.ContributingFactors, f => f.Contains("too small"));
-        Assert.InRange(maxShaft / sim.Config.Turbo!.MaxShaftSpeed, 1.0, 1.25);
+        Assert.InRange(maxShaft / sim.Config.Turbos[0].Spec.MaxShaftSpeed, 1.0, 1.25);
     }
 
     [Theory]
@@ -147,16 +147,16 @@ public class TurboInvariantTests
             input.Throttle = (i / 125) % 2 == 0 ? 1.0 : 0.0; // 0.25 s on, 0.25 s off
             if (i % 125 == 0) { worstPhase = Math.Max(worstPhase, Chatter(phase)); phase.Clear(); }
             var t = sim.Step(0.002, input);
-            Assert.True(double.IsFinite(t.Torque) && double.IsFinite(sim.State.TurboOmega));
-            Assert.InRange(sim.State.BoostControlIntegral, 0.0, 1.0);
-            Assert.True(t.TurbineInletTemperature < sim.Config.Turbo!.MaxTurbineInletTemperature, $"{Units.KToC(t.TurbineInletTemperature):F0} °C");
+            Assert.True(double.IsFinite(t.Torque) && double.IsFinite(sim.State.Turbos[0].Omega));
+            Assert.InRange(sim.State.Turbos[0].BoostControlIntegral, 0.0, 1.0);
+            Assert.True(t.TurbineInletTemperature < sim.Config.Turbos[0].Spec.MaxTurbineInletTemperature, $"{Units.KToC(t.TurbineInletTemperature):F0} °C");
             phase.Add(t.ManifoldPressure);
-            maxShaft = Math.Max(maxShaft, sim.State.TurboOmega);
+            maxShaft = Math.Max(maxShaft, sim.State.Turbos[0].Omega);
         }
         // A transient may overshoot once after each throttle edge (the quasi-static manifold jumps to the new
         // pressure in one step); a limit cycle reverses again and again.
         Assert.True(Math.Max(worstPhase, Chatter(phase)) <= 1, $"{turbo}: {worstPhase} reversals in one throttle phase");
-        Assert.True(maxShaft < sim.Config.Turbo!.MaxShaftSpeed, $"shaft {maxShaft / sim.Config.Turbo.MaxShaftSpeed:P0} of rated");
+        Assert.True(maxShaft < sim.Config.Turbos[0].Spec.MaxShaftSpeed, $"shaft {maxShaft / sim.Config.Turbos[0].Spec.MaxShaftSpeed:P0} of rated");
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class TurboInvariantTests
                 peak = Math.Max(peak, t.MapKpa);
                 last = t.MapKpa;
                 map.Add(t.ManifoldPressure);
-                Assert.InRange(sim.State.BoostControlIntegral, 0.0, 1.0);
+                Assert.InRange(sim.State.Turbos[0].BoostControlIntegral, 0.0, 1.0);
             }
             Assert.Equal(0, Chatter(map));
             // Up-steps overshoot by at most 8 % of the gauge target; every step ends within 4 kPa of it.

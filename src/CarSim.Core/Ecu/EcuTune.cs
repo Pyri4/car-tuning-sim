@@ -74,6 +74,12 @@ public sealed class EcuTune
     /// <summary>Fuel calibration: the fuel density the ECU meters with, kg/L.</summary>
     public double FuelDensityKgL { get; set; }
 
+    /// <summary>Speed above which variable-valve-lift camshafts run their high-lift profile, rpm (null: never).</summary>
+    public double? ValveLiftSwitchRpm { get; set; }
+
+    /// <summary>Speed above which a variable intake manifold runs its switched runner, rpm (null: never).</summary>
+    public double? IntakeRunnerSwitchRpm { get; set; }
+
     public double LambdaAt(double rpm, double mapKpa) => TargetLambda.Evaluate(rpm, mapKpa);
     public double AdvanceAt(double rpm, double mapKpa) => IgnitionAdvance.Evaluate(rpm, mapKpa);
     public double VolumetricEfficiencyAt(double rpm, double mapKpa) => VolumetricEfficiency.Evaluate(rpm, mapKpa);
@@ -95,7 +101,11 @@ public sealed class EcuTune
         double density = d.FuelDensityKgL ?? throw new InvalidDataException($"Tune '{d.Id}' has no fuel_density_kg_l.");
         var cam = d.IntakeCamAdvanceDeg == null ? null : new Table2D(d.RpmAxis, d.LoadAxisKpa, d.IntakeCamAdvanceDeg);
         return new EcuTune(d.Id, d.Name, lambda, ign, ve, boost, d.RevLimitRpm, d.IdleRpm, d.KnockControlEnabled,
-            d.InjectorFlowCcMin, d.FuelStoichAfr, displacement, deadTime, density, cam);
+            d.InjectorFlowCcMin, d.FuelStoichAfr, displacement, deadTime, density, cam)
+        {
+            ValveLiftSwitchRpm = d.ValveLiftSwitchRpm,
+            IntakeRunnerSwitchRpm = d.IntakeRunnerSwitchRpm,
+        };
     }
 
     public TuneDocument ToDocument() => new()
@@ -117,6 +127,8 @@ public sealed class EcuTune
         FuelStoichAfr = FuelStoichAfr,
         InjectorDeadTimeMs = InjectorDeadTimeMs,
         FuelDensityKgL = FuelDensityKgL,
+        ValveLiftSwitchRpm = ValveLiftSwitchRpm,
+        IntakeRunnerSwitchRpm = IntakeRunnerSwitchRpm,
     };
 
     public EcuTune Clone() => FromDocument(ToDocument());
