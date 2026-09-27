@@ -165,12 +165,17 @@ the M54's DISA is not authored.
 6. **Calibrate the base tune with the dev tools** — never by hand-fitting a curve:
    - start from a tune with sensible limits (rev limit, idle, λ targets, injector flow, displacement, fuel density)
      and any table axes you want;
-   - with a phaser: `carsim calibrate-cams <id> --fuel <fuel>` → `intake_cam_advance_deg`;
+   - first the hardware schedule the maps are measured on:
+     - with a phaser: `carsim calibrate-cams <id> --fuel <fuel>` → `intake_cam_advance_deg`;
+     - with two-stage hardware: switch speeds (`valve_lift_switch_rpm`, `intake_runner_switch_rpm`) from a full-load
+       sweep with each stage held (the torque crossover);
    - `carsim calibrate-ve <id> --fuel <fuel>` → `volumetric_efficiency`;
    - `carsim calibrate-spark <id> --fuel <fuel>` → `ignition_advance_deg` (MBT and knock margins);
-   - `calibrate-ve` again (spark changes exhaust temperature and residuals);
-   - set switch speeds (`valve_lift_switch_rpm`, `intake_runner_switch_rpm`) from a sweep with each stage held.
-   The tune's `description` should say how it was made. The synthetic matrix was calibrated exactly this way.
+   - `calibrate-ve` again (spark changes exhaust temperature and residuals).
+   A switch speed moved after the fuel map leaves the VE cells between the old and the new speed measured on the other
+   stage (it happened to `syn_i6_vis`; `TuneRegenerationTests` now checks every recipe's order).
+   The tune's `description` should say how it was made. The synthetic matrix was calibrated this way (its switch speeds
+   were re-set in the schedule-first order by the 2026-09-27 regeneration).
    Record the recipe in `tools/CarSim.Verification/tune-manifest.json` (steps, fuel, build, hand-authored tables; a test
    requires one per tune) so `carsim regenerate-tunes` can reproduce and regenerate it (docs/VERIFICATION.md).
 7. **Measure.** `carsim sweep <id> --fuel <fuel>`; for a real engine compare against its published figures with

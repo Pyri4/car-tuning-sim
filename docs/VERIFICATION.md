@@ -58,13 +58,22 @@ passed through the tune file's number format exactly as pasting `carsim calibrat
 variable-lift and variable-intake stages are a step too: the full-load torque crossover of the two stages held (100 rpm
 grid, rounded to 100 rpm).
 
+Two rules make a regenerated table legitimate (added by the 2026-09-27 design-resolution pass):
+- **Hardware schedule first.** Cam phase and switch speeds come before the fuel and spark maps measured on them
+  (`cams`/`runner_switch`/`lift_switch` → `ve` → `spark` → `ve`; `TuneRegenerationTests` checks every recipe). A switch
+  speed moved after the fuel map leaves VE cells measured on the other stage between the old and the new speed.
+- **Only values that settle are written.** Where a recipe changes anything, the driver runs it a second time on its own
+  output. A cell that goes back to its checked-in value is a rounding 2-cycle (spark ↔ VE across a 0.5° step, two
+  recipe-consistent states) and keeps the checked-in value. A cell that moves to a third value is written with the first
+  pass's value and reported as unsettled. The report says how many cells of each table are in a 2-cycle.
+
 **Hand-authored tables** (the K20's factory spark map and λ targets; λ targets everywhere; the turbo tunes' boost
 targets) are listed under `hand_authored`. The driver never writes them. After a physics change it audits a
 hand-authored spark map against what the spark calibrator would write on the tune's fuel and reports every cell above
 that knock/MBT ceiling; a human decides (keep, lower by hand, or convert to calibrated), and the decision is recorded in
 the tune's comment and the manifest.
 
-**Using it.** `carsim regenerate-tunes` (all 12 in ≈ 2.5 min on 4 cores; `--tune id,…`) reports, table by table, whether
+**Using it.** `carsim regenerate-tunes` (all 12 in ≈ 2.5 min on 4 cores, ≈ 5.5 min when every tune needs its second pass; `--tune id,…`) reports, table by table, whether
 the checked-in values are reproduced; `--write 1` rewrites only the calibrated tables in place, keeping the file's
 layout and number style (a test proves every tune file round-trips byte-identically through the writer).
 

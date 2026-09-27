@@ -34,8 +34,12 @@ public sealed record BuildRecipe(IReadOnlyList<string[]>? Swap, IReadOnlyList<st
 public sealed record CalibrationStep(string Calibrator, double? StepDeg = null, double? HoldS = null, double? KnockMarginDeg = null,
     double? MbtMarginDeg = null);
 
-/// <summary>One regenerated field against what is checked in.</summary>
-public sealed record FieldRegeneration(string Field, double[][] CheckedIn, double[][] Regenerated)
+/// <summary>
+/// One regenerated field against what is checked in. <paramref name="Oscillating"/>: cells the recipe moves on one pass and
+/// moves back on the next (a rounding 2-cycle between two recipe-consistent states), kept at their checked-in value and not
+/// counted as differing. <paramref name="Unsettled"/>: cells that moved again, to a third value, on the second pass.
+/// </summary>
+public sealed record FieldRegeneration(string Field, double[][] CheckedIn, double[][] Regenerated, int Oscillating = 0, int Unsettled = 0)
 {
     public int Cells => CheckedIn.Sum(r => r.Length);
 
@@ -76,13 +80,72 @@ public static class TuneRegenerator
             : ContentLoader.LoadDirectory(baseDir).GetOrThrow();
     }
 
+    /// <summary>
+    /// Runs the recipe on the checked-in tune. Where that changes anything, the recipe runs a second time on its own output:
+    /// a cell that goes back to its checked-in value is a rounding 2-cycle (e.g. spark ↔ VE across a 0.5° step), whose two
+    /// states are both what the recipe produces, so it keeps the checked-in one — a regeneration only writes values that
+    /// settle.
+    /// </summary>
     public static TuneRegeneration Run(TuneRecipe recipe, string repoRoot)
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var db = Content(recipe, repoRoot);
         var checkedIn = db.GetTune(recipe.Tune);
-        var doc = checkedIn;
+        var names = recipe.Steps.Select(s => FieldOf(s.Calibrator)).Distinct().ToList();
+        foreach (var field in names)
+            if (recipe.HandAuthored.Contains(field)) throw new InvalidDataException($"{recipe.Tune}: '{field}' is listed as hand-authored and calibrated.");
+
+        var doc = RunSteps(db, recipe, checkedIn);
+        var again = names.Any(f => !SameValues(Values(checkedIn, f), Values(doc, f))) ? RunSteps(db, recipe, doc) : doc;
         var fields = new List<FieldRegeneration>();
+        foreach (var field in names)
+        {
+            var kept = SettleTwoCycles(Values(checkedIn, field), Values(doc, field), Values(again, field), out int oscillating, out int unsettled);
+            doc = WithValues(doc, field, kept);
+            fields.Add(new FieldRegeneration(field, Values(checkedIn, field), kept, oscillating, unsettled));
+        }
+
+        var audit = new List<string>();
+        if (recipe.HandAuthored.Contains(IgnitionAdvance)) audit.AddRange(AuditSpark(db, recipe, doc));
+
+        return new TuneRegeneration(recipe, doc, fields, audit, FileRoundTrips(recipe, repoRoot, db), watch.Elapsed.TotalSeconds);
+    }
+
+    /// <summary>
+    /// The first pass's values, except cells the second pass returned to their checked-in value (a 2-cycle), which keep
+    /// it. <paramref name="unsettled"/> counts cells the second pass moved to a third value (they keep the first pass's).
+    /// </summary>
+    public static double[][] SettleTwoCycles(double[][] checkedIn, double[][] first, double[][] second, out int oscillating, out int unsettled)
+    {
+        int osc = 0, open = 0;
+        var result = first.Select((row, r) => row.Select((v, c) =>
+        {
+            if (v.Equals(checkedIn[r][c])) return v;
+            if (second[r][c].Equals(checkedIn[r][c])) { osc++; return checkedIn[r][c]; }
+            if (!second[r][c].Equals(v)) open++;
+            return v;
+        }).ToArray()).ToArray();
+        oscillating = osc;
+        unsettled = open;
+        return result;
+    }
+
+    private static bool SameValues(double[][] a, double[][] b) => a.Zip(b).All(rows => rows.First.SequenceEqual(rows.Second));
+
+    private static TuneDocument WithValues(TuneDocument d, string field, double[][] v) => field switch
+    {
+        VolumetricEfficiency => d with { VolumetricEfficiency = v },
+        IgnitionAdvance => d with { IgnitionAdvanceDeg = v },
+        IntakeCamAdvance => d with { IntakeCamAdvanceDeg = v },
+        RunnerSwitch => d with { IntakeRunnerSwitchRpm = double.IsNaN(v[0][0]) ? null : v[0][0] },
+        LiftSwitch => d with { ValveLiftSwitchRpm = double.IsNaN(v[0][0]) ? null : v[0][0] },
+        _ => throw new InvalidDataException($"Unknown field '{field}'."),
+    };
+
+    /// <summary>The recipe's steps in order, each on a fresh engine with the tables the earlier steps left.</summary>
+    private static TuneDocument RunSteps(ContentDatabase db, TuneRecipe recipe, TuneDocument start)
+    {
+        var doc = start;
         foreach (var step in recipe.Steps)
         {
             switch (step.Calibrator)
@@ -110,16 +173,7 @@ public static class TuneRegenerator
                     throw new InvalidDataException($"{recipe.Tune}: unknown calibrator '{step.Calibrator}'.");
             }
         }
-        foreach (var field in recipe.Steps.Select(s => FieldOf(s.Calibrator)).Distinct())
-        {
-            if (recipe.HandAuthored.Contains(field)) throw new InvalidDataException($"{recipe.Tune}: '{field}' is listed as hand-authored and calibrated.");
-            fields.Add(new FieldRegeneration(field, Values(checkedIn, field), Values(doc, field)));
-        }
-
-        var audit = new List<string>();
-        if (recipe.HandAuthored.Contains(IgnitionAdvance)) audit.AddRange(AuditSpark(db, recipe, doc));
-
-        return new TuneRegeneration(recipe, doc, fields, audit, FileRoundTrips(recipe, repoRoot, db), watch.Elapsed.TotalSeconds);
+        return doc;
     }
 
     /// <summary>Whether writing the checked-in values back leaves the tune file byte-identical (the writer keeps its format).</summary>

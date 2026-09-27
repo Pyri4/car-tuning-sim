@@ -46,6 +46,41 @@ public class TuneRegenerationTests
         }
     }
 
+    /// <summary>
+    /// The hardware schedule (cam phase, stage switch speeds) is set before the maps measured on it: a switch speed moved
+    /// after the fuel map leaves the VE cells between the old and the new speed measured on the other stage (syn.r6 before
+    /// the 2026-09-27 regeneration: up to 0.021 VE on a second pass).
+    /// </summary>
+    [Fact]
+    public void RecipesSetTheHardwareScheduleBeforeTheMapsMeasuredOnIt()
+    {
+        string[] schedule = { "cams", "runner_switch", "lift_switch" };
+        foreach (var recipe in Manifest.Tunes)
+        {
+            var steps = recipe.Steps.Select(s => s.Calibrator).ToList();
+            int lastSchedule = steps.FindLastIndex(schedule.Contains), firstMap = steps.FindIndex(s => !schedule.Contains(s));
+            Assert.True(lastSchedule < firstMap || lastSchedule < 0, $"{recipe.Tune}: {string.Join(" → ", steps)}");
+        }
+    }
+
+    /// <summary>
+    /// A regeneration writes only values that settle: a cell the second pass returns to its checked-in value is a rounding
+    /// 2-cycle and keeps it; a cell that settles on a new value takes it; one that moves again is reported unsettled.
+    /// </summary>
+    [Fact]
+    public void RoundingTwoCyclesKeepTheirCheckedInValue()
+    {
+        double[][] checkedIn = { new[] { 16.0, 21.5, 10.0, 8.0 } };
+        double[][] first = { new[] { 15.5, 21.5, 11.0, 9.0 } };
+        double[][] second = { new[] { 16.0, 21.0, 11.0, 9.5 } };
+        var settled = TuneRegenerator.SettleTwoCycles(checkedIn, first, second, out int oscillating, out int unsettled);
+        // 16 → 15.5 → 16: 2-cycle, kept. 21.5 unchanged on the first pass: kept. 10 → 11 → 11: settled, written.
+        // 8 → 9 → 9.5: moved again, the first pass's value is written and reported.
+        Assert.Equal(new[] { 16.0, 21.5, 11.0, 9.0 }, settled[0]);
+        Assert.Equal(1, oscillating);
+        Assert.Equal(1, unsettled);
+    }
+
     [Fact]
     public void EveryTuneFileRoundTripsThroughTheWriter()
     {

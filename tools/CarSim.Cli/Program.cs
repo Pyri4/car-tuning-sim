@@ -486,8 +486,12 @@ public static class Program
         {
             Console.WriteLine($"{r.Recipe.Tune} ({r.Recipe.Engine}, {r.Recipe.Fuel}; {string.Join(" → ", r.Recipe.Steps.Select(s => s.Calibrator))}; {r.Seconds:F0} s)");
             foreach (var f in r.Fields)
-                Console.WriteLine(f.Reproduced ? $"  {f.Field}: reproduced ({f.Cells} values)"
-                    : string.Create(inv, $"  {f.Field}: {f.Differing} of {f.Cells} values differ (max |Δ| {f.MaxAbsDifference:0.###})"));
+            {
+                string cycle = f.Oscillating == 0 ? "" : $"; {f.Oscillating} in a rounding 2-cycle keep their checked-in value";
+                string open = f.Unsettled == 0 ? "" : $"; WARNING: {f.Unsettled} moved again on a second pass (not settled)";
+                Console.WriteLine(f.Reproduced ? $"  {f.Field}: reproduced ({f.Cells} values{cycle})"
+                    : string.Create(inv, $"  {f.Field}: {f.Differing} of {f.Cells} values differ (max |Δ| {f.MaxAbsDifference:0.###}){cycle}{open}"));
+            }
             foreach (var a in r.Audit) Console.WriteLine("  audit: " + a);
             if (!r.FileRoundTrips) Console.WriteLine("  WARNING: rewriting the file with its own values would change it (format drift); --write would reformat these tables.");
             if (write && !r.Reproduced)

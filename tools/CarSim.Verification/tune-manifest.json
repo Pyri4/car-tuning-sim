@@ -11,6 +11,10 @@
   //   runner_switch / lift_switch -> intake_runner_switch_rpm / valve_lift_switch_rpm (full-load torque crossover of the
   //                                  two stages held, 100 rpm grid, rounded to 100 rpm)
   //
+  // Order: the hardware schedule first (cams, switch speeds), then the fuel and spark maps measured on it
+  // (ve -> spark -> ve). A switch speed set after the fuel map leaves VE cells measured on the other stage between the
+  // old and the new switch speed (TuneRegenerationTests checks the order).
+  //
   // Rule for hand-authored tables: they are listed under `hand_authored`, never written by the driver, and audited after
   // a physics change: a hand-authored spark map is compared cell by cell with what the spark calibrator would write on
   // the tune's fuel, and every cell more advanced than that knock/MBT ceiling is reported for a human decision (keep,
@@ -49,9 +53,9 @@
     },
     {
       "tune": "syn.t3.stock", "engine": "syn_i3_turbo_vvl", "layer": "test", "file": "content/test/engine-matrix/syn_i3_turbo_vvl.json", "fuel": "gasoline_98",
-      "build": {}, "steps": [ { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" }, { "calibrator": "lift_switch" } ],
+      "build": {}, "steps": [ { "calibrator": "lift_switch" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
       "hand_authored": [ "target_lambda", "boost_target_kpa" ],
-      "provenance": "Base map from the dev calibrators on RON 98: calibrate-ve -> calibrate-spark -> calibrate-ve; valve-lift switch speed from a sweep with each profile held."
+      "provenance": "Base map from the dev calibrators on RON 98: valve-lift switch speed from a sweep with each profile held, then calibrate-ve -> calibrate-spark -> calibrate-ve on that profile schedule."
     },
     {
       "tune": "syn.t20.stock", "engine": "syn_i4_turbo", "layer": "test", "file": "content/test/engine-matrix/syn_i4_turbo.json", "fuel": "gasoline_98",
@@ -61,9 +65,9 @@
     },
     {
       "tune": "syn.r6.stock", "engine": "syn_i6_vis", "layer": "test", "file": "content/test/engine-matrix/syn_i6_vis.json", "fuel": "gasoline_95",
-      "build": {}, "steps": [ { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" }, { "calibrator": "runner_switch" } ],
+      "build": {}, "steps": [ { "calibrator": "runner_switch" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
       "hand_authored": [ "target_lambda" ],
-      "provenance": "Base map from the dev calibrators on RON 95: calibrate-ve -> calibrate-spark -> calibrate-ve; runner switch speed from a sweep with each stage held."
+      "provenance": "Base map from the dev calibrators on RON 95: runner switch speed from a sweep with each stage held, then calibrate-ve -> calibrate-spark -> calibrate-ve on that stage schedule."
     },
     {
       "tune": "syn.b20.stock", "engine": "syn_h4_turbo", "layer": "test", "file": "content/test/engine-matrix/syn_h4_turbo.json", "fuel": "gasoline_98",
