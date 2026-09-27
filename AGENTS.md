@@ -82,6 +82,9 @@ When starting a task:
      and `--drive --smoke-test`; `CARSIM_MODS_DIR=<repo>/content/test` loads the synthetic engines).
 6. Summarize changed files, validation, and remaining risks.
 
+The project's agent skills (below) package steps 5–6 (`car-sim-verify`), engine work (`car-sim-add-engine`) and the
+end-of-milestone gate (`car-sim-project-gate`); use them when they apply.
+
 Architecture work comes before content scale: do not add hundreds of parts, an open world, multiplayer or unrelated UI
 before the systems underneath can carry them.
 
@@ -96,3 +99,22 @@ before the systems underneath can carry them.
 - Do not chase an isolated dyno number, add engines ahead of the capabilities they need, or put UI ahead of the
   simulation architecture. Validation (tests, CLI, Godot smoke tests, CI) is part of the work, never optional.
 - Branches may be stacked on unmerged PRs; say so in the PR, and merge in dependency order.
+
+## Agent skills
+Skills are managed with the open-source skills CLI (`npx skills`, https://github.com/vercel-labs/skills; needs Node.js).
+- **Installed:** `car-sim-verify`, `car-sim-add-engine`, `car-sim-project-gate` (this project's own procedures) and
+  `find-skills` (from `vercel-labs/skills`: discovering skills on skills.sh). Canonical copies live in
+  `.agents/skills/` (read by Codex and other agents); `.claude/skills/` holds symlinks for Claude Code;
+  `skills-lock.json` pins each skill's source and content hash.
+- **Edit a project skill** in its source, `tools/agent-skills/<name>/SKILL.md`, then reinstall:
+  `DISABLE_TELEMETRY=1 npx skills add ./tools/agent-skills -a claude-code -a codex -y`. Never edit `.agents/skills/`
+  directly: CI fails when an installed copy differs from its source. New project skill: `npx skills init <name>` inside
+  `tools/agent-skills/`. Skills point at the canonical docs (this file, ENGINE_AUTHORING_GUIDE.md, …) instead of
+  copying them; when a procedure changes, change the doc and the skill together.
+- **Third-party skills run with full agent permissions.** Install one only when the owner asks for it or approves it,
+  after reading its SKILL.md and any scripts it ships; record why in the commit. Prefer skills from known sources.
+- Telemetry: the CLI reports installs to its maintainers unless `DISABLE_TELEMETRY=1` (or `DO_NOT_TRACK=1`) is set;
+  it is off automatically in CI.
+- Windows checkouts without symlink support: reinstall with `--copy`, or run `npx skills experimental_install` (it also
+  refreshes `find-skills` from upstream).
+

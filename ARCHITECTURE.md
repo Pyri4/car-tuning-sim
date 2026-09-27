@@ -74,11 +74,16 @@ CarTuningSim.sln
 Directory.Build.props      shared compiler settings (nullable, warnings-as-errors, LangVersion)
 global.json                .NET SDK pin
 content/base/              base-game content as JSON (parts, engines, fuels, tunes, vehicles)
+content/test/              test-only content layers (the synthetic engine matrix; never shipped)
 src/CarSim.Core/           game-engine-agnostic simulation + domain model (NO Godot references)
 src/CarSim.Gameplay/       garage, economy, scenarios, save/load (NO Godot references)
 tests/CarSim.Core.Tests/   xUnit tests for the core
 tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno) built on the core
 game/                      Godot 4.7 project (presentation layer); references CarSim.Core
+docs/                      audits and milestone definitions (docs/milestones/)
+tools/agent-skills/        sources of this project's agent skills (installed with `npx skills`)
+.agents/skills/            installed agent skills (canonical copies; .claude/skills/ links to them)
+skills-lock.json           the installed skills' sources and content hashes
 ```
 
 `CarSim.Core` must never reference Godot. The game project references the core; the reverse is
@@ -360,3 +365,4 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
 | 2026-09-27 | `TuneDocument` is a record copied with `with` (the loader and the save migration no longer rebuild it field by field) | New tune fields were silently dropped by the field-by-field copies (the cam map was, in PR #4) |
 | 2026-09-27 | A car names only its stock engine; whether an engine fits a car is decided by interfaces (gearboxes require a bellhousing pattern), checked by scenarios, the garage and the CLI | Engine swaps are a core feature; a car hard-wired to an engine family made them impossible |
 | 2026-09-27 | A synthetic engine matrix lives in `content/test/` as a content layer, calibrated with the dev calibrators; its ids are forbidden in `src/` | Genericity is demonstrated, not claimed: architectures the code was never written for must run as data |
+| 2026-09-27 | Agent skills are managed with the skills CLI (`npx skills`, vercel-labs/skills): project procedures (verify, add an engine, project gate) as skills with sources in `tools/agent-skills/`, installed to `.agents/skills/` (+ `.claude/skills/` links), pinned in `skills-lock.json`; CI checks installed copies against their sources | One install for every coding agent the project uses (Claude Code, Codex, …); skills turn AGENTS.md procedures into checklists agents load when a task matches. Third-party skills need the owner's approval (they run with full agent permissions) |

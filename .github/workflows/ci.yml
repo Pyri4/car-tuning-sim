@@ -24,6 +24,14 @@ jobs:
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep kestrel_k20 --from 2000 --to 7000 --step 1000
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep isar_m54 --fuel gasoline_98 --from 2000 --to 6000 --step 1000
+      - name: Agent skills match their sources (tools/agent-skills → .agents/skills, .claude/skills links)
+        run: |
+          for src in tools/agent-skills/*/; do
+            name=$(basename "$src")
+            diff -r "$src" ".agents/skills/$name"
+            test -f ".claude/skills/$name/SKILL.md"
+            grep -q "\"$name\"" skills-lock.json
+          done
       - name: CLI smoke (synthetic engine matrix as a content layer)
         run: |
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate --mods content/test
