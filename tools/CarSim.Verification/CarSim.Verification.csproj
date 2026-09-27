@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Verification tooling (regression fingerprint, tune regeneration driver). Used by the CLI and the tests; never by
+       the game. Pure C#: no Godot references. -->
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>carsim</AssemblyName>
-    <RootNamespace>CarSim.Cli</RootNamespace>
+    <RootNamespace>CarSim.Verification</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\CarSim.Core\CarSim.Core.csproj" />
     <ProjectReference Include="..\..\src\CarSim.Gameplay\CarSim.Gameplay.csproj" />
-    <ProjectReference Include="..\CarSim.Verification\CarSim.Verification.csproj" />
   </ItemGroup>
 </Project>

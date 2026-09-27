@@ -1,0 +1,178 @@
+{
+  // The mutation harness's list (docs/VERIFICATION.md, "Mutation harness"). Each entry is a known bug, written as an exact
+  // text replacement in one source file, and the tests that must fail on it. The harness refuses to run an entry whose
+  // `find` text no longer occurs exactly once (update the entry with the code), proves the tests pass on the unmutated
+  // sources, then injects, rebuilds, tests and restores (fresh timestamps). Run:
+  //   dotnet run --project tools/CarSim.MutationCheck -c Release -- [--only id,id] [--list] [--full]
+
+  "mutations": [
+    {
+      "id": "ecu-true-air-mass",
+      "guards": "The ECU meters fuel from its own speed-density estimate, never the engine's true air mass (the true-air oracle of the validation pass).",
+      "file": "src/CarSim.Core/Simulation/EngineSimulation.cs",
+      "find": "double estAir = Ecu.EstimatedAirPerCycle(rpm, ecuAir.ManifoldPressure, ecuAir.ManifoldTemperature, g.Cylinders);",
+      "replace": "double estAir = ecuAir.AirPerCycle;",
+      "tests": "FullyQualifiedName~EcuObservabilityTests|FullyQualifiedName~FuelingTests|FullyQualifiedName~SpeedDensityTests"
+    },
+    {
+      "id": "ecu-true-fuel-density",
+      "guards": "The ECU converts fuel mass to injector time with the density its tune believes, not the real fuel's.",
+      "file": "src/CarSim.Core/Simulation/EngineSimulation.cs",
+      "find": "double pw = Ecu.PulseWidth(fuelCmd);",
+      "replace": "double pw = Ecu.PulseWidth(fuelCmd * Ecu.Tune.FuelDensityKgL * 1000.0 / fuel.Density);",
+      "tests": "FullyQualifiedName~EcuObservabilityTests|FullyQualifiedName~FuelingTests"
+    },
+    {
+      "id": "boost-feedback-compressor-outlet",
+      "guards": "Closed-loop boost reads the ECU's MAP sensor, not the true compressor-outlet pressure.",
+      "file": "src/CarSim.Core/Simulation/EngineSimulation.cs",
+      "find": "double measuredBoost = Ecu.ReadMap(_air[0].ManifoldPressure) - ambientPressure;",
+      "replace": "double measuredBoost = firstAir.CompressorOutletPressure - ambientPressure;",
+      "tests": "FullyQualifiedName~EcuObservabilityTests|FullyQualifiedName~TurboInvariantTests|FullyQualifiedName~TurboTests"
+    },
+    {
+      "id": "compressor-choke-removes-work",
+      "guards": "Past choke the compressor still absorbs work (no shaft runaway, no hidden clamp).",
+      "file": "src/CarSim.Core/Simulation/TurbochargerModel.cs",
+      "find": "return 1.0 - WorkBacksweep * x / (1.0 + 0.5 * x);",
+      "replace": "return x < 1.0 ? 1.0 - WorkBacksweep * x / (1.0 + 0.5 * x) : 0.0;",
+      "tests": "FullyQualifiedName~CompressorModelTests|FullyQualifiedName~TurboInvariantTests|FullyQualifiedName~TurboTests"
+    },
+    {
+      "id": "boost-no-anti-windup",
+      "guards": "The boost controller's integrator does not wind up while the gate is pinned (no tip-in overshoot).",
+      "file": "src/CarSim.Core/Simulation/EngineSimulation.cs",
+      "find": "if (!pinnedShut && !pinnedOpen) ts.BoostControlIntegral += BoostControlIntegralGain * error * dt;",
+      "replace": "ts.BoostControlIntegral += BoostControlIntegralGain * error * dt;",
+      "tests": "FullyQualifiedName~TurboInvariantTests|FullyQualifiedName~TurboTests"
+    },
+    {
+      "id": "ve-floor-raised",
+      "guards": "The VE shape floor is a guard that never carries normal running (clamp-activation tests).",
+      "file": "src/CarSim.Core/Simulation/AirPath.cs",
+      "find": "public const double VeShapeFloor = 0.25;",
+      "replace": "public const double VeShapeFloor = 0.60;",
+      "tests": "FullyQualifiedName~ClampActivationTests"
+    },
+    {
+      "id": "family-id-branch",
+      "guards": "No engine or part identity in simulation code (source audit).",
+      "file": "src/CarSim.Core/Simulation/AirPath.cs",
+      "find": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n",
+      "replace": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n        if (_b.CamsPart.Definition.Id == \"m54.cams.oem\") ve *= 1.0;\n",
+      "tests": "FullyQualifiedName~EngineAgnosticTests"
+    },
+    {
+      "id": "cylinder-count-branch",
+      "guards": "No cylinder-count special case in simulation code (source audit).",
+      "file": "src/CarSim.Core/Simulation/AirPath.cs",
+      "find": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n",
+      "replace": "        double ve = VeCeiling * Math.Max(VeShapeFloor, VeShape(rpm, intakeCamAdvance, camProfile, runnerStage));\n        if (_b.Cylinders == 6) ve *= 1.0;\n",
+      "tests": "FullyQualifiedName~EngineAgnosticTests"
+    },
+    {
+      "id": "tune-cam-table-dropped",
+      "guards": "A copied or saved tune keeps its intake cam table (the field-by-field copy that dropped it in PR #4).",
+      "file": "src/CarSim.Core/Ecu/EcuTune.cs",
+      "find": "IntakeCamAdvanceDeg = IntakeCamAdvance?.ToRows(),",
+      "replace": "IntakeCamAdvanceDeg = null,",
+      "tests": "FullyQualifiedName~CamTimingTests|FullyQualifiedName~GarageTests|FullyQualifiedName~M54ReferenceTests"
+    },
+    {
+      "id": "phaser-without-effect",
+      "guards": "The intake phaser's advance moves intake closing.",
+      "file": "src/CarSim.Core/Simulation/BankConfiguration.cs",
+      "find": "? Cams.InstalledIntakeCenterlineDeg - intakeAdvanceDeg - EngineConfiguration.ReferenceIntakeCenterlineDeg",
+      "replace": "? Cams.InstalledIntakeCenterlineDeg - EngineConfiguration.ReferenceIntakeCenterlineDeg",
+      "tests": "FullyQualifiedName~CamTimingTests|FullyQualifiedName~TorqueCurveDiagnosisTests"
+    },
+    {
+      "id": "first-bank-air-for-all",
+      "guards": "Every bank burns its own air path's charge, not the first bank's.",
+      "file": "src/CarSim.Core/Simulation/EngineSimulation.cs",
+      "find": "            var air = _air[b];\n            ref var r = ref _bank[b];\n            double cr = bank.Geometry.CompressionRatio;",
+      "replace": "            var air = _air[0];\n            ref var r = ref _bank[b];\n            double cr = bank.Geometry.CompressionRatio;",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests"
+    },
+    {
+      "id": "first-bank-geometry-for-all",
+      "guards": "Every bank compresses to its own head and gasket.",
+      "file": "src/CarSim.Core/Simulation/BankConfiguration.cs",
+      "find": "Geometry = EngineGeometry.TryCreate(a, index, out _)",
+      "replace": "Geometry = EngineGeometry.TryCreate(a, 0, out _)",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests"
+    },
+    {
+      "id": "shared-elements-unshared",
+      "guards": "An element serving several banks enters each bank's air path at that bank's share.",
+      "file": "src/CarSim.Core/Simulation/BankConfiguration.cs",
+      "find": "double ShareOf(string category) => (double)Cylinders / def.CylindersServedBy(a.SlotFor(category, index)!);",
+      "replace": "double ShareOf(string category) => 1.0;",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests"
+    },
+    {
+      "id": "four-cylinders-hard-coded",
+      "guards": "A bank's cylinder count comes from the family's data.",
+      "file": "src/CarSim.Core/Simulation/BankConfiguration.cs",
+      "find": "Cylinders = Definition.Cylinders.Count;",
+      "replace": "Cylinders = 4;",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests"
+    },
+    {
+      "id": "interfaces-from-any-bank",
+      "guards": "A bank part's requirements must be provided on its own banks (the right manifold bolts to the right head).",
+      "file": "src/CarSim.Core/Engines/AssemblyValidator.cs",
+      "find": "&& def.BanksServedBy(def.GetSlot(o.Key)).Intersect(banksServed).Any());",
+      "replace": "&& true);",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests"
+    },
+    {
+      "id": "one-turbo-state-for-all",
+      "guards": "Each turbocharger has its own shaft, wastegate and boost-control state.",
+      "file": "src/CarSim.Core/Simulation/EngineSimulation.cs",
+      "find": "var ts = s.Turbos[tc.Index];",
+      "replace": "var ts = s.Turbos[0];",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests"
+    },
+    {
+      "id": "runner-length-inert",
+      "guards": "The intake runner length acts on filling (fixed cams).",
+      "file": "src/CarSim.Core/Simulation/BankConfiguration.cs",
+      "find": "Math.Pow(EngineConfiguration.ReferenceRunnerLength / Intake.RunnerLength, 0.25),",
+      "replace": "1.0,",
+      "tests": "FullyQualifiedName~EngineOutputTests|FullyQualifiedName~FingerprintK20Tests"
+    },
+    {
+      "id": "runner-never-switches",
+      "guards": "A variable intake switches to its second stage above the tune's switch speed.",
+      "file": "src/CarSim.Core/Ecu/EcuController.cs",
+      "find": "running && Hardware.IntakeRunnerControl && Tune.IntakeRunnerSwitchRpm is double on",
+      "replace": "false && Hardware.IntakeRunnerControl && Tune.IntakeRunnerSwitchRpm is double on",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests|FullyQualifiedName~FingerprintSyntheticTests"
+    },
+    {
+      "id": "stage-switch-without-hysteresis",
+      "guards": "A switched stage drops back only below its switch speed less the hysteresis (no chatter).",
+      "file": "src/CarSim.Core/Ecu/EcuController.cs",
+      "find": "public const double SwitchHysteresisRpm = 150.0;",
+      "replace": "public const double SwitchHysteresisRpm = 0.0;",
+      "tests": "FullyQualifiedName~ArchitectureInvariantTests|FullyQualifiedName~IntakeGasDynamicsGuardTests"
+    },
+    {
+      "id": "fingerprint-sensitivity",
+      "guards": "The regression fingerprint catches a 1e-10 relative change of one shared filling constant.",
+      "file": "src/CarSim.Core/Simulation/EngineConfiguration.cs",
+      "find": "public const double BaseTunedPistonSpeed = 15.0;",
+      "replace": "public const double BaseTunedPistonSpeed = 15.0000000015;",
+      "tests": "FullyQualifiedName~FingerprintK20Tests|FullyQualifiedName~FingerprintM54Tests"
+    },
+    {
+      "id": "ve-calibrator-rounding",
+      "guards": "The shipped VE tables are what the calibrator writes (tune reproducibility).",
+      "file": "src/CarSim.Core/Ecu/VeCalibrator.cs",
+      "find": "table[r][c] = Math.Round(Interpolate(samples, loadAxis[r]), 3);",
+      "replace": "table[r][c] = Math.Round(Interpolate(samples, loadAxis[r]), 2);",
+      "tests": "FullyQualifiedName~FingerprintK20Tests"
+    }
+  ]
+}

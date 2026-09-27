@@ -5,6 +5,9 @@ using CarSim.Core.Ecu;
 using CarSim.Core.Simulation;
 using CarSim.Core.Engines;
 using CarSim.Core.Parts;
+using CarSim.Verification;
+using CarSim.Verification.Calibration;
+using CarSim.Verification.Fingerprint;
 
 namespace CarSim.Cli;
 
@@ -41,6 +44,20 @@ public static class Program
           carsim bench <engine-id> [--steps 20000] [--repeats 5] [--rpm 5000] [build options]
                                                         Step cost: best-of-N time and allocated bytes per engine step (full
                                                         throttle, held speed) and per vehicle step (autopilot on the test track).
+          carsim fingerprint [--case <id>[,<id>...]] [--check <file>] [--write <file>] [--dump <dir>] [--jobs <n>] [--list 1]
+                                                        Regression fingerprint of the verification matrix (docs/VERIFICATION.md):
+                                                        runs every case (or --case, by id or id prefix) and compares it with the
+                                                        checked-in baseline (tests/baselines/fingerprint.txt, or --check <file>).
+                                                        --write <file> re-baselines (always the whole matrix); --dump <dir> also
+                                                        writes every value at full precision. Exit code 4 when it differs.
+          carsim fingerprint-diff <before-dir> <after-dir>
+                                                        Key-by-key comparison of two --dump directories (e.g. two commits).
+          carsim regenerate-tunes [--tune <id>[,<id>...]] [--write 1] [--jobs <n>] [--manifest <file>]
+                                                        The recalibration driver: runs every tune's recipe from
+                                                        tools/CarSim.Verification/tune-manifest.json with the dev calibrators and
+                                                        reports, table by table, whether the checked-in tables are reproduced;
+                                                        audits hand-authored spark maps. --write 1 rewrites the calibrated tables
+                                                        (never the hand-authored ones) in the tune files.
         <engine-id> (kestrel_k20, isar_m54, ...) may be left out only when the content has a single engine family.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
         Content options (every command): --content <dir> (default content/base)  --mods <dir> (default content/mods;
@@ -68,6 +85,9 @@ public static class Program
                 "bench" => Bench(options),
                 "calibrate-spark" => CalibrateSpark(options),
                 "calibrate-cams" => CalibrateCams(options),
+                "fingerprint" => Fingerprint(options),
+                "fingerprint-diff" => FingerprintDiff(options),
+                "regenerate-tunes" => RegenerateTunes(options),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -391,6 +411,95 @@ public static class Program
             bytes = (double)(GC.GetAllocatedBytesForCurrentThread() - allocated) / steps;
         }
         return (best, bytes);
+    }
+
+    /// <summary>The regression fingerprint: run the matrix, compare with (or write) the baseline.</summary>
+    private static int Fingerprint(CliOptions o)
+    {
+        var all = FingerprintMatrix.Cases;
+        if (o.Named.ContainsKey("list"))
+        {
+            foreach (var c in all) Console.WriteLine($"{c.Id,-26} {c.Description}");
+            return 0;
+        }
+        var cases = all.ToList();
+        if (o.Named.TryGetValue("case", out var filter))
+        {
+            var wanted = filter.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            cases = all.Where(c => wanted.Any(w => c.Id == w || c.Id.StartsWith(w, StringComparison.Ordinal))).ToList();
+            if (cases.Count == 0) return Fail($"No fingerprint case matches '{filter}' (carsim fingerprint --list 1).");
+        }
+        string? dump = o.Named.GetValueOrDefault("dump");
+        int? jobs = o.Named.TryGetValue("jobs", out var j) ? int.Parse(j, System.Globalization.CultureInfo.InvariantCulture) : null;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        if (o.Named.TryGetValue("write", out var writePath))
+        {
+            if (cases.Count != all.Count) return Fail("--write re-baselines the whole matrix; leave out --case.");
+            var records = FingerprintRunner.Run(cases, schema: null, dumpDirectory: dump, parallelism: jobs);
+            var baseline = FingerprintBaseline.FromRecords(cases.Zip(records));
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(writePath))!);
+            File.WriteAllText(writePath, baseline.ToText(all.Select(c => c.Id).ToList()));
+            Console.WriteLine($"Wrote {writePath}: {cases.Count} cases, {baseline.Sections.Count} sections, {baseline.Schema.Count} channels ({watch.Elapsed.TotalSeconds:F1} s).");
+            return 0;
+        }
+        string path = o.Named.GetValueOrDefault("check") ?? RepoPaths.FingerprintBaseline;
+        var expected = FingerprintBaseline.Load(path);
+        var run = FingerprintRunner.Run(cases, expected.Schema, dump, parallelism: jobs);
+        var comparison = FingerprintComparison.Compare(expected, run);
+        int sections = run.Sum(r => r.Sections.Count);
+        Console.WriteLine($"Fingerprint: {cases.Count} cases, {sections} sections against {path} ({watch.Elapsed.TotalSeconds:F1} s).");
+        foreach (var line in comparison.Changed) Console.WriteLine("  CHANGED " + line);
+        foreach (var line in comparison.Missing) Console.WriteLine("  MISSING " + line);
+        if (comparison.NewChannels.Count > 0)
+            Console.WriteLine($"  new channels (not in the baseline's schema, not compared): {string.Join(", ", comparison.NewChannels)}");
+        Console.WriteLine(comparison.Identical ? "  IDENTICAL: every digested value is bit-for-bit the baseline's."
+            : "  DIFFERENT. A deliberate change is re-baselined with `carsim fingerprint --write tests/baselines/fingerprint.txt` and documented.");
+        return comparison.Identical ? 0 : 4;
+    }
+
+    private static int FingerprintDiff(CliOptions o)
+    {
+        if (o.Positional.Count != 2) return Fail("Usage: carsim fingerprint-diff <before-dir> <after-dir>");
+        Console.Write(FingerprintRunner.DiffDumps(o.Positional[0], o.Positional[1]));
+        return 0;
+    }
+
+    /// <summary>The recalibration driver over the tune manifest.</summary>
+    private static int RegenerateTunes(CliOptions o)
+    {
+        var manifest = TuneManifest.Load(o.Named.GetValueOrDefault("manifest") ?? RepoPaths.TuneManifest);
+        var recipes = manifest.Tunes.ToList();
+        if (o.Named.TryGetValue("tune", out var filter))
+        {
+            var wanted = filter.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            recipes = recipes.Where(r => wanted.Contains(r.Tune)).ToList();
+            if (recipes.Count == 0) return Fail($"No tune in the manifest matches '{filter}'.");
+        }
+        bool write = o.Named.GetValueOrDefault("write") == "1";
+        int jobs = o.Named.TryGetValue("jobs", out var j) ? int.Parse(j, System.Globalization.CultureInfo.InvariantCulture) : Environment.ProcessorCount;
+        string root = RepoPaths.Root;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var results = new TuneRegeneration[recipes.Count];
+        Parallel.For(0, recipes.Count, new ParallelOptions { MaxDegreeOfParallelism = jobs }, i => results[i] = TuneRegenerator.Run(recipes[i], root));
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        foreach (var r in results)
+        {
+            Console.WriteLine($"{r.Recipe.Tune} ({r.Recipe.Engine}, {r.Recipe.Fuel}; {string.Join(" → ", r.Recipe.Steps.Select(s => s.Calibrator))}; {r.Seconds:F0} s)");
+            foreach (var f in r.Fields)
+                Console.WriteLine(f.Reproduced ? $"  {f.Field}: reproduced ({f.Cells} values)"
+                    : string.Create(inv, $"  {f.Field}: {f.Differing} of {f.Cells} values differ (max |Δ| {f.MaxAbsDifference:0.###})"));
+            foreach (var a in r.Audit) Console.WriteLine("  audit: " + a);
+            if (!r.FileRoundTrips) Console.WriteLine("  WARNING: rewriting the file with its own values would change it (format drift); --write would reformat these tables.");
+            if (write && !r.Reproduced)
+            {
+                string path = Path.Combine(root, r.Recipe.File);
+                File.WriteAllText(path, TuneRegenerator.Write(File.ReadAllText(path), r.Recipe.Tune, r.Regenerated, r.Fields.Select(f => f.Field)));
+                Console.WriteLine($"  wrote {r.Recipe.File}");
+            }
+        }
+        int reproduced = results.Count(r => r.Reproduced);
+        Console.WriteLine($"{reproduced} of {results.Length} tunes reproduced exactly ({watch.Elapsed.TotalSeconds:F0} s).");
+        return 0;
     }
 
     private static void SwapPart(EngineAssembly a, string slot, PartDefinition part, PartInstanceFactory factory)
