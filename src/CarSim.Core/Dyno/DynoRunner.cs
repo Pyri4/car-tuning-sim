@@ -237,7 +237,7 @@ public sealed record DynoRun(
         ("time_s", t => t.Time), ("rpm", t => t.Rpm), ("torque_nm", t => t.Torque), ("power_kw", t => t.PowerKw),
         ("power_hp", t => t.PowerHp), ("map_kpa", t => t.MapKpa), ("boost_kpa", t => t.BoostKpa), ("lambda", t => t.Lambda),
         ("afr", t => t.Afr), ("target_lambda", t => t.TargetLambda), ("injector_duty", t => t.InjectorDuty),
-        ("ignition_deg", t => t.IgnitionAdvance), ("knock_level", t => (double)t.KnockSensorLevel), ("knock_retard_deg", t => t.KnockRetard), ("ve", t => t.VolumetricEfficiency),
+        ("ignition_deg", t => t.IgnitionAdvance), ("intake_cam_deg", t => t.IntakeCamAdvance), ("knock_level", t => (double)t.KnockSensorLevel), ("knock_retard_deg", t => t.KnockRetard), ("ve", t => t.VolumetricEfficiency),
         ("pcp_bar", t => t.PeakCylinderPressureBar), ("egt_c", t => t.EgtC), ("coolant_c", t => t.CoolantC), ("oil_c", t => t.OilC),
         ("oil_bar", t => t.OilPressureBar), ("iat_c", t => Units.KToC(t.ManifoldTemperature)), ("turbo_rpm", t => t.TurboRpm),
         ("wastegate", t => t.WastegateOpening),

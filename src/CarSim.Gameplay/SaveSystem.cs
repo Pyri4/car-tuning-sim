@@ -35,6 +35,9 @@ public static class SaveSystem
     public sealed class SaveFile
     {
         public int Version { get; set; } = CurrentVersion;
+
+        /// <summary>Scenario the game started from (display only; absent in older saves).</summary>
+        public string? ScenarioId { get; set; }
         public string EngineId { get; set; } = "";
         public bool EngineInCar { get; set; }
         public double Money { get; set; }
@@ -82,6 +85,7 @@ public static class SaveSystem
     {
         var file = new SaveFile
         {
+            ScenarioId = g.ScenarioId.Length > 0 ? g.ScenarioId : null,
             EngineId = g.Engine.Definition.Id,
             EngineInCar = g.EngineInCar,
             Money = g.Money,
@@ -156,7 +160,10 @@ public static class SaveSystem
             }
         }
         var garage = new Garage(content, engine, EcuTune.FromDocument(file.Tune!), file.FuelId, file.Money,
-            new PartInstanceFactory(file.NextInstanceId), file.EngineInCar, chassis);
+            new PartInstanceFactory(file.NextInstanceId), file.EngineInCar, chassis)
+        {
+            ScenarioId = file.ScenarioId ?? "",
+        };
         garage.RestoreInventory(file.Inventory.Select(ps => Load(ps, content)));
         garage.RestoreLog(file.Log);
         return garage;
@@ -178,6 +185,7 @@ public static class SaveSystem
             {
                 Id = tune.Id, Name = tune.Name, Description = tune.Description, RpmAxis = tune.RpmAxis, LoadAxisKpa = tune.LoadAxisKpa,
                 TargetLambda = tune.TargetLambda, IgnitionAdvanceDeg = tune.IgnitionAdvanceDeg, BoostTargetKpa = tune.BoostTargetKpa,
+                IntakeCamAdvanceDeg = tune.IntakeCamAdvanceDeg,
                 RevLimitRpm = tune.RevLimitRpm, IdleRpm = tune.IdleRpm, KnockControlEnabled = tune.KnockControlEnabled,
                 InjectorFlowCcMin = tune.InjectorFlowCcMin, FuelStoichAfr = tune.FuelStoichAfr, Source = tune.Source,
                 VolumetricEfficiency = tune.VolumetricEfficiency ?? ve,

@@ -40,8 +40,8 @@ public partial class GarageView : HBoxContainer
     private void Refresh()
     {
         Ui.Clear(_info);
-        var sc = State.Content.Scenarios.Values.FirstOrDefault();
-        _info.AddChild(Ui.Heading(sc?.Name ?? "Project car"));
+        var sc = State.Content.Scenarios.GetValueOrDefault(G.ScenarioId);
+        _info.AddChild(Ui.Heading(sc?.Name ?? G.Vehicle?.Name ?? "Project car"));
         if (sc != null) _info.AddChild(Ui.Wrapped(sc.Description, 14, Ui.Muted));
         _info.AddChild(Ui.Label($"Money: {G.Money:N0}", 18, Ui.Good));
         if (G.Vehicle is { } car)
@@ -87,8 +87,15 @@ public partial class GarageView : HBoxContainer
         var row = Ui.HBox();
         row.AddChild(Ui.Button("Save", () => { try { Ui.Message(this, "Saved", State.Save()); } catch (Exception e) { Ui.Message(this, "Save failed", e.Message); } }));
         row.AddChild(Ui.Button("Load", () => { try { State.Load(); } catch (Exception e) { Ui.Message(this, "Load failed", e.Message); } }));
-        row.AddChild(Ui.Button("New game", () => State.NewGame()));
         _info.AddChild(row);
+        var newGame = Ui.HBox();
+        var scenarios = State.Content.Scenarios.Values.OrderBy(s => s.Id == GameState.DefaultScenario ? 0 : 1).ThenBy(s => s.Name).ToList();
+        var pick = new OptionButton();
+        foreach (var s in scenarios) pick.AddItem(s.Name);
+        pick.Selected = Math.Max(0, scenarios.FindIndex(s => s.Id == G.ScenarioId));
+        newGame.AddChild(pick);
+        newGame.AddChild(Ui.Button("New game", () => { if (scenarios.Count > 0) State.NewGame(scenarios[pick.Selected].Id); }));
+        _info.AddChild(newGame);
         if (State.ContentErrors.Count > 0)
             _info.AddChild(Ui.Wrapped($"{State.ContentErrors.Count} content error(s): {string.Join("; ", State.ContentErrors.Take(3))}", 13, Ui.Danger));
         _info.AddChild(Ui.Wrapped($"Content: {State.ContentDir}", 12, Ui.Muted));

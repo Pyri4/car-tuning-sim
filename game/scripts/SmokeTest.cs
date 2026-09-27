@@ -21,7 +21,7 @@ public static class SmokeTest
         {
             var run = new CarSim.Core.Dyno.DynoRunner(sim, new CarSim.Core.Dyno.DynoSettings()).RunToCompletion();
             ok &= run.PeakPower != null && run.PeakPower.PowerKw > 50;
-            detail += $"; dyno peak {run.PeakPower?.PowerHp:F1} hp";
+            detail += $"; {state.Garage.Engine.Definition.Name}: dyno peak {run.PeakPower?.PowerHp:F1} hp";
         }
         GD.Print($"SMOKE TEST {(ok ? "PASSED" : "FAILED")}: {detail}");
         tree.Quit(ok ? 0 : 1);

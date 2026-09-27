@@ -96,7 +96,8 @@ public static class VeCalibrator
         return table;
     }
 
-    private static double Interpolate(List<(double MapKpa, double Ve)> samples, double mapKpa)
+    /// <summary>Linear interpolation over (MAP, value) samples sorted by MAP, held flat beyond both ends.</summary>
+    internal static double Interpolate(List<(double MapKpa, double Ve)> samples, double mapKpa)
     {
         if (samples.Count == 0) return 0.85;
         if (mapKpa <= samples[0].MapKpa) return samples[0].Ve;

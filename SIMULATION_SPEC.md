@@ -15,7 +15,7 @@ When the code changes, this file changes in the same commit.
 ## Engine model overview (`Simulation/EngineSimulation.cs`)
 Each `Step(dt, inputs)`:
 1. Engine speed: imposed (`SpeedMode.Held`: dyno brake / drivetrain) or integrated (`Free`).
-2. ECU pre-step: rev limiter (fuel cut, 150 rpm hysteresis), idle-air PI controller.
+2. ECU pre-step: rev limiter (fuel cut, 150 rpm hysteresis), idle-air PI controller, intake cam phaser target.
 3. Air path solved quasi-statically at this speed and throttle.
 4. ECU meters fuel and picks spark from its tables using the MAP it can *measure*.
 5. Fuel system delivers what injectors and pump physically can.
@@ -26,7 +26,7 @@ Each `Step(dt, inputs)`:
 Outputs are an `EngineTelemetry` record (≈60 channels).
 
 Performance (measured in the validation pass, Release, .NET 8 defaults, one core of a shared 4-core container;
-best of 5 × 20 000 steps, ±10 % run to run):
+best of 5 × 20 000 steps, ±10 % run to run; the second-family milestone's own measurements follow the table):
 
 | Step | Time | Allocated | At 500 Hz |
 |---|---|---|---|
@@ -38,7 +38,16 @@ best of 5 × 20 000 steps, ±10 % run to run):
 | ↳ telemetry record | 0.1 µs | 0.6 KB | |
 | Vehicle (engine + 8 chassis substeps, ride, tyre thermal) | ≈ 79–82 µs | 11.9 KB | 5.8 MB/s |
 
-That is ≈ 4–5 % of a core at 500 Hz. The allocations are short-lived gen-0 garbage: closures in the orifice root
+Second-family milestone (`carsim bench <engine>`: 2 ms steps, full throttle held at 5,000 rpm, then the car on
+autopilot; best of 5 × 20 000 steps, three runs each, this session's container):
+
+| Step | K20 before the milestone | K20 after | M54 |
+|---|---|---|---|
+| Engine | 43.7–47.2 µs, 10,560 B | 42.6–49.4 µs, 10,576 B | 44.2–48.3 µs, 10,576 B |
+| Vehicle (engine + chassis) | 71.5–72.3 µs, 13,220 B | 57.4–73.3 µs, 13,236 B | 63.6–73.5 µs, 13,249 B |
+
+Six cylinders cost the same as four: the mean-value model has no per-cylinder loop, so cylinder count only scales
+numbers. The +16 B is the one air-path closure carrying the cam-phase field. That is ≈ 4–5 % of a core at 500 Hz. The allocations are short-lived gen-0 garbage: closures in the orifice root
 finds, and warning strings rebuilt every step. An allocation-free (struct-generic) root finder was built and
 measured: bit-identical results, half the allocation, turbo steps 10 % faster — but NA and vehicle steps ≈ 25 %
 *slower* under .NET 8's default dynamic PGO (equal or faster with PGO off), so it was not merged. An
@@ -79,7 +88,9 @@ cylinder → exhaust port → exhaust manifold → exhaust system → ambient.
   the fuel's `charge_cooling_factor`: `h_vap = 350 kJ/kg · factor · AFR_stoich/14.7`.
 
 ### Volumetric efficiency (tuning component)
-- Tuned mean piston speed `v = 15 + 0.15 · (intake_duration − 220°)` m/s → `rpm_cam = v·60/(2S)`.
+- Tuned mean piston speed `v = 15 + 0.15 · (intake_duration − 220°) + 0.30 · Δ_IVC` m/s → `rpm_cam = v·60/(2S)`, where
+  `Δ_IVC` is how many crank degrees later the intake closes than the reference installation (see "Cam timing"; 0 for
+  straight-up cams, so every K20 cam is exactly as before). `v` is guarded at ≥ 2 m/s.
 - Intake runner shifts it: `rpm_peak = rpm_cam · (0.300 m / L_runner)^0.25`.
 - Shape (x = rpm/rpm_peak): below peak `1 − a_lo(1−x)²` with `a_lo = 0.50 + 0.004·overlap°`
   (overlap costs low-rpm filling); above peak `1 − 0.25(x−1)²`; floor 0.25; scaled by 1.02.
@@ -101,6 +112,32 @@ floor and a kink into part-load VE for long-overlap cams (VE 0.39 flat below 31 
 ## Valvetrain (`Engines/ValvetrainModel.cs`)
 Harmonic lift profile over the advertised event (duration@1mm + 50°):
 `rpm_float = (D/6) · √(F_open / (2π² · m_valve · L))`. Spring wear reduces force by up to 15 %.
+
+## Cam timing (`Parts/Specs/TopEndSpecs.cs`, `Simulation/EngineConfiguration.cs`, `Simulation/AirPath.cs`)
+Added for the second engine family (double VANOS). The duration correlation above reads intake duration as a stand-in
+for intake closing (IVC), fitted on straight-up cams whose separations span 108–114° and pinned by the K20's 112° OEM
+pair: implicitly every cam sat at an intake centreline of ≈ 112°. A cam pair may now state its installed lobe
+centrelines — degreed-in cams, or the **park** position of cam phasers — and an intake phaser range:
+- `Δ_IVC = ICL_installed − advance − 112°` when centrelines are authored, 0 otherwise
+  (`EngineConfiguration.ReferenceIntakeCenterlineDeg`). The intake closes one degree later per degree of centreline,
+  but only half a degree per degree of duration, hence `0.30 = 2 × 0.15` m/s per degree — no new fitted constant.
+- Overlap `= (D_i + D_e)/2 − (ICL + ECL) + advance` (the existing `− 2·LSA` when straight up); it feeds the low-side
+  VE curvature and reversion as before.
+- Phaser: the ECU looks its `intake_cam_advance_deg` table up at the MAP it read on the previous step, clamps it to
+  `[0, intake_phaser_range_deg]` (0 without `cam_phase_control`, without a table, or when the engine is not running —
+  no oil pressure), and the phaser follows with a 0.15 s time constant. Telemetry `IntakeCamAdvance`; dyno CSV
+  `intake_cam_deg` (a cam-position sensor reads it).
+- Effect: advancing closes the intake earlier — better filling at low speed, worse at high speed, more overlap. The M54
+  map advances 50° at idle and parks (late closing) above 5,500 rpm.
+- Guard (`CamTuningFloorActive`): `v ≥ 2 m/s`. The correlation is linear and a very early closing would extrapolate it
+  through zero; below the guard the VE peak sits at a few hundred rpm. Tested never to act on the shipped calibrations of
+  either family; reached only by commanding the M54's full 60° at high speed.
+- Not modelled: exhaust phasing (an exhaust phase would only add overlap, which this model counts purely as a filling
+  cost — there is no exhaust-opening/blowdown or scavenging term), part-load internal-EGR strategies (no pumping or
+  emissions benefit is modelled, so the phaser map is a filling optimum everywhere), the phaser's oil-pressure
+  dependence, and intake gas dynamics that a phaser cannot move — the phaser shifts the whole filling hump, so a phased
+  engine fills at its ceiling at every speed and the runner has no effect under it (see "M54 torque-curve
+  investigation").
 
 ## ECU (`Ecu/`)
 The ECU only knows its sensors and its calibration; it never sees the engine's true airflow.
@@ -127,6 +164,10 @@ The ECU only knows its sensors and its calibration; it never sees the engine's t
 - Not modelled: coolant/warm-up enrichment, transient (wall-film) fuelling, closed-loop λ trim (open-loop
   errors persist — tested), battery-voltage and pressure dependence of the dead time. The wideband λ on the
   dyno is the feedback the player tunes the VE table with.
+- Base-map tools for content authors (the game never calls them): `CamPhaseCalibrator` (`carsim calibrate-cams`: the
+  intake advance that traps the most air at each rpm and throttle of the VE sweep, mapped onto the tune's MAP axis),
+  `SparkCalibrator` (`carsim calibrate-spark`: `min(MBT − 1°, knock limit − 1.5°)` on the fuel given, three passes because
+  the knock limit is exact near the running advance), and:
 - `VeCalibrator` (`carsim calibrate-ve`) is the content author's base-map generator: it holds the
   engine on a steady-state dyno over a 13-point throttle sweep at every rpm column, computes
   `VE = m_air · R · IAT / (MAP · V_cyl)` and interpolates onto the table's load axis (two passes, the
@@ -500,7 +541,10 @@ solved once per set-up in the frequency domain and scaled at run time:
   cut), slips to launch from rest (engagement rises with engine speed), opens to avoid stalling. After a
   gear change on the move it re-engages smoothly: until engine and gearbox are within 50 rpm it passes at
   most |engine torque| + 80 N·m (a good driver's engagement), so shifts do not shock the gearbox.
-  Launches from rest are not limited.
+  Launches from rest are not limited. That controlled sync slip heats and wears the facings like any slip but is not a
+  "clutch slipping" warning or failure cause — unless the clutch itself cannot hold the sync torque (until the second
+  engine family, whose heavier flywheel and wider first-to-second step make the sync last > 0.3 s, it was flagged on
+  every upshift).
 - Gearbox efficiency applied to drive torque; gearbox input inertia reflected onto the driven wheels.
 - Differential: open (equal torque), clutch LSD (locking torque = preload + locking fraction × input
   torque, accel/decel separately) or locked; implemented as a clamped coupling between the two wheels.
@@ -586,13 +630,16 @@ Every `Clamp`/`Min`/`Max` in the simulation was reviewed in the validation pass.
   | Turbine efficiency ≥ 0.25·η_peak below the optimum BSR | spooling from standstill and idle, never on boost | `TurbineBladeSpeedRatio`, `TurbineOnEfficiencyFloor` |
   | Front weight share ∈ [25, 75] %, CG ≥ 15 cm | no shipped part combination | `VehicleConfiguration.WeightDistributionClamped`, `CgHeightFloored` |
   | Knock mixture term λ ∈ [0.6, 1.3]; coolant wall heating only above 90 °C | outside the correlation's range / a cold engine (a colder wall does not *reduce* knock — known asymmetry) | — |
+  | Tuned piston speed ≥ 2 m/s (cam timing) | the M54's intake fully advanced at high speed; never on either shipped calibration | `CamTuningFloorActive` |
 
 **Calibration constants.** Classes: (A) physical constants (gas constants, c_p, γ, Stefan–Boltzmann, heating
 values, Thornton's 406 kJ/mol O₂, Douaud–Eyzat); (B) numerical (tolerances, step sizes); (C) empirical
 correlations with a physical form, scaled by geometry where the physics says so; (D) gameplay tuning. Class C
 constants that set overall levels and were fitted to the stock K20's published output: the Otto realisation
 factor 0.80 and the FMEP coefficients (together they set ≈ 148 hp) — they are the engine-family calibration and
-the first thing a second family would re-fit. Made size-aware in the validation pass (K20 unchanged within
+the first thing a second family would re-fit — the second family (below) was run through them **unchanged**, which lands
+it at −10 % power and +1 % torque against its real reference. The duration correlation's reference centreline (112°,
+from the K20 OEM cams) joins this class. Made size-aware in the validation pass (K20 unchanged within
 0.1 %): the valvetrain FMEP (valves, cylinder volume), block/sump/oil↔coolant conductances (∝ (V/2 L)^(2/3)), and
 the exhaust-port conductance (∝ bore² × cylinders). Still K20-sized and documented as debt: the piston-crown
 correlation's reference heat flux (14.2 MW/m² ↔ +150 K, dimensional, not size-specific but fitted on one engine),
@@ -604,12 +651,128 @@ efficiency and × 1.3 coolant share, a warped head × 0.9), game-compressed fati
 Pinned loosely by tests (`EngineOutputTests.StockEngineCalibration`):
 peak torque ≈ 189 N·m at ≈ 4000 rpm, peak power ≈ 110 kW (148 hp) at ≈ 7000–7500 rpm,
 peak VE ≈ 0.93, WOT peak cylinder pressure ≈ 60–66 bar, hot oil pressure ≈ 1.3 bar at idle and
-5.2 bar (relief) above ≈ 4000 rpm.
+5.2 bar (relief) above ≈ 4000 rpm. Unchanged by the second-family milestone: stock (RON 95 and 98), race-cam and T28
+turbo builds give bit-identical steady-state sweeps and dyno runs before and after it (the cam-timing terms are exactly
+zero for cams without authored centrelines); `EngineAgnosticTests` pins the dyno peak to the pre-milestone value.
+
+## Second engine family (Isar M54 = BMW M54B30 reference)
+The architecture test of the second-family milestone: a real engine (PARTS_DATABASE.md, "Isar M54 reference engine")
+represented through content only, run through every generic system, compared with its published figures. No
+simulation code knows it; the one missing abstraction it exposed — cam timing — was added generically (above).
+
+**Experiment A0 (before cam timing existed):** the same content with its true 1 mm durations and the old implicit
+112° centreline gave 296 N·m (−1 %) but 130 kW at 5,500 rpm (**−23 %**): the fixed-cam correlation could place the
+filling peak at the torque peak or at the power peak, not both. A single "effective" duration would have meant
+authoring a false cam. With the intake phaser (60°, schedule from `calibrate-cams`) the engine is represented by its
+real cams.
+
+Acceptance bands (set from what a mean-value model with constants fitted on another engine can claim, and pinned by
+`M54ReferenceTests`): geometry exact (displacement ±1 cc, bore/stroke/rod exact), compression ±0.05, peak torque and
+torque at 3,500 rpm ±10 %, peak power ±15 % (a mean-value model with level-setting constants fitted on another
+engine; the fictional K20's 148 hp is also ≈ 7 % under the real K20A3's 160 hp it resembles, though its parts were not
+authored to that engine), peak-power speed 5,500–6,500 rpm, a broad NA curve (≥ 85 % of peak torque 1,500–5,000 rpm), idle at the tune's
+700 ± 75 rpm.
+
+| RON 98, 90 °C coolant | Reference | Model | Δ |
+|---|---|---|---|
+| Displacement | 2979 cc | 2979.3 cc | +0.01 % |
+| Compression ratio | 10.2 | 10.20 (derived) | — |
+| Peak torque | 300 N·m @ 3,500 | 303.9 N·m @ 2,000 (flat within 1 % 1,500–2,750) | +1.3 % |
+| Torque at 3,500 rpm | 300 N·m | 291.1 N·m | −3.0 % |
+| Peak power | 170 kW @ 5,900 | 153.0 kW @ 6,250 (dyno sweep 153.9 kW @ 6,475) | −10.0 % |
+| Power at 5,900 rpm | 170 kW | ≈ 149.5 kW | −12 % |
+| Torque at 6,000 rpm | ≈ 270 N·m (from 170 kW @ 5,900) | 240.0 N·m | ≈ −11 % |
+| Rev limit | 6,500 rpm | fuel cut at 6,500 (150 rpm hysteresis); valve float ≈ 7,070 rpm | — |
+| Idle | ≈ 700 rpm | 700 rpm at ≈ 15 kPa MAP, λ 1.02 | — |
+
+Model reference (not a validation target): peak VE 1.00, peak BMEP 12.8 bar, WOT peak cylinder pressure ≤ 66 bar, oil
+4.1 bar at 3,000 rpm and 4.7 bar at 6,000 (relief 4.5 bar + slope), rotating inertia 0.208 kg·m²; RON 95 and RON 91 lose
+≈ 1 % at 2,000 rpm to knock retard and nothing at the power peak (octane only limits the NA engine at low speed; see
+Known issues on the octane sensitivity). In the Isar C30 the autopilot laps the test facility in 52.1 s (the stock
+Kestrel S2: 51.8 s).
+
+Why the shape differs (a plateau from 1,500 to 2,750 rpm instead of a peak at 3,500): see "M54 torque-curve
+investigation" below. Low idle MAP (≈ 15 kPa; K20 ≈ 21 kPa) comes from the absence of accessory load in the model.
+
+Content-only variant (a test fixture, not shipped): the M54 turned by JSON edits alone into an 80 × 76 mm straight
+eight (3,057 cc, 11:1, 7,500 rpm, 205° intake) builds, fires eight times per two revolutions, respects its own limit,
+has less friction at the same speed (shorter stroke) and peaks later and higher; the M54 under renamed ids is
+bit-identical (`EngineAgnosticTests`).
+
+### M54 torque-curve investigation
+Question (review of PR #4): the reference peaks at 300 N·m at 3,500 rpm; the model plateaus at ≈ 303 N·m from 1,500 to
+2,750 rpm and falls from there (291 N·m at 3,500). Is the difference **(A)** wrong M54 content, **(B)** missing generic
+physics or **(C)** an unavoidable simplification of the mean-value model?
+
+Reference shape (web-search summaries of E46 dyno threads; no digitised factory curve could be opened): a double hump —
+first peak at 3,500 rpm, a dip at ≈ 4,000–4,200 rpm where DISA switches (flap closed below ≈ 3,750 rpm, open above
+≈ 4,100), a second hump, 170 kW at 5,900 rpm (≈ 275 N·m). No point values below 3,500 rpm were found, so the low end is
+compared by shape, not by number.
+
+Experiments: RON 98, warm, full load, steady state, damage off; wherever a change moves the optimum, the tune is
+recalibrated with the dev tools (cams → VE → spark → VE). E1–E9 run the shipped code with content or tune edits.
+E10–E11 ran a prototype of the missing term, which is not shipped.
+
+| # | Experiment | Result |
+|---|---|---|
+| E1 | Shipped M54: phaser position and VE shape along the full-load curve | The phaser holds the filling peak on the engine speed, within one 2.5° map step (the correlation moves it ≈ 95 rpm per crank degree). The VE shape factor is 0.994–1.000 from 1,000 to 6,250 rpm: the engine fills as if tuned at every speed. What is left of the shape is flow loss, friction and knock |
+| E2 | Cam calibration against the fixed-phase envelope (0–60° in 10° steps) | The shipped schedule traps the best fixed phase's air at every speed (1,500 rpm: 586.6 mg for both); the best phase moves from 50° at 1,000 rpm to 0° from 5,000 rpm. The calibrator adds nothing the physics does not offer |
+| E3 | The same VE model on the K20 (fixed cams) | Shape 0.67 at 1,000 rpm, 0.81 at 2,000, 0.94 at 3,500, 1.00 at 5,500: the model is not flat by itself. The M54 with its phaser parked has the same hump (190 → 273 N·m from 1,000 to 3,500 rpm) |
+| E4 | Intake runner 250 / 380 / 550 / 800 mm | Under VANOS the curves agree within 1 N·m up to 5,000 rpm. Parked, 2,000 rpm torque goes 234 / 241 / 248 / 256 N·m. The runner only shifts the one hump, and the phaser shifts it back |
+| E5 | Phaser range 60 (sourced) / 40 / 25 / 0° | 1,000 rpm: 293 / 271 / 224 / 190 N·m; 2,000: 304 / 304 / 286 / 241; identical from 3,000 up. Only an unsourced cut to ≈ 25° makes the low end rise, and then the peak sits at ≈ 2,750 |
+| E6 | The K20 given a phaser by content (park 20° late, 50° range, standalone ECU) | Fixed: 126 / 164 / 189 / 189 N·m at 1,000 / 2,000 / 3,500 / 4,000 rpm. Phased: 155 / 204 / 200 / 195. The same flattening, with the peak moving from 4,000 to 2,500 rpm: the effect is generic |
+| E7 | Estimated flows at 6,000 rpm | Port flows +20 %: +4.5 % torque. Exhaust manifold + system +30 %: +0.5 %. Intake + throttle +30 %: +1.4 %. All together: +6.6 % (160 kW). At 3,500 rpm the same changes give +0.2 to +2.3 % |
+| E8 | Low-speed spark: shipped map against MBT − 1° with knock control off | Knock binds below ≈ 2,500 rpm (1,500 rpm: 10.5° against MBT 21.1°). Spark at MBT knocks and gives less torque (1,500 rpm: 282 against 302 N·m). The shipped low end is knock-limited, not over-advanced |
+| E9 | A 3,500 rpm filling resonance, emulated with the model's existing wave-tuning hump (gain 0.03 / 0.06 / 0.09) | 3,500 rpm: 291 → 299 / 308 / 316 N·m, and at the larger gains the peak moves to 3,000–3,500. 1,000–2,000 rpm is unchanged (293 / 302 / 304). Under a phaser a resonance can add a hump but cannot lower the plateau |
+| E10 | Prototype (not shipped): the tuning curve split in two parts. A share *g* stays with the intake's gas dynamics, tuned at the speed of the same cam and runner installed straight up (3,314 rpm for the M54), which a phaser cannot move. The other 1 − *g* follows intake closing | *g* = 0 / 0.25 / 0.5 / 0.75. 1,000 rpm: 293 / 274 / 255 / 236 N·m. 2,000: 304 / 298 / 292 / 285. 3,500: 291 in all. 6,000: 239 / 231 / 222 / 213. Peak power: 152.6 / 146.2 / 139.5 / 133.9 kW. Peak torque at 2,000 / 2,500 / ≈ 2,750 / 3,000 rpm. The K20 is unchanged apart from floating-point rounding |
+| E11 | E10 at *g* = 0.5 plus an idealised two-stage intake: at 3,900 rpm the gas-dynamic tuning switches to a shorter effective runner | 250 / 150 / 100 mm: peak power 144.8 / 148.9 / 151.0 kW; below the switch, as E10. The top end the split loses is DISA's open stage |
+
+The intake cam schedule across speed and load: the correlation moves the filling peak ≈ 95 rpm per crank degree of
+intake closing, so the sourced 60° of VANOS covers ≈ 900–5,400 rpm; the calibrated schedule uses 47.5° of it between
+1,000 and 5,500 rpm and parks above. The VE shape has no load term, so the schedule is the same in every load row. A real
+VANOS map also varies with load (internal EGR, idle quality), which is not modelled and has no effect at full load. At
+idle the map advances fully where the real engine idles retarded; that is harmless here, because the M54's cams have no
+overlap at 1 mm lift in any phase.
+
+Conclusion:
+- **(B) Missing generic physics is the root cause of the shape.** The VE model has one filling hump for intake closing
+  and intake gas dynamics (runner ram and resonance) together, its height does not depend on speed, and a cam phaser
+  moves all of it (E1). Consequences:
+  - a phased engine fills at its ceiling at every speed — a phased K20 does the same (E6);
+  - the runner has no effect under a phaser (E4);
+  - a switched runner such as DISA has nothing to act on, so the reference's 3,500 rpm hump, 4,000 rpm dip and second
+    hump cannot be expressed (E9).
+- **Not (A) for the shape.** No sourced or estimated M54 value moves the plateau: the schedule (E2) is sourced in range
+  and calibrated, the phaser range (E5) is sourced, and the runner (E4) is inert.
+- **(A) in part for the top end.** The estimated flows are worth up to +6.6 % at 6,000 rpm (E7), about half of the
+  −12 % there. They stay as estimated: raising them to close the gap would be fitting.
+- **(C) for the rest of the level.** Speed-independent combustion efficiency and charge heating, the shared FMEP and the
+  knock model's weak octane sensitivity set the absolute level for both families; the K20 also sits ≈ 7 % under its real
+  counterpart at its power peak. The shared constants were not re-fitted to either engine.
+- **The calibration methodology is sound.** The cam schedule is the fixed-phase envelope (E2), spark is knock-limited
+  where it matters (E8), and the VE table only sets fuelling (λ): the calibrators do not create the low end.
+
+Why E10 is not shipped, although it is the missing physics: it is necessary but not sufficient.
+- On its own it makes the low end rise, as the real engine's does, but it costs 6–19 kW at the top. The real M54's top
+  end comes from DISA's open stage (E11); at *g* = 0.5 the M54 would make 139.5 kW (−18 %, outside the ±15 % band).
+- Completing it needs two values we do not have. The share *g* would be a new shared constant with no source and no
+  second phased engine to check it on. DISA's open-stage effective runner length is not published. Choosing either to
+  make the M54 match is the fitting the review forbids.
+
+It is the next generic-physics task (ROADMAP, with its prerequisites). Until then the limitation is pinned by
+`TorqueCurveDiagnosisTests`:
+- filling at the ceiling under a phaser;
+- the runner inert under a phaser;
+- a phased K20 flattening;
+- the cam calibration equal to the fixed-phase envelope;
+- knock-limited low-speed spark;
+- the top end's sensitivity to flow;
+- the plateau-then-fall shape.
 
 ## Validation
 Deterministic xUnit tests cover: unit conversions, compressible flow, root finding, geometry and
 compression ratio, valvetrain, combustion functions, torque/power identity (P = T·ω), BMEP
-identity, throttle/vacuum, exhaust restriction, cams/runners/heads, fueling limits (injectors,
+identity, throttle/vacuum, exhaust restriction, cams/runners/heads, cam phasing and the M54 torque-curve diagnosis, fueling limits (injectors,
 pump, calibration errors), speed-density fuelling (shipped tables on target, breathing mods, stroker
 displacement, IAT compensation, recalibration, smooth part-load VE), knock and timing, rev limiter, valve float, rod loads, oil pressure,
 thermal behaviour, starting/idle/revving, determinism, compressor speed lines/choke/surge, compressor
@@ -633,3 +796,13 @@ closed-loop matrix, square waves, target steps, overspeed failure, windmilling t
 fitted part; clamp activation; tyre-width and suspension trade-offs; knock factors over an envelope grid and
 the knock-limited range vs compression and octane; fatigue additivity across a save/load; save v3 → v4
 migration. New regression tests were mutation-checked against the bugs they guard.
+
+Added for the second engine family: the M54 against its published figures (topology, geometry, compression, start and
+idle, rev limit, torque/power bands, curve shape, fuelling vs VE/injector scaling/dead time/fuel pressure/fuel
+properties/MAP/IAT/coolant, timing and knock, detonation and over-rev failures, damage through save/load, deterministic
+dyno); both families through one gameplay pipeline (build → drive → failure); identity invariance under renamed ids;
+a content-only eight-cylinder variant; a source audit (no family token, content id or size-specific branch in `src/`);
+the K20's pre-milestone dyno reference pinned; cam timing (straight-up cams untouched, degreed-in at the reference
+identical to straight up, validation, overlap, phaser lag, ECU without cam control, filling low vs high, shipped cam and
+spark maps not stale, the tuned-speed guard); spec fuzz and every-part-in-every-slot on the M54. Mutation-checked: a
+family-id hack, a cylinder-count hack, the content loader dropping the cam table, a phaser without effect.

@@ -16,11 +16,24 @@ public static class SimFactory
         return a;
     }
 
-    public static EcuTune StockTune() => EcuTune.FromDocument(TestContent.Database.GetTune("k20.stock"));
+    /// <summary>A stock assembly of <paramref name="engineId"/> with swaps applied.</summary>
+    public static EngineAssembly AssemblyOf(string engineId, params (string slot, string part)[] swaps)
+    {
+        var a = TestContent.Stock(engineId);
+        foreach (var (slot, part) in swaps) TestContent.Swap(a, slot, part);
+        return a;
+    }
 
+    public static EcuTune StockTune() => StockTuneOf(TestContent.K20);
+
+    /// <summary>The factory calibration of an engine family.</summary>
+    public static EcuTune StockTuneOf(string engineId) =>
+        EcuTune.FromDocument(TestContent.Database.GetTune(TestContent.Database.GetEngine(engineId).StockTune));
+
+    /// <summary>A warm engine on the dyno; without a tune it runs its own family's factory calibration.</summary>
     public static EngineSimulation Create(EngineAssembly assembly, string fuel = "gasoline_95", EcuTune? tune = null, EngineState? state = null)
     {
-        tune ??= StockTune();
+        tune ??= StockTuneOf(assembly.Definition.Id);
         var config = EngineConfiguration.Build(assembly, TestContent.Database.GetFuel(fuel), new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa)).GetOrThrow();
         return new EngineSimulation(config, tune, state ?? EngineState.Warm());
     }
@@ -46,7 +59,8 @@ public static class SimFactory
             Id = d.Id, Name = d.Name, RpmAxis = d.RpmAxis, LoadAxisKpa = d.LoadAxisKpa.Concat(extraKpa).ToArray(),
             TargetLambda = Extend(d.TargetLambda), IgnitionAdvanceDeg = Extend(d.IgnitionAdvanceDeg),
             VolumetricEfficiency = Extend(d.VolumetricEfficiency!), DisplacementCc = d.DisplacementCc,
-            BoostTargetKpa = d.BoostTargetKpa, RevLimitRpm = d.RevLimitRpm, IdleRpm = d.IdleRpm,
+            BoostTargetKpa = d.BoostTargetKpa, IntakeCamAdvanceDeg = d.IntakeCamAdvanceDeg == null ? null : Extend(d.IntakeCamAdvanceDeg),
+            RevLimitRpm = d.RevLimitRpm, IdleRpm = d.IdleRpm,
             KnockControlEnabled = d.KnockControlEnabled, InjectorFlowCcMin = d.InjectorFlowCcMin, FuelStoichAfr = d.FuelStoichAfr,
             InjectorDeadTimeMs = d.InjectorDeadTimeMs, FuelDensityKgL = d.FuelDensityKgL,
         });

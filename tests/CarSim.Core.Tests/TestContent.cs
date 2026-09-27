@@ -29,11 +29,21 @@ public static class TestContent
 
     public const string K20 = "kestrel_k20";
 
+    /// <summary>The second engine family (real-engine reference: BMW M54B30).</summary>
+    public const string M54 = "isar_m54";
+
+    /// <summary>Both shipped engine families, for tests that run the same pipeline over each.</summary>
+    public static readonly string[] Families = { K20, M54 };
+
     /// <summary>Shared factory for swapped-in parts so instance ids never collide within a test run.</summary>
     private static readonly PartInstanceFactory SwapFactory = new(1_000_000);
 
-    public static EngineAssembly StockK20(PartInstanceFactory? factory = null) =>
-        EngineAssembly.CreateStock(Database.GetEngine(K20), Database, factory ?? new PartInstanceFactory());
+    public static EngineAssembly StockK20(PartInstanceFactory? factory = null) => Stock(K20, factory);
+
+    public static EngineAssembly StockM54(PartInstanceFactory? factory = null) => Stock(M54, factory);
+
+    public static EngineAssembly Stock(string engineId, PartInstanceFactory? factory = null) =>
+        EngineAssembly.CreateStock(Database.GetEngine(engineId), Database, factory ?? new PartInstanceFactory());
 
     /// <summary>Replaces the part in <paramref name="slot"/> (removing and re-installing whatever is in the way).</summary>
     public static void Swap(EngineAssembly a, string slot, string partId, PartInstanceFactory? factory = null)

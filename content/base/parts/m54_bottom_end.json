@@ -1,0 +1,76 @@
+{
+  // Isar M54 bottom end. Geometry follows the reference M54B30 (84.0 x 89.6 mm, 135 mm rods, 22 mm pins,
+  // 60/45 mm journals, 211 mm deck); ratings and masses not published by the manufacturer are estimates.
+  // See PARTS_DATABASE.md, "Isar M54 reference engine", for which value is which.
+  "parts": [
+    {
+      "id": "m54.block.oem", "name": "M54 OEM block (aluminium, iron liners)", "category": "block", "manufacturer": "Isar",
+      "price": 1900, "mass_kg": 40.0, "provides": ["m54.deck", "m54.sump_flange", "m54.bellhousing"],
+      "description": "Closed-deck aluminium six with cast-in grey-iron liners and seven main bearings. Stiffer deck than an open-deck four; the liners limit how far it can be bored.",
+      "spec": { "cylinders": 6, "bore_mm": 84.0, "deck_height_mm": 211.0, "main_journal_diameter_mm": 60.0,
+                "max_cylinder_pressure_bar": 150, "coolant_capacity_l": 4.6, "material": "aluminium/iron liners" }
+    },
+    {
+      "id": "m54.main_bearings.oem", "name": "M54 OEM main bearings (7)", "category": "main_bearings", "manufacturer": "Isar",
+      "price": 110, "mass_kg": 0.5,
+      "spec": { "journal_diameter_mm": 60.0, "clearance_mm": 0.040, "max_load_kn": 65, "material": "bi-metal" }
+    },
+    {
+      "id": "m54.rod_bearings.oem", "name": "M54 OEM rod bearings", "category": "rod_bearings", "manufacturer": "Isar",
+      "price": 90, "mass_kg": 0.3,
+      "spec": { "journal_diameter_mm": 45.0, "clearance_mm": 0.045, "max_load_kn": 52, "material": "bi-metal" }
+    },
+    {
+      "id": "m54.crankshaft.oem", "name": "M54 OEM forged crankshaft (89.6 mm)", "category": "crankshaft", "manufacturer": "Isar",
+      "price": 1500, "mass_kg": 21.5,
+      "description": "Forged steel, twelve counterweights, seven mains, with its torsional damper. A long six-throw crank: torsional vibration, not bending, sets its speed limit.",
+      "spec": { "stroke_mm": 89.6, "main_journal_diameter_mm": 60.0, "rod_journal_diameter_mm": 45.0,
+                "max_rpm": 7600, "max_torque_nm": 500, "inertia_kg_m2": 0.050, "material": "forged steel" }
+    },
+    {
+      "id": "m54.rods.oem", "name": "M54 OEM connecting rods (135 mm)", "category": "connecting_rods", "manufacturer": "Isar",
+      "price": 540, "mass_kg": 3.45,
+      "description": "Forged steel, fracture-split big ends. Heavier than a four's rods but the long 135 mm length keeps the angularity down.",
+      "spec": { "count": 6, "length_mm": 135.0, "big_end_diameter_mm": 45.0, "pin_diameter_mm": 22.0, "mass_each_g": 575,
+                "max_tensile_load_kn": 32, "max_compressive_load_kn": 90, "beam": "i-beam" }
+    },
+    {
+      "id": "m54.pistons.oem", "name": "M54 OEM cast pistons (10.2:1)", "category": "pistons", "manufacturer": "Isar",
+      "price": 520, "mass_kg": 2.34,
+      "description": "Cast eutectic pistons with a shallow bowl and valve reliefs. Sit 0.7 mm below the deck.",
+      "spec": { "count": 6, "bore_mm": 84.0, "pin_diameter_mm": 22.0, "compression_height_mm": 30.5, "dish_volume_cc": 12.1,
+                "mass_each_g": 390, "max_cylinder_pressure_bar": 120, "max_crown_temperature_c": 300, "material": "cast eutectic" }
+    },
+    {
+      "id": "m54.pistons.forged_hc", "name": "Forged high-compression pistons (11.3:1)", "category": "pistons", "manufacturer": "Featherline",
+      "price": 1350, "mass_kg": 2.28,
+      "description": "2618 forged pistons with a shallower bowl for naturally aspirated builds: more torque everywhere, and much less margin against knock on pump fuel.",
+      "spec": { "count": 6, "bore_mm": 84.0, "pin_diameter_mm": 22.0, "compression_height_mm": 30.5, "dish_volume_cc": 6.4,
+                "mass_each_g": 380, "max_cylinder_pressure_bar": 165, "max_crown_temperature_c": 360, "material": "forged 2618" }
+    },
+    {
+      "id": "m54.oil_pump.oem", "name": "M54 OEM oil pump", "category": "oil_pump", "manufacturer": "Isar",
+      "price": 260, "mass_kg": 1.8, "requires": ["m54.sump_flange"],
+      "description": "Chain-driven gear pump bolted under the block, inside the sump.",
+      "spec": { "displacement_cc_per_rev": 16.0, "relief_pressure_kpa": 450 }
+    },
+    {
+      "id": "m54.oil_pan.oem", "name": "M54 OEM aluminium sump", "category": "oil_pan", "manufacturer": "Isar",
+      "price": 240, "mass_kg": 4.5, "requires": ["m54.sump_flange"],
+      "description": "Deep two-piece aluminium sump, 6.5 L with the filter. Surges on sticky tyres in long corners.",
+      "spec": { "capacity_l": 6.5, "max_sustained_g": 1.0, "baffled": false }
+    },
+    {
+      "id": "m54.flywheel.dual_mass", "name": "M54 OEM dual-mass flywheel", "category": "flywheel", "manufacturer": "Isar",
+      "price": 690, "mass_kg": 13.0, "requires": ["m54.bellhousing"],
+      "description": "Two masses on springs to keep the gearbox quiet. Heavy, and its spring pack does not like high revs.",
+      "spec": { "inertia_kg_m2": 0.130, "max_rpm": 7500 }
+    },
+    {
+      "id": "m54.flywheel.single_mass", "name": "Lightweight single-mass flywheel (M54)", "category": "flywheel", "manufacturer": "Featherline",
+      "price": 620, "mass_kg": 7.5, "requires": ["m54.bellhousing"],
+      "description": "Chromoly single-mass conversion: revs build much faster; gear rattle at idle is the price.",
+      "spec": { "inertia_kg_m2": 0.075, "max_rpm": 9500 }
+    }
+  ]
+}

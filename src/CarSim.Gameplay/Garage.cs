@@ -47,6 +47,9 @@ public sealed class Garage
     public ContentDatabase Content { get; }
     public EngineAssembly Engine { get; }
 
+    /// <summary>The scenario this game started from (empty for a garage built by hand or loaded from an older save).</summary>
+    public string ScenarioId { get; set; } = "";
+
     /// <summary>The car's chassis parts (null for an engine-only game).</summary>
     public VehicleAssembly? Chassis { get; }
 
@@ -84,7 +87,10 @@ public sealed class Garage
             foreach (var (slot, wear) in sc.Wear)
                 if (chassis.PartIn(slot) is { } p) p.Wear = wear;
         }
-        var garage = new Garage(content, engine, EcuTune.FromDocument(content.GetTune(tuneId)), sc.Fuel, sc.Money, factory, true, chassis);
+        var garage = new Garage(content, engine, EcuTune.FromDocument(content.GetTune(tuneId)), sc.Fuel, sc.Money, factory, true, chassis)
+        {
+            ScenarioId = sc.Id,
+        };
         foreach (var id in sc.Inventory) garage._inventory.Add(factory.Create(content.GetPart(id)));
         garage.Note($"New game: {sc.Name}.");
         return garage;
@@ -182,6 +188,31 @@ public sealed class Garage
         if (!CanAccess(slotId)) return ActionResult.Fail($"{slot.Label} cannot be reached with the engine in the car. Remove the engine first.");
         var r = Engine.CanInstall(slotId, part);
         return r.Ok ? ActionResult.Success("") : ActionResult.Fail(r.Message);
+    }
+
+    /// <summary>
+    /// Why <paramref name="part"/> would not fit <paramref name="slotId"/> as the engine and car stand (empty when it
+    /// fits): mounting interfaces that no other installed part provides, or a per-cylinder set sized for another
+    /// cylinder count. The same rules the assembly validator applies after installation, asked before buying.
+    /// </summary>
+    public IReadOnlyList<string> FitProblems(PartDefinition part, string slotId)
+    {
+        var problems = new List<string>();
+        var others = Engine.Installed.Concat(Chassis?.Installed ?? Enumerable.Empty<KeyValuePair<string, PartInstance>>())
+            .Where(kv => kv.Key != slotId).Select(kv => kv.Value.Definition);
+        var provided = new HashSet<string>(others.SelectMany(d => d.Provides), StringComparer.Ordinal);
+        var missing = part.Requires.Where(r => !provided.Contains(r)).ToList();
+        if (missing.Count > 0) problems.Add($"needs {string.Join(", ", missing)}, which nothing fitted provides");
+        int? count = part.Spec switch
+        {
+            CarSim.Core.Parts.Specs.PistonSpec p => p.Count,
+            CarSim.Core.Parts.Specs.ConnectingRodSpec r => r.Count,
+            CarSim.Core.Parts.Specs.InjectorSpec i => i.Count,
+            _ => null,
+        };
+        if (count is int n && Engine.Definition.FindSlot(slotId) != null && n != Engine.Definition.Cylinders)
+            problems.Add($"a set of {n} for a {Engine.Definition.Cylinders}-cylinder engine");
+        return problems;
     }
 
     /// <summary>Slots of the engine or the car that accept <paramref name="part"/>'s category.</summary>

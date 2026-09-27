@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using CarSim.Core.Content;
 using CarSim.Core.Damage;
 using CarSim.Core.Dyno;
@@ -31,8 +32,19 @@ public sealed class GameState
         Content = result.Database;
         Mods = result.Mods;
         ContentOverrides = result.Overrides;
-        Garage = Garage.NewGame(Content, "project_car");
+        Garage = Garage.NewGame(Content, StartScenario(Content));
     }
+
+    /// <summary>The scenario a session starts with: <c>--scenario=&lt;id&gt;</c> on the command line, else <see cref="DefaultScenario"/>.</summary>
+    public static string StartScenario(ContentDatabase content)
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--scenario=", StringComparison.Ordinal)) return arg["--scenario=".Length..];
+        return content.Scenarios.ContainsKey(DefaultScenario) ? DefaultScenario : content.Scenarios.Keys.First();
+    }
+
+    /// <summary>The new-game scenario offered first.</summary>
+    public const string DefaultScenario = "project_car";
 
     public string ContentDir { get; }
 
@@ -57,7 +69,7 @@ public sealed class GameState
 
     public void NotifyChanged() => Changed?.Invoke();
 
-    public void NewGame(string scenario = "project_car")
+    public void NewGame(string scenario = DefaultScenario)
     {
         Garage = Garage.NewGame(Content, scenario);
         Runs.Clear();

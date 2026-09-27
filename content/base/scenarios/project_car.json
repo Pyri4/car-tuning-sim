@@ -26,6 +26,24 @@
         "head_gasket": { "head_gasket_breach": 0.20 }
       },
       "inventory": []
+    },
+    {
+      "id": "isar_c30_six",
+      "name": "The Isar C30 six",
+      "description": "A high-mileage 3.0 straight-six coupé that still pulls hard. The bearings and valve springs have done a lot of miles, and it wants its premium fuel.",
+      "engine": "isar_m54",
+      "vehicle": "isar_c30",
+      "money": 12000,
+      "fuel": "gasoline_98",
+      "wear": {
+        "main_bearings": 0.20,
+        "rod_bearings": 0.25,
+        "valve_springs": 0.15,
+        "injectors": 0.10,
+        "clutch": 0.30,
+        "tires_rear": 0.30
+      },
+      "inventory": []
     }
   ]
 }

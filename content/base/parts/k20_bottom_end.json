@@ -104,12 +104,12 @@
     },
     {
       "id": "k20.oil_pump.oem", "name": "K20 OEM oil pump", "category": "oil_pump", "manufacturer": "Kestrel",
-      "price": 180, "mass_kg": 1.4,
+      "price": 180, "mass_kg": 1.4, "requires": ["k20.sump_flange"],
       "spec": { "displacement_cc_per_rev": 9.0, "relief_pressure_kpa": 520 }
     },
     {
       "id": "k20.oil_pump.hv", "name": "High-volume oil pump", "category": "oil_pump", "manufacturer": "Ironclad Racing",
-      "price": 420, "mass_kg": 1.6,
+      "price": 420, "mass_kg": 1.6, "requires": ["k20.sump_flange"],
       "spec": { "displacement_cc_per_rev": 11.5, "relief_pressure_kpa": 620 }
     },
     {
@@ -124,12 +124,12 @@
     },
     {
       "id": "k20.flywheel.oem", "name": "K20 OEM flywheel", "category": "flywheel", "manufacturer": "Kestrel",
-      "price": 260, "mass_kg": 9.5,
+      "price": 260, "mass_kg": 9.5, "requires": ["k20.bellhousing"],
       "spec": { "inertia_kg_m2": 0.110, "max_rpm": 8500 }
     },
     {
       "id": "k20.flywheel.light", "name": "Chromoly lightweight flywheel", "category": "flywheel", "manufacturer": "Featherline",
-      "price": 480, "mass_kg": 4.8,
+      "price": 480, "mass_kg": 4.8, "requires": ["k20.bellhousing"],
       "spec": { "inertia_kg_m2": 0.060, "max_rpm": 11000 }
     }
   ]

@@ -242,9 +242,14 @@ public sealed class VehicleSimulation
         for (int w = 0; w < 4; w++)
             _energy.TyreRolling[w] = _fz[w] * TireModel.RollingResistance(c.TireOf(w), _tyreState[w].PressureKpa) * Math.Abs(s.WheelOmega[w] * c.TireOf(w).Radius) * dt;
         Tyres.Update(dt, _energy.Tyre, _energy.TyreRolling, speed);
+        // A post-shift sync limited by the engagement controller (the clutch itself could hold more) is a deliberate,
+        // brief slip, not a slipping clutch: it heats and wears the facings like any slip, but it is not a warning or a
+        // failure cause. A clutch too weak to hold even the sync torque still counts. The sync lasts longer with a
+        // heavier flywheel and a wider ratio step between the gears.
+        bool controlledSync = _syncingAfterShift && clutchCapacity >= Math.Abs(engineTorque) + ShiftSyncTorqueMarginNm;
         if (_syncingAfterShift && (ratio == 0.0 || (s.Clutch > 0.99 && Math.Abs(s.EngineOmega - lastGearboxOmega) < Units.RpmToRadPerSec(50))))
             _syncingAfterShift = false;
-        bool clutchCommanded = s.Clutch >= 0.999 && s.ShiftTimer <= 0 && s.Gear != 0;
+        bool clutchCommanded = s.Clutch >= 0.999 && s.ShiftTimer <= 0 && s.Gear != 0 && !controlledSync;
         Wear.Update(dt, s.Time, _energy, speed, et.Torque, Units.RadPerSecToRpm(s.EngineOmega - lastGearboxOmega), clutchCommanded, s.Gear);
         return Last!;
     }

@@ -1,0 +1,63 @@
+{
+  // Isar M54 3.0: the in-game marque for a real-engine validation target, the BMW M54B30 as fitted to the
+  // European E46 330i/330Ci (2000-2006, Siemens MS43, not the ZHP package): 2979 cc DOHC 24-valve inline-six,
+  // 84.0 x 89.6 mm, 10.2:1, 170 kW (231 PS) at 5,900 rpm and 300 N·m at 3,500 rpm on RON 98, 6,500 rpm limit.
+  // Sources, estimates and simplifications: PARTS_DATABASE.md, "Isar M54 reference engine".
+  // No simulation code knows this family: everything below is data read through the same specs as the K20.
+  "engines": [
+    {
+      "id": "isar_m54",
+      "name": "Isar M54 3.0L DOHC I6",
+      "cylinders": 6,
+      "layout": "inline",
+      "description": "2979 cc twin-cam straight six with double VANOS and a two-stage (DISA) intake. Aluminium block with iron liners, forged crank on seven mains, long 135 mm rods. Torquey rather than peaky; 6,500 rpm factory limit.",
+      "slots": [
+        { "id": "block",           "category": "block",           "display_name": "Cylinder block" },
+        { "id": "main_bearings",   "category": "main_bearings",   "display_name": "Main bearings (7)",  "install_after": ["block"] },
+        { "id": "crankshaft",      "category": "crankshaft",      "display_name": "Crankshaft",         "install_after": ["main_bearings"] },
+        { "id": "rod_bearings",    "category": "rod_bearings",    "display_name": "Rod bearings",       "install_after": ["crankshaft"] },
+        { "id": "connecting_rods", "category": "connecting_rods", "display_name": "Connecting rods",    "install_after": ["rod_bearings"] },
+        { "id": "pistons",         "category": "pistons",         "display_name": "Pistons",            "install_after": ["connecting_rods"] },
+        { "id": "oil_pump",        "category": "oil_pump",        "display_name": "Oil pump (chain-driven)", "install_after": ["crankshaft"] },
+        { "id": "oil_pan",         "category": "oil_pan",         "display_name": "Oil sump",           "install_after": ["oil_pump", "connecting_rods"] },
+        { "id": "flywheel",        "category": "flywheel",        "display_name": "Flywheel",           "install_after": ["crankshaft"] },
+        { "id": "head_gasket",     "category": "head_gasket",     "display_name": "Head gasket",        "install_after": ["pistons"],         "accessible_in_vehicle": true },
+        { "id": "cylinder_head",   "category": "cylinder_head",   "display_name": "Cylinder head",      "install_after": ["head_gasket"],     "accessible_in_vehicle": true },
+        { "id": "valve_springs",   "category": "valve_springs",   "display_name": "Valve springs",      "install_after": ["cylinder_head"],   "accessible_in_vehicle": true },
+        { "id": "camshafts",       "category": "camshafts",       "display_name": "Camshafts + VANOS",  "install_after": ["valve_springs"],   "accessible_in_vehicle": true },
+        { "id": "intake_manifold", "category": "intake_manifold", "display_name": "Intake manifold (DISA)", "install_after": ["cylinder_head"], "accessible_in_vehicle": true },
+        { "id": "throttle_body",   "category": "throttle_body",   "display_name": "Throttle body",      "install_after": ["intake_manifold"], "accessible_in_vehicle": true },
+        { "id": "injectors",       "category": "injectors",       "display_name": "Fuel injectors",     "install_after": ["intake_manifold"], "accessible_in_vehicle": true },
+        { "id": "fuel_pump",       "category": "fuel_pump",       "display_name": "Fuel pump",                                               "accessible_in_vehicle": true },
+        { "id": "exhaust_manifold","category": "exhaust_manifold","display_name": "Exhaust manifolds",  "install_after": ["cylinder_head"],   "accessible_in_vehicle": true },
+        { "id": "exhaust",         "category": "exhaust",         "display_name": "Exhaust system",     "install_after": ["exhaust_manifold"],"accessible_in_vehicle": true },
+        { "id": "radiator",        "category": "radiator",        "display_name": "Radiator",                                                "accessible_in_vehicle": true },
+        { "id": "ecu",             "category": "ecu",             "display_name": "ECU",                                                     "accessible_in_vehicle": true }
+      ],
+      "stock_parts": {
+        "block": "m54.block.oem",
+        "main_bearings": "m54.main_bearings.oem",
+        "crankshaft": "m54.crankshaft.oem",
+        "rod_bearings": "m54.rod_bearings.oem",
+        "connecting_rods": "m54.rods.oem",
+        "pistons": "m54.pistons.oem",
+        "oil_pump": "m54.oil_pump.oem",
+        "oil_pan": "m54.oil_pan.oem",
+        "flywheel": "m54.flywheel.dual_mass",
+        "head_gasket": "m54.head_gasket.oem",
+        "cylinder_head": "m54.head.oem",
+        "valve_springs": "m54.valve_springs.oem",
+        "camshafts": "m54.cams.oem",
+        "intake_manifold": "m54.intake.disa",
+        "throttle_body": "throttle.68mm",
+        "injectors": "injectors.6x230cc",
+        "fuel_pump": "fuel_pump.m54_oem",
+        "exhaust_manifold": "m54.exhaust_manifold.oem",
+        "exhaust": "exhaust.twin_50mm",
+        "radiator": "radiator.m54_oem",
+        "ecu": "ecu.m54_oem"
+      },
+      "stock_tune": "m54.stock"
+    }
+  ]
+}

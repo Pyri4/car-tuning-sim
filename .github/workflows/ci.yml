@@ -22,7 +22,8 @@ jobs:
       - name: CLI smoke (content validation and a dyno sweep)
         run: |
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate
-          dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep --from 2000 --to 7000 --step 1000
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep kestrel_k20 --from 2000 --to 7000 --step 1000
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep isar_m54 --fuel gasoline_98 --from 2000 --to 6000 --step 1000
 
   godot-smoke:
     name: Godot headless smoke test
@@ -52,3 +53,9 @@ jobs:
         run: |
           timeout 300 "$GODOT_BIN" --headless --path game -- --drive --smoke-test | tee drive.log
           grep -q "DRIVE SMOKE TEST PASSED" drive.log
+      - name: Second engine family through the same game layer (Isar M54 scenario, dyno and drive)
+        run: |
+          timeout 300 "$GODOT_BIN" --headless --path game -- --smoke-test --scenario=isar_c30_six | tee smoke-m54.log
+          grep -q "SMOKE TEST PASSED.*Isar M54" smoke-m54.log
+          timeout 300 "$GODOT_BIN" --headless --path game -- --drive --smoke-test --scenario=isar_c30_six | tee drive-m54.log
+          grep -q "DRIVE SMOKE TEST PASSED" drive-m54.log

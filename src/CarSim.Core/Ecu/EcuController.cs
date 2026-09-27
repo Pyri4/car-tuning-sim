@@ -41,6 +41,15 @@ public sealed class EcuController
 
     public double TargetLambda(double rpm, double mapReading) => Tune.LambdaAt(rpm, Units.PaToKpa(mapReading));
 
+    /// <summary>
+    /// Intake cam advance the ECU commands, crank degrees from the park position: its table at the speed and the MAP it
+    /// reads, within <paramref name="phaserRangeDeg"/> (0 when there is no phaser or the ECU cannot drive one).
+    /// </summary>
+    public double IntakeCamAdvanceTarget(double rpm, double mapReading, double phaserRangeDeg) =>
+        phaserRangeDeg > 0 && Hardware.CamPhaseControl
+            ? MathUtil.Clamp(Tune.IntakeCamAdvanceAt(rpm, Units.PaToKpa(mapReading)), 0.0, phaserRangeDeg)
+            : 0.0;
+
     /// <summary>Table advance minus active knock retard, degrees BTDC.</summary>
     public double SparkAdvance(double rpm, double mapReading) => Tune.AdvanceAt(rpm, Units.PaToKpa(mapReading)) - KnockRetard;
 

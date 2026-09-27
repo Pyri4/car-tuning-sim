@@ -17,6 +17,23 @@
       "spec": { "count": 4, "flow_cc_min": 1000, "rated_pressure_kpa": 300, "max_duty": 0.85, "dead_time_ms": 1.10 }
     },
     {
+      "id": "injectors.6x230cc", "name": "230 cc/min injectors (set of 6)", "category": "injectors", "manufacturer": "Precision Flow",
+      "price": 390, "mass_kg": 0.45,
+      "description": "OEM-size injectors for a 3-litre six, rated at 3.5 bar.",
+      "spec": { "count": 6, "flow_cc_min": 230, "rated_pressure_kpa": 350, "max_duty": 0.85, "dead_time_ms": 0.85 }
+    },
+    {
+      "id": "throttle.68mm", "name": "68 mm electronic throttle body", "category": "throttle_body", "manufacturer": "Precision Flow",
+      "price": 380, "mass_kg": 1.6,
+      "spec": { "bore_mm": 68, "flow_cfm": 670 }
+    },
+    {
+      "id": "exhaust.twin_50mm", "name": "Twin-pipe exhaust (2 × 50 mm, silencers)", "category": "exhaust", "manufacturer": "Isar",
+      "price": 780, "mass_kg": 22.0,
+      "description": "Two 50 mm pipes through a centre resonator into one rear silencer. The catalysts sit in the manifolds, upstream of it.",
+      "spec": { "flow_cfm": 600, "diameter_mm": 71, "has_catalyst": false }
+    },
+    {
       "id": "fuel_pump.oem_170", "name": "OEM in-tank fuel pump", "category": "fuel_pump", "manufacturer": "Kestrel",
       "price": 160, "mass_kg": 0.8,
       "description": "Delivers about 85 L/h at 3 bar. Enough for the factory engine, not much more.",
@@ -49,10 +66,29 @@
       "spec": { "map_sensor_max_kpa": 105, "boost_control": false, "knock_control": true, "max_rev_limit_rpm": 8200, "tables_editable": true }
     },
     {
+      "id": "fuel_pump.m54_oem", "name": "M54 OEM in-tank fuel pump", "category": "fuel_pump", "manufacturer": "Isar",
+      "price": 210, "mass_kg": 1.0,
+      "description": "About 130 L/h at the 3.5 bar rail pressure.",
+      "spec": { "free_flow_lph": 260, "max_pressure_kpa": 700, "regulated_pressure_kpa": 350 }
+    },
+    {
+      "id": "radiator.m54_oem", "name": "M54 OEM radiator", "category": "radiator", "manufacturer": "Isar",
+      "price": 320, "mass_kg": 6.5,
+      "spec": { "heat_rejection_w_per_k": 1900, "reference_air_speed_ms": 15, "coolant_capacity_l": 3.4, "thermostat_open_c": 90 }
+    },
+    {
+      "id": "ecu.m54_oem", "name": "M54 OEM ECU (reflashable)", "category": "ecu", "manufacturer": "Isar",
+      "price": 700, "mass_kg": 0.9,
+      "description": "Factory engine management with knock control and VANOS cam-phase control. No boost control, and nothing to measure boost with.",
+      "spec": { "map_sensor_max_kpa": 105, "boost_control": false, "knock_control": true, "max_rev_limit_rpm": 7200, "tables_editable": true,
+                "cam_phase_control": true }
+    },
+    {
       "id": "ecu.standalone", "name": "Standalone programmable ECU", "category": "ecu", "manufacturer": "Apex Engine Management",
       "price": 1500, "mass_kg": 0.7,
-      "description": "4-bar MAP sensor, closed-loop boost control, knock control, 12,000 rpm capable.",
-      "spec": { "map_sensor_max_kpa": 400, "boost_control": true, "knock_control": true, "max_rev_limit_rpm": 12000, "tables_editable": true }
+      "description": "4-bar MAP sensor, closed-loop boost control, knock control, cam-phaser outputs, 12,000 rpm capable.",
+      "spec": { "map_sensor_max_kpa": 400, "boost_control": true, "knock_control": true, "max_rev_limit_rpm": 12000, "tables_editable": true,
+                "cam_phase_control": true }
     }
   ]
 }
