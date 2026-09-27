@@ -16,7 +16,8 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 586 automated tests (484 before the engine-architecture milestone, 435 before the second engine family, 348
+- 649 automated tests: 644 run and 5 are the pending acceptance tests of Intake Gas Dynamics 2.0 (586 before its
+  Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
   before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
   physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
   synthetic engine matrix. CI runs them, CLI content checks and dyno sweeps (with and without the matrix), and headless
@@ -193,6 +194,17 @@ Audit first (`docs/ENGINE_ARCHITECTURE_AUDIT.md`, two passes), then:
 - Answer: **engines are data** for every architecture in the matrix; what still needs code is listed as B/D in the
   audit's second pass and in ENGINE_AUTHORING_GUIDE.md §9.
 
+### Intake Gas Dynamics 2.0 — Phase 0 ✅ (2026-09-27; Phase 1 awaiting authorization)
+Make the next physics change measurable, reproducible and reviewable before it is made (docs/milestones/INTAKE_GAS_DYNAMICS_2.md):
+- [x] **Regression fingerprint** in the repo (`carsim fingerprint`, `tests/baselines/fingerprint.txt`): K20, M54 and every
+      synthetic family, full precision, in every build, sweep, dyno mode, cold start, failure hold, scenario and lap
+- [x] **Recalibration driver** (`carsim regenerate-tunes`, a recipe per tune, hand-authored tables audited, format-keeping
+      writer) — finding: no shipped tune is an exact fixed point of its recipe today (docs/VERIFICATION.md)
+- [x] **Mutation harness** (`tools/CarSim.MutationCheck`, 21 mutants, manual CI job)
+- [x] **Model specification** with sources and assumptions (SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model")
+- [x] **Acceptance tests before the code**: five pending system-level tests (each recorded failing on today's model) and
+      active guards; no physics, content or tune change
+
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
@@ -201,11 +213,13 @@ Chosen by long-term value, not ease: prefer work that improves every engine or u
 milestone starts only when the owner authorizes it, and ends with a project gate (verify, review, merge order, define
 the next milestone).
 
-1. **Intake Gas Dynamics 2.0 (next milestone — proposed, awaiting authorization).** Definition, phases, test matrix and
-   acceptance criteria: [docs/milestones/INTAKE_GAS_DYNAMICS_2.md](docs/milestones/INTAKE_GAS_DYNAMICS_2.md). Separates
+1. **Intake Gas Dynamics 2.0 (current milestone — Phase 0 complete; Phase 1, the physics, awaiting authorization).**
+   Definition, phases, test matrix, acceptance criteria and Phase 0 results:
+   [docs/milestones/INTAKE_GAS_DYNAMICS_2.md](docs/milestones/INTAKE_GAS_DYNAMICS_2.md). Separates
    valve-event filling from runner/plenum gas dynamics, so a cam phaser no longer carries the runner response, variable
-   intakes act on phased engines, and the K20-fitted correlation constants give way to sourced ones. Phase 0 brings the
-   verification tooling into the repo first (regression fingerprint, recalibration driver, mutation harness). Background:
+   intakes act on phased engines, and the K20-fitted correlation constants give way to sourced ones. Phase 0 brought the
+   verification tooling into the repo (regression fingerprint, recalibration driver, mutation harness; docs/VERIFICATION.md)
+   and wrote the model specification and acceptance tests; open questions Q1–Q5 need the owner before Phase 1. Background:
    the M54 torque-curve investigation (SIMULATION_SPEC.md; its E10 prototype is an input, not the design).
 2. **Cylinder groups on inline engines.** Banks are the unit of per-bank parts and air paths, and an inline engine may
    declare only one. That blocks an inline twin turbo (a turbo per three cylinders on one head: RB26-, N54-, 2JZ-type

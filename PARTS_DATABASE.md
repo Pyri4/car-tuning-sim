@@ -146,7 +146,8 @@ exhaust_lift_mm}` — is the second cam profile a two-stage (VTEC-type) camshaft
 ### `intake_manifold`
 `runner_length_mm` (tunes the torque peak), `flow_cfm` (includes filter/inlet), optional `switched_runner_length_mm`
 (50–1000: the second runner length of a two-stage variable intake, used above the tune's `intake_runner_switch_rpm` by
-an ECU with `intake_runner_control`).
+an ECU with `intake_runner_control`). Proposed for Intake Gas Dynamics 2.0 and **not accepted by the loader yet**: runner
+diameter, plenum volume and N runner stages (SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model").
 
 ### `throttle_body`
 `bore_mm`, `flow_cfm` (wide open).

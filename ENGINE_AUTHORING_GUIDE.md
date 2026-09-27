@@ -171,13 +171,16 @@ the M54's DISA is not authored.
    - `calibrate-ve` again (spark changes exhaust temperature and residuals);
    - set switch speeds (`valve_lift_switch_rpm`, `intake_runner_switch_rpm`) from a sweep with each stage held.
    The tune's `description` should say how it was made. The synthetic matrix was calibrated exactly this way.
+   Record the recipe in `tools/CarSim.Verification/tune-manifest.json` (steps, fuel, build, hand-authored tables; a test
+   requires one per tune) so `carsim regenerate-tunes` can reproduce and regenerate it (docs/VERIFICATION.md).
 7. **Measure.** `carsim sweep <id> --fuel <fuel>`; for a real engine compare against its published figures with
    acceptance bands stated in advance. If it misses, find out why (content? a missing capability? a shared model
    simplification?) and document it. **Do not change model constants to hit one engine's numbers.**
 8. **Car and swaps.** Give the block a bellhousing interface (reuse an existing pattern only if it is physically the
    same). Test it in a car: `carsim drive <id> --vehicle <car>`; a scenario puts it in the game.
 9. **Tests.** Real engines get reference tests (as `M54ReferenceTests`) and join the cross-family pipeline tests. Run the
-   whole suite: the architecture tests, the source audit and the K20/M54 pins must stay green.
+   whole suite: the architecture tests, the source audit and the K20/M54 pins — the regression fingerprint — must stay
+   green. A real engine joins the fingerprint matrix (`FingerprintMatrix`) and the baseline is re-written.
 10. **Game.** `godot --headless --path game -- --smoke-test --scenario=<scenario>` (and `--drive --smoke-test`); look at
     the Workshop, Tuning and Dyno tabs.
 

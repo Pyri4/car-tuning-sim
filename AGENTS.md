@@ -80,6 +80,10 @@ When starting a task:
    - `dotnet run --project tools/CarSim.Cli -- validate --mods content/test` (base content plus the synthetic matrix);
    - for engine or UI changes, the Godot smoke tests (`godot --headless --path game -- --smoke-test [--scenario=<id>]`,
      and `--drive --smoke-test`; `CARSIM_MODS_DIR=<repo>/content/test` loads the synthetic engines).
+   - The test suite includes the **regression fingerprint** (`tests/baselines/fingerprint.txt`): any change to a K20, M54
+     or synthetic output fails it. A deliberate change is re-baselined with `carsim fingerprint --write` and reported with
+     the diff (`carsim fingerprint --dump` + `fingerprint-diff` for detail). Tune changes go through
+     `carsim regenerate-tunes`; a new invariant gets an entry in the mutation harness. See docs/VERIFICATION.md.
 6. Summarize changed files, validation, and remaining risks.
 
 The project's agent skills (below) package steps 5–6 (`car-sim-verify`), engine work (`car-sim-add-engine`) and the

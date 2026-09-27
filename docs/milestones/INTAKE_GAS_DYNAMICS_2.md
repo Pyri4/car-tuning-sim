@@ -1,8 +1,9 @@
 # Milestone: Intake Gas Dynamics 2.0
 
-**Status: PROPOSED — awaiting the owner's explicit authorization.** Defined by the project gate of 2026-09-27 (after
-the engine-architecture milestone). Do not start implementation until the owner authorizes it; the owner may change
-the scope below.
+**Status: PHASE 0 COMPLETE — Phase 1 (the physics) awaits the owner's explicit authorization.** Defined by the project
+gate of 2026-09-27 (after the engine-architecture milestone). The owner authorized Phase 0 only (verification tooling,
+the pre-physics baseline, the model specification, sources and acceptance tests); no intake gas-dynamics physics is
+implemented. Do not start Phase 1 until the owner authorizes it; the owner may change the scope below.
 
 ## Goal
 Separate the two things the current volumetric-efficiency model fuses into one filling hump:
@@ -38,9 +39,11 @@ dynamics — for NA and boosted engines, on every bank.
 ## Model constraints
 - Reduced-order and closed-form per bank per step: no CFD, no 1-D wave-action (GT-Power-style) solver, no per-cylinder
   pulse integration, no extra root finds in the air-path solve.
-- Physical basis with sources (e.g. Heywood, *Internal Combustion Engine Fundamentals*, ch. 7; Winterbone & Pearson,
-  *Theory of Engine Manifold Design*; Blair, *Design and Simulation of Four-Stroke Engines*): quarter-wave runner
-  tuning and/or Helmholtz resonance (f = a/2π·√(A/(L·V))), speed of sound a = √(γRT) from the charge temperature.
+- Physical basis with sources (e.g. Heywood, *Internal Combustion Engine Fundamentals*, §6.2 — volumetric efficiency is
+  in chapter 6 of the 1988 edition, not chapter 7 as this line first said; Winterbone & Pearson, *Theory of Engine
+  Manifold Design*; Blair, *Design and Simulation of Four-Stroke Engines*): quarter-wave runner tuning and/or Helmholtz
+  resonance (f = a/2π·√(A/(L·V))), speed of sound a = √(γRT) from the charge temperature. The Phase 0 specification's
+  sources and their verification status: SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model".
 - Every constant is classified in SIMULATION_SPEC.md as physical, derived or fitted. Fitted constants are shared and
   fitted across several engines at once (K20, M54, synthetic fixed- and variable-runner engines) — never per engine.
 - Bounded by construction: VE, port pressure and tuning gain have stated physical bounds; no NaN, no negative pressure,
@@ -49,7 +52,7 @@ dynamics — for NA and boosted engines, on every bank.
 - The E10 prototype of the M54 investigation (a fixed gas-dynamic share *g*) is an input, not the design: its
   unsourced share is exactly what this milestone replaces with a physically derived amplitude.
 
-## Phase 0 — prerequisites (before any physics change)
+## Phase 0 — prerequisites (before any physics change) — done, see "Phase 0 results"
 The last milestone's verification relied on tools that live outside the repository. This milestone changes K20 and
 M54 output on purpose and invalidates every VE table, so the tools must be in the repo first:
 
@@ -87,6 +90,11 @@ Structural behaviour, not just "power went up":
 Plus the existing suites: energy balance, ECU observability, spec fuzz (over the new fields), clamp activation,
 timestep convergence, allocation budget, the architecture invariants and the source audit.
 
+Executable form (Phase 0): items 1–3 and 5 at system level are `IntakeGasDynamicsAcceptanceTests` (pending); items 4, 8, 9
+and the allocation half of acceptance criterion 6 are `IntakeGasDynamicsGuardTests` (active); item 6 (interaction sign
+and bounds) and the component-level halves of items 1–3 and 7 are written first thing in Phase 1 against the new model's
+API, with the tolerances of the specification; item 10 is covered by the existing architecture invariants.
+
 ## Acceptance criteria
 1. **M54 / DISA:** with generic code and M54 *data* only (DISA's effective geometry documented as estimated, with its
    provenance), the modelled M54 torque curve is no longer a plateau from 1,500 rpm: it rises into a mid-range peak, and
@@ -103,6 +111,64 @@ timestep convergence, allocation budget, the architecture invariants and the sou
 7. **All tests, CLI checks, Godot smoke tests (real and synthetic engines) and CI green.**
 8. **Docs:** SIMULATION_SPEC (model, sources, constants, bounds), ENGINE_AUTHORING_GUIDE §5 and §6 (intake data and how
    to author it), PARTS_DATABASE (schema), ARCHITECTURE decision log, ROADMAP, the audit.
+
+## Phase 0 results (2026-09-27)
+Deliverables — details and usage in docs/VERIFICATION.md:
+1. **Regression fingerprint** (`tools/CarSim.Verification`, `carsim fingerprint`, `tests/baselines/fingerprint.txt`, 38 tests):
+   35 cases — K20 (stock RON 95/98, short runner, NA build, T28 on 98/95, T35, and the driver's regeneration of its
+   factory VE recipe), M54 (stock 98/95, phaser parked), nine failure holds, both game scenarios, four autopilot drives,
+   all nine synthetic families — each section digested at full precision (SHA-256 over every telemetry value), plus
+   readable key numbers. Deterministic (parallel and serial runs identical); a 1e-10 relative change of one shared
+   constant fails it (mutation `fingerprint-sensitivity`).
+2. **Recalibration driver** (`carsim regenerate-tunes`, `tools/CarSim.Verification/tune-manifest.json`): one recipe per
+   shipped and test tune, hand-authored tables listed and audited, `--write` that rewrites only calibrated tables and
+   keeps each file's format (every tune file round-trips byte-identically).
+3. **Mutation harness** (`tools/CarSim.MutationCheck`, 21 mutants from the validation pass, the second family, the
+   engine architecture and this milestone; CI job on manual dispatch).
+4. **Model specification** — SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model (Phase 0 specification, NOT
+   implemented)": structure, equations, constant classes, bounds, sources and their verification status, assumptions,
+   what is not modelled, open questions Q1–Q5. For review before Phase 1 code.
+
+The pre-physics baseline: the fingerprint (every K20, M54 and synthetic output at full precision); the K20 is still
+bit-identical to the engine-architecture merge and the M54 is its Phase 1 starting point. Reference numbers (fingerprint
+key numbers, full-load sweep with 1 s settle): K20 stock (RON 95) 111.0 kW (148.8 hp) / 189.2 N·m at 3,750 rpm; T28
+build (RON 98) 177.5 kW / 292.5 N·m; M54 (RON 98) 153.0 kW / 303.9 N·m at 2,000 rpm (plateau from 1,500 rpm); M54 laps
+52.14 s in the Isar C30. Step cost
+(`carsim bench`, this container, full load 5,000 rpm, 2 ms): K20 52.5 µs / 10,360 B, M54 51.7 µs / 10,360 B,
+`syn_v6_tt` 156.5 µs / 28,032 B — the budget of acceptance criterion 6.
+
+Measured on the current model (the rig of the acceptance tests; SIMULATION_SPEC.md has the details): runner tuned speed
+∝ L^−0.254; no charge-temperature effect; the runner's crossover moves with the cam phase (none at 50° advance); a
+two-stage intake under the M54's VANOS map changes torque by < 2 % everywhere; `syn_i6_vis`'s switched stage loses to
+its primary below ≈ 6,400 rpm, so its shipped 4,600 rpm switch speed costs up to ≈ 2.6 %.
+
+Findings for the owner:
+- **No shipped tune is an exact fixed point of its recipe** (VERIFICATION.md, table): the M54's cams and VE are; its
+  spark and most others differ by 0.5° in a few cells; the K20 turbo VE by up to 0.026; the synthetic turbo cam maps by
+  up to 10°. Regenerating them is a content change that moves the fingerprint (the K20 by 11 VE cells), so Phase 0 did
+  not; Phase 1 should regenerate under the old physics first, in its own commit (Q5).
+- **Hand-authored spark maps exceed the calibrator's ceiling** in many light-load cells (K20 stock 74, turbo base 80 of
+  180, by up to 11.5°). The audit rule reports them; whether they stay is the owner's decision after Phase 1.
+- `syn_i6_vis`'s switch speed was not set by the held-stage sweep the authoring guide prescribes (above).
+
+### Acceptance tests (defined in Phase 0)
+Pending — `IntakeGasDynamicsAcceptanceTests`, skipped unless `CARSIM_RUN_PENDING_ACCEPTANCE=1`; each fails today as shown:
+
+| Test | Criterion (tolerance) | Today |
+|---|---|---|
+| `TheRunnerCrossoverDoesNotMoveWithTheCamPhaser` | M54, 380 vs 250 mm (test-only), intake cam held at 10° and 50°: the speed above which the short runner out-fills the long one exists (1,500–6,400 rpm) and moves ≤ 10 % | no crossover at 50° |
+| `TunedSpeedScalesWithRunnerLengthAsTheWaveModelsPredict` | K20 fixed cams, 230/340/460 mm: crossover scaling exponent against geometric-mean length in [0.45, 1.1] (Helmholtz ½ … quarter wave 1) | 0.254 |
+| `AHotterChargeRaisesTheTunedSpeedWithTheSpeedOfSound` | K20, ambient 263 → 323 K: crossover shift within [0.5, 1.5] × (√(T_hot/T_cold) − 1) of the charge temperatures | 0 |
+| `ASwitchedRunnerActsOnAPhasedEngine` | M54 + test-only 380/250 mm two-stage intake, shipped VANOS map: each stage wins by ≥ 2 % in its own range, long stage below short | < 2 % everywhere |
+| `TheM54RisesIntoAMidRangePeakWithItsDisaAuthored` | M54 with its DISA authored (provenance): peak torque at 2,750–4,750 rpm, ≥ 3 % above the 1,500 rpm torque; peak torque 270–330 N·m, power 144.5–195.5 kW | DISA not authored |
+
+Active guards — must hold now and after Phase 1: `IntakeGasDynamicsGuardTests` (every family bounded, 0 < VE_dyn ≤ 1.35,
+λ within 4 % of target at full load on its calibration fuel; stage switching with 150 rpm hysteresis; the phaser still
+moves the valve-event optimum ≥ 20° between 1,500 and 5,500 rpm; per-step allocation ≤ Phase 0 + 2 %), the fingerprint
+(K20 protection: any change is a measured, documented re-baseline), `TuneRegenerationTests`, the source audit
+(`EngineAgnosticTests`), the architecture invariants and the M54 bands (`M54ReferenceTests`). Step time (+10 %) is
+measured with `carsim bench` against the numbers above in the same container. `TorqueCurveDiagnosisTests` pin today's
+limitation and are expected to fail in Phase 1: they are retired or inverted there, deliberately and documented.
 
 ## Out of scope
 CFD or wave-action solvers; exhaust wave tuning beyond the existing scavenging term (a candidate follow-up, together

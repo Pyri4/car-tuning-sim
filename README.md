@@ -42,6 +42,7 @@ DOHC V8s, a flat-four, VVL, variable intake) proves that other architectures run
 - SIMULATION_SPEC.md — initial simulation model and equations
 - PARTS_DATABASE.md — initial component/data schema
 - docs/ENGINE_ARCHITECTURE_AUDIT.md — structural engine assumptions found in the code and what was done about each
+- docs/VERIFICATION.md — the regression fingerprint, the tune-regeneration driver and the mutation harness
 - docs/milestones/ — milestone definitions (the next one is proposed until the owner authorizes it)
 
 Coding agents also get this project's procedures as agent skills (`.agents/skills/`, `.claude/skills/`, managed with

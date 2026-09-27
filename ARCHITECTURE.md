@@ -78,7 +78,10 @@ content/test/              test-only content layers (the synthetic engine matrix
 src/CarSim.Core/           game-engine-agnostic simulation + domain model (NO Godot references)
 src/CarSim.Gameplay/       garage, economy, scenarios, save/load (NO Godot references)
 tests/CarSim.Core.Tests/   xUnit tests for the core
-tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno) built on the core
+tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno, fingerprint, regenerate-tunes) built on the core
+tools/CarSim.Verification/ regression fingerprint and tune-regeneration driver (+ tune-manifest.json); CLI and tests only
+tools/CarSim.MutationCheck/ mutation harness (mutations.json): injects known bugs, proves the guarding tests fail
+tests/baselines/           checked-in regression fingerprint
 game/                      Godot 4.7 project (presentation layer); references CarSim.Core
 docs/                      audits and milestone definitions (docs/milestones/)
 tools/agent-skills/        sources of this project's agent skills (installed with `npx skills`)
@@ -281,6 +284,12 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
   numeric field of every fitted part scaled from −1× to 10³×; wherever the part's validator accepts the value, the
   engine or car must be refused with reasons or run finite); clamp-activation tests (guards on fitted laws never
   carry normal running); tyre-width and suspension trade-offs; Miner additivity across a save/load.
+- **Regression fingerprint** (Intake Gas Dynamics 2.0, Phase 0; docs/VERIFICATION.md): every K20, M54 and synthetic
+  output in a fixed build matrix — sweeps, dyno modes, cold start, failure holds, scenarios, laps — digested at full
+  precision and checked by the suite against `tests/baselines/fingerprint.txt`; bit-identity claims are checked by it,
+  and a deliberate change is a measured, documented re-baseline. Tunes are regenerated through the recipes of
+  `tools/CarSim.Verification/tune-manifest.json` (`carsim regenerate-tunes`). Acceptance tests of a milestone may be
+  written before its code as `PendingAcceptanceFact` (skipped until the milestone; each recorded failing when written).
 - **Mutation checks:** new invariants are shown to fail on the bug they guard — the previous physics (overrun
   exhaust heat), an ECU fed the true air mass or the true fuel density, boost feedback from the compressor outlet,
   choke that removes compressor work, no boost anti-windup, a raised VE floor. A test that cannot fail on its bug is
@@ -366,3 +375,5 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
 | 2026-09-27 | A car names only its stock engine; whether an engine fits a car is decided by interfaces (gearboxes require a bellhousing pattern), checked by scenarios, the garage and the CLI | Engine swaps are a core feature; a car hard-wired to an engine family made them impossible |
 | 2026-09-27 | A synthetic engine matrix lives in `content/test/` as a content layer, calibrated with the dev calibrators; its ids are forbidden in `src/` | Genericity is demonstrated, not claimed: architectures the code was never written for must run as data |
 | 2026-09-27 | Agent skills are managed with the skills CLI (`npx skills`, vercel-labs/skills): project procedures (verify, add an engine, project gate) as skills with sources in `tools/agent-skills/`, installed to `.agents/skills/` (+ `.claude/skills/` links), pinned in `skills-lock.json`; CI checks installed copies against their sources | One install for every coding agent the project uses (Claude Code, Codex, …); skills turn AGENTS.md procedures into checklists agents load when a task matches. Third-party skills need the owner's approval (they run with full agent permissions) |
+| 2026-09-27 | Verification tooling lives in the repo: a regression fingerprint (per-section SHA-256 over every telemetry value at round-trip precision, readable key numbers, a channel schema so added telemetry is not a difference), a tune-regeneration driver over a per-tune recipe manifest, and a mutation harness over a list of known bugs | The last milestone's bit-identity and mutation claims rested on tools outside the repo (audit G3); Intake Gas Dynamics 2.0 changes the K20 and M54 on purpose and invalidates every calibrated table, so the change must be measurable and reproducible first |
+| 2026-09-27 | Acceptance tests may precede their physics as skipped `PendingAcceptanceFact` tests, each shown to fail on the current model when written | The criteria of a physics change are fixed, reviewable and executable before the change, instead of being written to fit it afterwards |
