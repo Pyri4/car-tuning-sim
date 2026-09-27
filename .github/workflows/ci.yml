@@ -3,6 +3,8 @@ name: CI
 on:
   push:
   pull_request:
+  # Manual runs also run the mutation harness (slow: every known bug injected, rebuilt and tested).
+  workflow_dispatch:
 
 jobs:
   core:
@@ -37,6 +39,10 @@ jobs:
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate --mods content/test
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- inspect syn_v8_ohv --mods content/test
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep syn_v6_tt --mods content/test --fuel gasoline_98 --from 2000 --to 7000 --step 1000
+      - name: Verification tools (fingerprint from the CLI, tune-regeneration driver) — docs/VERIFICATION.md
+        run: |
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- fingerprint --case k20_stock_95,m54_stock_98
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- regenerate-tunes --tune k20.stock,syn.r6.stock
 
   godot-smoke:
     name: Godot headless smoke test
@@ -84,3 +90,15 @@ jobs:
             grep -q "DRIVE SMOKE TEST PASSED" drive-$s.log
             if grep -q "ERROR" drive-$s.log; then echo "script errors in the drive smoke test"; exit 1; fi
           done
+
+  mutation-check:
+    name: Mutation harness (manual dispatch)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Inject every known bug (tools/CarSim.MutationCheck/mutations.json) and prove its tests fail
+        run: dotnet run --project tools/CarSim.MutationCheck -c Release
