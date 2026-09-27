@@ -58,16 +58,13 @@ public sealed class BankConfiguration
             IntercoolerCdA = CompressibleFlow.EffectiveAreaFromCfm(Intercooler.FlowCfm) * IntercoolerShare;
         }
 
-        // Cam profiles (a variable-lift camshaft has two), runner stages (a variable intake has two).
+        // Cam profiles (a variable-lift camshaft has two), runner stages (a variable intake has two or more).
         Profiles = new[] { new CamProfileConfiguration(Head, Cams.Profile(false)), new CamProfileConfiguration(Head, Cams.Profile(true)) };
-        RunnerTuning = new[]
-        {
-            Math.Pow(EngineConfiguration.ReferenceRunnerLength / Intake.RunnerLength, 0.25),
-            Math.Pow(EngineConfiguration.ReferenceRunnerLength / Units(Intake.SwitchedRunnerLengthMm ?? Intake.RunnerLengthMm), 0.25),
-        };
+        RunnerStages = Intake.AllStages().Select(s => new RunnerStageConfiguration(s, g)).ToArray();
+        RunnerTuning = RunnerStages.Select(s => Math.Pow(EngineConfiguration.ReferenceRunnerLength / Units(s.Spec.RunnerLengthMm), 0.25)).ToArray();
         IntakePhaserRange = engine.Ecu.CamPhaseControl ? Cams.IntakePhaserRangeDeg : 0.0;
         HasVariableLift = Cams.HasVariableLift && engine.Ecu.ValveLiftControl;
-        HasSwitchedRunner = Intake.SwitchedRunnerLengthMm != null && engine.Ecu.IntakeRunnerControl;
+        HasSwitchedRunner = RunnerStages.Count > 1 && engine.Ecu.IntakeRunnerControl;
         _stroke = g.Stroke;
         VePeakRpm = VePeakRpmAt(0.0);
         ScavengingRpm = EngineConfiguration.HeaderTuningConstant / ExhaustManifold.PrimaryLengthMm;
@@ -131,7 +128,10 @@ public sealed class BankConfiguration
     /// <summary>[0] the base cam profile, [1] the variable-lift profile (the base again for a single-profile camshaft).</summary>
     public IReadOnlyList<CamProfileConfiguration> Profiles { get; }
 
-    /// <summary>Runner tuning factor (0.300 m / L)^0.25: [0] the primary runner, [1] the switched one (the primary for a fixed manifold).</summary>
+    /// <summary>The intake's runner stages: [0] the primary runner, then the switched stages in the ECU's order.</summary>
+    public IReadOnlyList<RunnerStageConfiguration> RunnerStages { get; }
+
+    /// <summary>Runner tuning factor (0.300 m / L)^0.25 per runner stage.</summary>
     public IReadOnlyList<double> RunnerTuning { get; }
 
     /// <summary>
@@ -143,7 +143,7 @@ public sealed class BankConfiguration
     /// <summary>Whether the ECU can switch this bank's camshafts to a high-lift profile.</summary>
     public bool HasVariableLift { get; }
 
-    /// <summary>Whether the ECU can switch this bank's intake manifold to its switched runner.</summary>
+    /// <summary>Whether the ECU can switch this bank's intake manifold between its runner stages.</summary>
     public bool HasSwitchedRunner { get; }
 
     /// <summary>Speed of peak cam/runner filling with the cams at their installed (park) position, base profile and primary runner, rpm.</summary>
@@ -216,6 +216,32 @@ public sealed class CamProfileConfiguration
 
     /// <summary>Tuned mean piston speed from the intake duration alone (straight-up cams), m/s.</summary>
     public double DurationTunedPistonSpeed { get; }
+}
+
+/// <summary>One runner stage of a bank's intake: its geometry, with the model default where the part states none.</summary>
+public sealed class RunnerStageConfiguration
+{
+    /// <summary>Runner diameter assumed when the part states none, as a fraction of the bore (assumption A5).</summary>
+    public const double DefaultDiameterPerBore = 0.40;
+
+    internal RunnerStageConfiguration(IntakeStageSpec spec, EngineGeometry geometry)
+    {
+        Spec = spec;
+        Length = Common.Units.MmToM(spec.RunnerLengthMm);
+        DefaultDiameter = spec.RunnerDiameterMm == null;
+        Diameter = spec.RunnerDiameterMm is double d ? Common.Units.MmToM(d) : DefaultDiameterPerBore * geometry.Bore;
+    }
+
+    public IntakeStageSpec Spec { get; }
+
+    /// <summary>Acoustic length (runner mouth to valve seat), m.</summary>
+    public double Length { get; }
+
+    /// <summary>Mean runner diameter, m (the model default when the part states none).</summary>
+    public double Diameter { get; }
+
+    /// <summary>Whether <see cref="Diameter"/> is the model default (0.40 × bore) rather than part data.</summary>
+    public bool DefaultDiameter { get; }
 }
 
 /// <summary>One installed turbocharger: its spec, part and the banks it serves (their exhaust drives it, their intake draws through it).</summary>

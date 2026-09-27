@@ -138,16 +138,16 @@
       "id": "runner-length-inert",
       "guards": "The intake runner length acts on filling (fixed cams).",
       "file": "src/CarSim.Core/Simulation/BankConfiguration.cs",
-      "find": "Math.Pow(EngineConfiguration.ReferenceRunnerLength / Intake.RunnerLength, 0.25),",
-      "replace": "1.0,",
+      "find": "RunnerTuning = RunnerStages.Select(s => Math.Pow(EngineConfiguration.ReferenceRunnerLength / Units(s.Spec.RunnerLengthMm), 0.25)).ToArray();",
+      "replace": "RunnerTuning = RunnerStages.Select(s => 1.0).ToArray();",
       "tests": "FullyQualifiedName~EngineOutputTests|FullyQualifiedName~FingerprintK20Tests"
     },
     {
       "id": "runner-never-switches",
       "guards": "A variable intake switches to its second stage above the tune's switch speed.",
       "file": "src/CarSim.Core/Ecu/EcuController.cs",
-      "find": "running && Hardware.IntakeRunnerControl && Tune.IntakeRunnerSwitchRpm is double on",
-      "replace": "false && Hardware.IntakeRunnerControl && Tune.IntakeRunnerSwitchRpm is double on",
+      "find": "if (!running || !Hardware.IntakeRunnerControl) return 0;",
+      "replace": "if (!running || !Hardware.IntakeRunnerControl || rpm > 0) return 0;",
       "tests": "FullyQualifiedName~ArchitectureInvariantTests|FullyQualifiedName~FingerprintSyntheticTests"
     },
     {

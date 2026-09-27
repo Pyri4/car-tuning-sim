@@ -69,6 +69,9 @@ public static class TuneRegenerator
     public const string VolumetricEfficiency = "volumetric_efficiency", IgnitionAdvance = "ignition_advance_deg",
         IntakeCamAdvance = "intake_cam_advance_deg", RunnerSwitch = "intake_runner_switch_rpm", LiftSwitch = "valve_lift_switch_rpm";
 
+    /// <summary>Written with <see cref="RunnerSwitch"/>: the switch speeds of the third and later stages of an intake with more than two.</summary>
+    public const string RunnerUpperSwitch = "intake_runner_upper_switch_rpm";
+
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
     /// <summary>Loads the content a recipe needs: the base game, plus the test layers for synthetic engines.</summary>
@@ -137,7 +140,11 @@ public static class TuneRegenerator
         VolumetricEfficiency => d with { VolumetricEfficiency = v },
         IgnitionAdvance => d with { IgnitionAdvanceDeg = v },
         IntakeCamAdvance => d with { IntakeCamAdvanceDeg = v },
-        RunnerSwitch => d with { IntakeRunnerSwitchRpm = double.IsNaN(v[0][0]) ? null : v[0][0] },
+        RunnerSwitch => d with
+        {
+            IntakeRunnerSwitchRpm = double.IsNaN(v[0][0]) ? null : v[0][0],
+            IntakeRunnerUpperSwitchRpm = v[0].Length > 1 ? v[0][1..] : d.IntakeRunnerUpperSwitchRpm,
+        },
         LiftSwitch => d with { ValveLiftSwitchRpm = double.IsNaN(v[0][0]) ? null : v[0][0] },
         _ => throw new InvalidDataException($"Unknown field '{field}'."),
     };
@@ -164,7 +171,7 @@ public static class TuneRegenerator
                     };
                     break;
                 case "runner_switch":
-                    doc = doc with { IntakeRunnerSwitchRpm = Crossover(db, recipe, doc, lift: false) };
+                    doc = RunnerSwitchSpeeds(db, recipe, doc);
                     break;
                 case "lift_switch":
                     doc = doc with { ValveLiftSwitchRpm = Crossover(db, recipe, doc, lift: true) };
@@ -204,6 +211,11 @@ public static class TuneRegenerator
             text = field is RunnerSwitch or LiftSwitch
                 ? ReplaceScalar(text, start, end, field, Values(values, field)[0][0])
                 : ReplaceTable(text, start, end, field, Values(values, field));
+            if (field == RunnerSwitch && values.IntakeRunnerUpperSwitchRpm is { } upper)
+            {
+                (start, end) = TuneObject(text, tuneId);
+                text = ReplaceList(text, start, end, RunnerUpperSwitch, upper);
+            }
         }
         return text;
     }
@@ -222,14 +234,44 @@ public static class TuneRegenerator
     }
 
     /// <summary>
+    /// The switch speed of every stage of a variable intake: stage k's is the crossover of stages k − 1 and k, each held
+    /// (<see cref="Crossover"/>). A two-stage intake has one (<c>intake_runner_switch_rpm</c>); the third and later stages'
+    /// go to <c>intake_runner_upper_switch_rpm</c>, which the tune file must already have (a placeholder list is enough).
+    /// </summary>
+    private static TuneDocument RunnerSwitchSpeeds(ContentDatabase db, TuneRecipe recipe, TuneDocument doc)
+    {
+        int stages = Sim(db, recipe, doc).Config.Banks.Max(b => b.RunnerStages.Count);
+        var speeds = new double?[stages];
+        for (int k = 1; k < stages; k++) speeds[k] = Crossover(db, recipe, HoldingStage(doc, k - 1), HoldingStage(doc, k));
+        if (stages <= 2) return doc with { IntakeRunnerSwitchRpm = stages == 2 ? speeds[1] : doc.IntakeRunnerSwitchRpm };
+        if (doc.IntakeRunnerUpperSwitchRpm == null)
+            throw new InvalidDataException($"{recipe.Tune}: the intake has {stages} stages; add intake_runner_upper_switch_rpm (a placeholder list) to the tune first.");
+        // A stage that never wins against the one below it is never switched to, and nor is any above it.
+        var upper = speeds[1] == null ? Array.Empty<double>() : speeds[2..].TakeWhile(v => v != null).Select(v => v!.Value).ToArray();
+        return doc with { IntakeRunnerSwitchRpm = speeds[1], IntakeRunnerUpperSwitchRpm = upper };
+    }
+
+    /// <summary>The tune with its intake held on runner stage <paramref name="stage"/> at every speed a sweep visits.</summary>
+    public static TuneDocument HoldingStage(TuneDocument doc, int stage) => doc with
+    {
+        IntakeRunnerSwitchRpm = stage >= 1 ? 500 : null,
+        IntakeRunnerUpperSwitchRpm = stage >= 2 ? Enumerable.Repeat(500.0, stage - 1).ToArray() : null,
+    };
+
+    /// <summary>
     /// Speed at which the second stage (switched runner or high-lift profile) starts making more full-load torque than the
     /// first and keeps doing so up to the rev limit: both stages held, 100 rpm grid, zero crossing interpolated and rounded
     /// to 100 rpm. Null when the second stage never wins.
     /// </summary>
-    internal static double? Crossover(ContentDatabase db, TuneRecipe recipe, TuneDocument doc, bool lift)
+    internal static double? Crossover(ContentDatabase db, TuneRecipe recipe, TuneDocument doc, bool lift) => lift
+        ? Crossover(db, recipe, doc with { ValveLiftSwitchRpm = null }, doc with { ValveLiftSwitchRpm = 500 })
+        : Crossover(db, recipe, HoldingStage(doc, 0), HoldingStage(doc, 1));
+
+    /// <summary>The full-load torque crossover of two held configurations (see <see cref="Crossover(ContentDatabase, TuneRecipe, TuneDocument, bool)"/>).</summary>
+    private static double? Crossover(ContentDatabase db, TuneRecipe recipe, TuneDocument first, TuneDocument then)
     {
-        var primary = Sweep(db, recipe, lift ? doc with { ValveLiftSwitchRpm = null } : doc with { IntakeRunnerSwitchRpm = null });
-        var second = Sweep(db, recipe, lift ? doc with { ValveLiftSwitchRpm = 500 } : doc with { IntakeRunnerSwitchRpm = 500 });
+        var primary = Sweep(db, recipe, first);
+        var second = Sweep(db, recipe, then);
         int last = -1;
         for (int i = 0; i < primary.Count; i++)
             if (second[i].Torque < primary[i].Torque) last = i;
@@ -296,7 +338,7 @@ public static class TuneRegenerator
         VolumetricEfficiency => d.VolumetricEfficiency ?? throw new InvalidDataException($"{d.Id} has no {field}."),
         IgnitionAdvance => d.IgnitionAdvanceDeg,
         IntakeCamAdvance => d.IntakeCamAdvanceDeg ?? throw new InvalidDataException($"{d.Id} has no {field} (add a placeholder table first)."),
-        RunnerSwitch => new[] { new[] { d.IntakeRunnerSwitchRpm ?? double.NaN } },
+        RunnerSwitch => new[] { new[] { d.IntakeRunnerSwitchRpm ?? double.NaN }.Concat(d.IntakeRunnerUpperSwitchRpm ?? Array.Empty<double>()).ToArray() },
         LiftSwitch => new[] { new[] { d.ValveLiftSwitchRpm ?? double.NaN } },
         _ => throw new InvalidDataException($"Unknown field '{field}'."),
     };
@@ -305,7 +347,7 @@ public static class TuneRegenerator
     public static string Format(string field, double v) => field switch
     {
         VolumetricEfficiency => v.ToString("0.000", Inv),
-        RunnerSwitch or LiftSwitch => v.ToString("0", Inv),
+        RunnerSwitch or RunnerUpperSwitch or LiftSwitch => v.ToString("0", Inv),
         _ => v.ToString("0.#", Inv),
     };
 
@@ -374,6 +416,16 @@ public static class TuneRegenerator
         }
         sb.Append(closeIndent);
         return text[..(open + 1)] + sb + text[close..];
+    }
+
+    /// <summary>Replaces a flat list of numbers (<c>"field": [a, b]</c>) in place, in the field's number format.</summary>
+    private static string ReplaceList(string text, int start, int end, string field, double[] values)
+    {
+        var key = new Regex("\"" + Regex.Escape(field) + "\"\\s*:\\s*\\[");
+        var match = key.Match(text, start, end - start);
+        if (!match.Success) throw new InvalidDataException($"'{field}' not found in the tune object.");
+        int open = match.Index + match.Length - 1, close = Matching(text, open, '[', ']');
+        return text[..(open + 1)] + string.Join(", ", values.Select(v => Format(field, v))) + text[close..];
     }
 
     private static string ReplaceScalar(string text, int start, int end, string field, double value)

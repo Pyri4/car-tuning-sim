@@ -101,8 +101,9 @@ public partial class TuningView : HSplitContainer
         if (caps.VariableLiftCams)
             _left.AddChild(Ui.Label(hw.ValveLiftControl ? "Variable valve lift: two cam profiles, switched by engine speed"
                 : "Variable valve lift: this ECU cannot switch the cams (base profile only)", 13, hw.ValveLiftControl ? Ui.Muted : Ui.Caution));
+        int runnerStages = State.Garage.Engine.PartsOf(PartCategory.IntakeManifold).Max(p => p.Part.Spec<IntakeManifoldSpec>().AllStages().Count);
         if (caps.SwitchedRunners)
-            _left.AddChild(Ui.Label(hw.IntakeRunnerControl ? "Variable intake: two runner lengths, switched by engine speed"
+            _left.AddChild(Ui.Label(hw.IntakeRunnerControl ? $"Variable intake: {runnerStages} runner stages, switched by engine speed"
                 : "Variable intake: this ECU cannot switch the runners (primary only)", 13, hw.IntakeRunnerControl ? Ui.Muted : Ui.Caution));
         _left.AddChild(Ui.Label($"Max rev limit: {hw.MaxRevLimitRpm:F0} rpm", 13, Ui.Muted));
 
@@ -113,7 +114,21 @@ public partial class TuningView : HSplitContainer
         if (caps.VariableValveLift)
             AddSpin("Valve-lift switch (rpm)", 1000, hw.MaxRevLimitRpm, 50, Tune.ValveLiftSwitchRpm ?? hw.MaxRevLimitRpm, v => Tune.ValveLiftSwitchRpm = v);
         if (caps.VariableIntakeRunner)
-            AddSpin("Intake runner switch (rpm)", 1000, hw.MaxRevLimitRpm, 50, Tune.IntakeRunnerSwitchRpm ?? hw.MaxRevLimitRpm, v => Tune.IntakeRunnerSwitchRpm = v);
+        {
+            AddSpin(runnerStages > 2 ? "Runner stage 2 from (rpm)" : "Intake runner switch (rpm)", 1000, hw.MaxRevLimitRpm, 50,
+                Tune.IntakeRunnerSwitchRpm ?? hw.MaxRevLimitRpm, v => Tune.IntakeRunnerSwitchRpm = v);
+            for (int k = 2; k < runnerStages; k++)
+            {
+                int index = k - 2;
+                AddSpin($"Runner stage {k + 1} from (rpm)", 1000, hw.MaxRevLimitRpm, 50, Tune.IntakeRunnerSwitchRpmOf(k) ?? hw.MaxRevLimitRpm, v =>
+                {
+                    var upper = Tune.IntakeRunnerUpperSwitchRpm ?? Array.Empty<double>();
+                    if (upper.Length <= index) upper = upper.Concat(Enumerable.Repeat(hw.MaxRevLimitRpm, index + 1 - upper.Length)).ToArray();
+                    upper[index] = v;
+                    Tune.IntakeRunnerUpperSwitchRpm = upper;
+                });
+            }
+        }
         var knock = new CheckBox { Text = "Knock control enabled", ButtonPressed = Tune.KnockControlEnabled, Disabled = !hw.KnockControl };
         knock.Toggled += on => { Tune.KnockControlEnabled = on; State.Garage.TuneChanged(); };
         _left.AddChild(knock);

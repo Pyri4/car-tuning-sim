@@ -127,8 +127,11 @@ public sealed class BankState
     /// <summary>Whether this bank's camshafts run their high-lift profile.</summary>
     public bool HighValveLift;
 
-    /// <summary>Whether this bank's intake manifold runs its switched runner.</summary>
-    public bool SwitchedRunner;
+    /// <summary>The runner stage this bank's intake manifold runs (0 = its primary runner).</summary>
+    public int RunnerStage;
+
+    /// <summary>Whether this bank's intake manifold runs a switched stage.</summary>
+    public bool SwitchedRunner => RunnerStage > 0;
 
     public BankState Clone() => (BankState)MemberwiseClone();
 }
@@ -202,6 +205,9 @@ public sealed record EngineTelemetry
 
     /// <summary>Whether a variable intake manifold runs its switched runner (any bank).</summary>
     public bool SwitchedRunner { get; init; }
+
+    /// <summary>The highest runner stage any bank's intake runs (0 = primary runners everywhere).</summary>
+    public int RunnerStage { get; init; }
 
     public double TargetLambda { get; init; }
     public double Lambda { get; init; }
@@ -354,7 +360,8 @@ public readonly record struct BankTelemetry(
     bool HighValveLift,
     bool SwitchedRunner,
     double ValveFloatRpm,
-    double Torque);
+    double Torque,
+    int RunnerStage);
 
 /// <summary>One turbocharger's state in a step.</summary>
 public readonly record struct TurboTelemetry(

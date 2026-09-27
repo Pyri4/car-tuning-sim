@@ -62,10 +62,24 @@ public sealed class EcuController
         running && Hardware.ValveLiftControl && Tune.ValveLiftSwitchRpm is double on
         && rpm >= (wasHigh ? on - SwitchHysteresisRpm : on);
 
-    /// <summary>Whether a variable intake manifold should run its switched runner (same rule as <see cref="HighValveLift"/>).</summary>
-    public bool SwitchedIntakeRunner(double rpm, bool wasSwitched, bool running) =>
-        running && Hardware.IntakeRunnerControl && Tune.IntakeRunnerSwitchRpm is double on
-        && rpm >= (wasSwitched ? on - SwitchHysteresisRpm : on);
+    /// <summary>
+    /// The runner stage a variable intake with <paramref name="stages"/> stages should run (0 = the primary runner): the
+    /// highest stage whose switch speed the engine has reached, where a stage it already runs (<paramref name="current"/>)
+    /// is kept down to its switch speed less the hysteresis — the rule of <see cref="HighValveLift"/>, stage by stage.
+    /// 0 without an ECU that can drive the intake or while the engine is not running; a stage without a switch speed in
+    /// the tune is never reached, nor any above it.
+    /// </summary>
+    public int IntakeRunnerStage(double rpm, int current, int stages, bool running)
+    {
+        if (!running || !Hardware.IntakeRunnerControl) return 0;
+        int stage = 0;
+        for (int k = 1; k < stages; k++)
+        {
+            if (Tune.IntakeRunnerSwitchRpmOf(k) is not double on || rpm < (current >= k ? on - SwitchHysteresisRpm : on)) break;
+            stage = k;
+        }
+        return stage;
+    }
 
     /// <summary>Table advance minus active knock retard, degrees BTDC.</summary>
     public double SparkAdvance(double rpm, double mapReading) => Tune.AdvanceAt(rpm, Units.PaToKpa(mapReading)) - KnockRetard;

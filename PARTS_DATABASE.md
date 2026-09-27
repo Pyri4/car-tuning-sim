@@ -144,10 +144,21 @@ exhaust_lift_mm}` — is the second cam profile a two-stage (VTEC-type) camshaft
 / retainer clearance).
 
 ### `intake_manifold`
-`runner_length_mm` (tunes the torque peak), `flow_cfm` (includes filter/inlet), optional `switched_runner_length_mm`
-(50–1000: the second runner length of a two-stage variable intake, used above the tune's `intake_runner_switch_rpm` by
-an ECU with `intake_runner_control`). Proposed for Intake Gas Dynamics 2.0 and **not accepted by the loader yet**: runner
-diameter, plenum volume and N runner stages (SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model").
+- `runner_length_mm` (50–1000): the **acoustic length** of the primary runner stage, from the runner's mouth in the plenum
+  (or the airbox) to the intake valve seat, **including the cylinder head's intake port**. Longer runners tune to lower
+  speed.
+- `runner_diameter_mm` (optional, 15–120): mean inner diameter of the runners (a round runner of the same mean
+  cross-section). Without it the model assumes 0.40 × bore (assumption A5) and the validator reports
+  `default_intake_geometry`.
+- `flow_cfm` (includes filter/inlet).
+- Variable intakes (need an ECU with `intake_runner_control`; without it the primary stage stays and the validator warns):
+  - `switched_runner_length_mm` (50–1000): a two-stage intake's second stage, used above the tune's
+    `intake_runner_switch_rpm`;
+  - or `switched_stages`: any number of stages, `[{runner_length_mm, runner_diameter_mm?}, …]`, in the order the ECU
+    selects them as speed rises (stage 1, 2, …; the primary is stage 0). A stage without its own diameter takes the
+    manifold's. The tune's `intake_runner_switch_rpm` switches to stage 1 and `intake_runner_upper_switch_rpm`
+    (ascending) to stage 2 onwards. Not together with `switched_runner_length_mm`.
+- Not in the schema (deferred with the plenum mode): plenum volume.
 
 ### `throttle_body`
 `bore_mm`, `flow_cfm` (wide open).

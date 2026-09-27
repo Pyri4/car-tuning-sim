@@ -255,7 +255,7 @@ public sealed class EngineSimulation
             double camTarget = s.Running ? Ecu.IntakeCamAdvanceTarget(rpm, camMap, bank.IntakePhaserRange) : 0.0;
             bs.IntakeCamAdvance += (camTarget - bs.IntakeCamAdvance) * MathUtil.LagFactor(dt, CamPhaserTimeConstant);
             bs.HighValveLift = bank.HasVariableLift && Ecu.HighValveLift(rpm, bs.HighValveLift, s.Running);
-            bs.SwitchedRunner = bank.HasSwitchedRunner && Ecu.SwitchedIntakeRunner(rpm, bs.SwitchedRunner, s.Running);
+            bs.RunnerStage = bank.HasSwitchedRunner ? Ecu.IntakeRunnerStage(rpm, bs.RunnerStage, bank.RunnerStages.Count, s.Running) : 0;
             int profile = bs.HighValveLift ? 1 : 0;
             double floatRpm = bank.ValveFloatRpm(profile);
             _bank[b].FloatRpm = floatRpm;
@@ -264,7 +264,7 @@ public sealed class EngineSimulation
             _air[b] = _airPaths[b].Solve(new AirPathConditions(rpm, bank.ThrottleCdA * throttleFraction, input.AmbientPressure, input.AmbientTemperature,
                 bs.ExhaustGasTemperature, s.CoolantTemperature, bs.LastFuelAirRatio, evapCooling, floatRpm,
                 turbo?.Omega ?? 0.0, turbo?.WastegateOpening ?? 0.0, input.CoolingAirSpeed, bs.TurbineOutletTemperature, bs.IntakeCamAdvance,
-                profile, bs.SwitchedRunner ? 1 : 0));
+                profile, bs.RunnerStage));
             anyAir |= _air[b].AirPerCycle > 0;
         }
         // One MAP sensor: on the plenum of the first bank's air path.
@@ -499,6 +499,7 @@ public sealed class EngineSimulation
         double chargeTemperature = 0.0, veDynamic = 0.0, residual = 0.0, camAdvance = 0.0, airMassFlow = 0.0, egtSensor = double.NegativeInfinity;
         double portGas = double.NegativeInfinity, floatRpmMin = double.PositiveInfinity;
         bool highLift = false, switchedRunner = false, veFloor = false, camFloor = false;
+        int runnerStage = 0;
         for (int b = 0; b < banks; b++)
         {
             var bank = c.Banks[b];
@@ -506,7 +507,7 @@ public sealed class EngineSimulation
             var air = _air[b];
             ref var r = ref _bank[b];
             double w = bank.CylinderShare;
-            int profile = bs.HighValveLift ? 1 : 0, runner = bs.SwitchedRunner ? 1 : 0;
+            int profile = bs.HighValveLift ? 1 : 0, runner = bs.RunnerStage;
             airPerCycle += w * air.AirPerCycle;
             manifoldPressure += w * air.ManifoldPressure;
             portPressure += w * air.PortPressure;
@@ -522,11 +523,12 @@ public sealed class EngineSimulation
             floatRpmMin = Math.Min(floatRpmMin, r.FloatRpm);
             highLift |= bs.HighValveLift;
             switchedRunner |= bs.SwitchedRunner;
+            runnerStage = Math.Max(runnerStage, bs.RunnerStage);
             veFloor |= rpm > 1 && _airPaths[b].VeShape(rpm, bs.IntakeCamAdvance, profile, runner) < AirPath.VeShapeFloor;
             camFloor |= bank.TunedPistonSpeed(bs.IntakeCamAdvance, profile) < EngineConfiguration.MinTunedPistonSpeed;
             bankTelemetry[b] = new BankTelemetry(air.AirPerCycle, air.ManifoldPressure, air.PortPressure, air.ExhaustPortPressure,
                 r.Firing ? r.Lambda : 0.0, r.Knock, r.KnockLimit, r.Pcp, r.Imep, bs.EgtSensor, bs.IntakeCamAdvance,
-                bs.HighValveLift, bs.SwitchedRunner, r.FloatRpm, r.Torque);
+                bs.HighValveLift, bs.SwitchedRunner, r.FloatRpm, r.Torque, bs.RunnerStage);
         }
         double cylindersPerSecond = rpm / 120.0 * g.Cylinders;
         var turboAir = c.Turbos.Count > 0 ? _air[c.Turbos[0].Banks[0]] : ecuAir;
@@ -555,6 +557,7 @@ public sealed class EngineSimulation
             IntakeCamAdvance = camAdvance,
             HighValveLift = highLift,
             SwitchedRunner = switchedRunner,
+            RunnerStage = runnerStage,
             TargetLambda = targetLambda,
             Lambda = firing ? lambdaMean : 0.0,
             Afr = firing ? lambdaMean * fuel.StoichiometricAfr : 0.0,

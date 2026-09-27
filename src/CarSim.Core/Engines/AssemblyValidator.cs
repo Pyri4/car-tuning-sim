@@ -198,7 +198,7 @@ public static class AssemblyValidator
                     $"{On(b)}The ECU cannot switch the variable-lift camshafts: they stay on their base profile, so the top end suffers.",
                     SlotOf(a, PartCategory.Ecu), camSlot);
             var intakeSlot = a.SlotFor(PartCategory.IntakeManifold, b)?.Id ?? PartCategory.IntakeManifold;
-            if (a.SpecFor<IntakeManifoldSpec>(PartCategory.IntakeManifold, b) is { SwitchedRunnerLengthMm: not null } && ecu is { IntakeRunnerControl: false }
+            if (a.SpecFor<IntakeManifoldSpec>(PartCategory.IntakeManifold, b) is { HasSwitchedStages: true } && ecu is { IntakeRunnerControl: false }
                 && !issues.Any(i => i.Code == "intake_runner_uncontrolled" && i.Slots.Contains(intakeSlot)))
                 Add(IssueSeverity.Warning, "intake_runner_uncontrolled",
                     $"{On(b)}The ECU cannot switch the variable intake manifold: it stays on its primary runner.",
