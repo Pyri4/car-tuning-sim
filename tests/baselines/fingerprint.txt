@@ -1263,82 +1263,82 @@ value m54_stock_98 geometry displacement_cc 2979.2552514452564
 value m54_stock_98 geometry compression_ratio 10.203517158016732
 value m54_stock_98 geometry mass_kg 173.54
 value m54_stock_98 geometry issues [Info] default_intake_geometry: The intake manifold states no runner diameter: intake tuning assumes 0.40 × bore (33.6 mm). | [Info] compression_ratio: Static compression ratio 10.20:1 (2.98 L, bore 84.0 × stroke 89.6 mm).
-digest m54_stock_98 wot d6021cda39797b1d75f5b99aa5cb30e17b79d4a83d6e2ccd9d0772f2da843f5c samples=25 channels=116
-value m54_stock_98 wot torque_nm@1000 279.9230371356036
-value m54_stock_98 wot power_kw@1000 29.313471901191836
-value m54_stock_98 wot ve@1000 0.9620347521699688
-value m54_stock_98 wot ve_dynamic@1000 0.9752267302274166
-value m54_stock_98 wot lambda@1000 0.9507086054970096
-value m54_stock_98 wot torque_nm@1500 289.72116901263945
-value m54_stock_98 wot power_kw@1500 45.509294807977746
-value m54_stock_98 wot ve@1500 0.9601980522860881
-value m54_stock_98 wot ve_dynamic@1500 0.9785603425132059
-value m54_stock_98 wot lambda@1500 0.9507811965021682
-value m54_stock_98 wot torque_nm@2000 293.1622952943922
-value m54_stock_98 wot power_kw@2000 61.39976754709227
-value m54_stock_98 wot ve@2000 0.9585830021552572
-value m54_stock_98 wot ve_dynamic@2000 0.98428243880851
-value m54_stock_98 wot lambda@2000 0.950439625586152
-value m54_stock_98 wot torque_nm@2500 294.59956632963105
-value m54_stock_98 wot power_kw@2500 77.12598611099233
-value m54_stock_98 wot ve@2500 0.9586765482178039
-value m54_stock_98 wot ve_dynamic@2500 0.9937783556774564
-value m54_stock_98 wot lambda@2500 0.9302669699486388
-value m54_stock_98 wot torque_nm@3000 294.37340171842
-value m54_stock_98 wot power_kw@3000 92.48013162508252
-value m54_stock_98 wot ve@3000 0.9615606932547421
-value m54_stock_98 wot ve_dynamic@3000 1.0087895110361458
-value m54_stock_98 wot lambda@3000 0.9002161819549687
-value m54_stock_98 wot torque_nm@3500 293.7701658155439
-value m54_stock_98 wot power_kw@3500 107.6723893898296
-value m54_stock_98 wot ve@3500 0.9665435893156687
-value m54_stock_98 wot ve_dynamic@3500 1.0296182850265616
-value m54_stock_98 wot lambda@3500 0.8797996307700491
-value m54_stock_98 wot torque_nm@4000 290.2151687891604
-value m54_stock_98 wot power_kw@4000 121.5650456304464
-value m54_stock_98 wot ve@4000 0.9678075078642184
+digest m54_stock_98 wot 1e72658bae6c1ce0e47361d5451372fc05e5f2f161b445fabf26153343d4e453 samples=25 channels=116
+value m54_stock_98 wot torque_nm@1000 279.98460330607463
+value m54_stock_98 wot power_kw@1000 29.31991909548722
+value m54_stock_98 wot ve@1000 0.9624069133126724
+value m54_stock_98 wot ve_dynamic@1000 0.9756136325009316
+value m54_stock_98 wot lambda@1000 0.9510769461702437
+value m54_stock_98 wot torque_nm@1500 290.06192587229447
+value m54_stock_98 wot power_kw@1500 45.562820770325374
+value m54_stock_98 wot ve@1500 0.9613049254874054
+value m54_stock_98 wot ve_dynamic@1500 0.9797123003297176
+value m54_stock_98 wot lambda@1500 0.9508916125761634
+value m54_stock_98 wot torque_nm@2000 294.0797754818979
+value m54_stock_98 wot power_kw@2000 61.59192414821774
+value m54_stock_98 wot ve@2000 0.9612946572540587
+value m54_stock_98 wot ve_dynamic@2000 0.9871612103133973
+value m54_stock_98 wot lambda@2000 0.9502792815529877
+value m54_stock_98 wot torque_nm@2500 296.52833697750987
+value m54_stock_98 wot power_kw@2500 77.63093708581196
+value m54_stock_98 wot ve@2500 0.9644461714502178
+value m54_stock_98 wot ve_dynamic@2500 1.0000914307283126
+value m54_stock_98 wot lambda@2500 0.9301238937237108
+value m54_stock_98 wot torque_nm@3000 297.62867825145537
+value m54_stock_98 wot power_kw@3000 93.50280690924124
+value m54_stock_98 wot ve@3000 0.9713191877887885
+value m54_stock_98 wot ve_dynamic@3000 1.0198838884052015
+value m54_stock_98 wot lambda@3000 0.9001805649000948
+value m54_stock_98 wot torque_nm@3500 296.84492436871
+value m54_stock_98 wot power_kw@3500 108.79934725941831
+value m54_stock_98 wot ve@3500 0.9758279617610561
+value m54_stock_98 wot ve_dynamic@3500 1.0406971371351637
+value m54_stock_98 wot lambda@3500 0.8802968714294996
+value m54_stock_98 wot torque_nm@4000 290.2176654910358
+value m54_stock_98 wot power_kw@4000 121.5660914464824
+value m54_stock_98 wot ve@4000 0.9678074742556741
 value m54_stock_98 wot ve_dynamic@4000 1.0502782086597724
-value m54_stock_98 wot lambda@4000 0.8799585151071635
-value m54_stock_98 wot torque_nm@4500 282.15074825387063
-value m54_stock_98 wot power_kw@4500 132.96040768788347
-value m54_stock_98 wot ve@4500 0.9566293930278253
+value m54_stock_98 wot lambda@4000 0.8799584837800721
+value m54_stock_98 wot torque_nm@4500 282.1533877176447
+value m54_stock_98 wot power_kw@4500 132.9616515058838
+value m54_stock_98 wot ve@4500 0.9566293930260138
 value m54_stock_98 wot ve_dynamic@4500 1.058486357969715
-value m54_stock_98 wot lambda@4500 0.8808436713012429
-value m54_stock_98 wot torque_nm@5000 269.60413001224765
-value m54_stock_98 wot power_kw@5000 141.16439237065745
-value m54_stock_98 wot ve@5000 0.9324861483267096
+value m54_stock_98 wot lambda@4500 0.8808436712994893
+value m54_stock_98 wot torque_nm@5000 269.6070229176864
+value m54_stock_98 wot power_kw@5000 141.1659070924031
+value m54_stock_98 wot ve@5000 0.9324861483267094
 value m54_stock_98 wot ve_dynamic@5000 1.0508789837613555
-value m54_stock_98 wot lambda@5000 0.8824318884391207
-value m54_stock_98 wot torque_nm@5500 255.20338881579235
-value m54_stock_98 wot power_kw@5500 146.98660010373402
+value m54_stock_98 wot lambda@5000 0.8824318884391205
+value m54_stock_98 wot torque_nm@5500 255.20633382385392
+value m54_stock_98 wot power_kw@5500 146.98829630661072
 value m54_stock_98 wot ve@5500 0.903277306200628
 value m54_stock_98 wot ve_dynamic@5500 1.0360170791289698
 value m54_stock_98 wot lambda@5500 0.8843397057424245
-value m54_stock_98 wot torque_nm@6000 240.30959501424078
-value m54_stock_98 wot power_kw@6000 150.99097165677546
+value m54_stock_98 wot torque_nm@6000 240.31256158956487
+value m54_stock_98 wot power_kw@6000 150.99283561102436
 value m54_stock_98 wot ve@6000 0.8726226428494895
 value m54_stock_98 wot ve_dynamic@6000 1.0179944954264988
 value m54_stock_98 wot lambda@6000 0.8854305735374509
-value m54_stock_98 wot torque_nm@6500 -55.92311957783009
-value m54_stock_98 wot power_kw@6500 -38.065660020165815
+value m54_stock_98 wot torque_nm@6500 -55.92013455978268
+value m54_stock_98 wot power_kw@6500 -38.06362818283262
 value m54_stock_98 wot ve@6500 0.8402816567987547
 value m54_stock_98 wot ve_dynamic@6500 0.9984578623569847
 value m54_stock_98 wot lambda@6500 0
-value m54_stock_98 wot torque_nm@7000 -60.42653587461107
-value m54_stock_98 wot power_kw@7000 -44.294964276630246
+value m54_stock_98 wot torque_nm@7000 -60.42353343975813
+value m54_stock_98 wot power_kw@7000 -44.29276337693231
 value m54_stock_98 wot ve@7000 0.8107066945138278
 value m54_stock_98 wot ve_dynamic@7000 0.9772830121872668
 value m54_stock_98 wot lambda@7000 0
-value m54_stock_98 wot peak_power_kw 152.3150098344706
+value m54_stock_98 wot peak_power_kw 152.3169516816522
 value m54_stock_98 wot peak_power_rpm 6250
-value m54_stock_98 wot peak_torque_nm 294.59956632963105
-value m54_stock_98 wot peak_torque_rpm 2500
-digest m54_stock_98 partload 72add6cdfdba082976ea799675a2ebd0cdf1f93bf03edfa7059dc98656777b15 samples=36 channels=116
-digest m54_stock_98 cold 199d4d7b7ce368da4083211a6363a79bf07b0f32ac3f20bb071ea206f0c59199 samples=400 channels=116
-value m54_stock_98 cold rpm@10s 700.0815489465156
-value m54_stock_98 cold rpm@29s 700.0281168040086
+value m54_stock_98 wot peak_torque_nm 297.62867825145537
+value m54_stock_98 wot peak_torque_rpm 3000.0000000000005
+digest m54_stock_98 partload 322f20a130bfabfd4871ecef5c9912a69211ff55984d576f8fd83a3a4bd5c2bc samples=36 channels=116
+digest m54_stock_98 cold d906b7ab662465a522c763728d117fbed3cdb3b1b14fb88eea5ed3ed6b307e89 samples=400 channels=116
+value m54_stock_98 cold rpm@10s 700.0815333529792
+value m54_stock_98 cold rpm@29s 700.0281180003916
 value m54_stock_98 cold first_fire_s 0.1320000000000001
-value m54_stock_98 cold coolant_c@40s 31.608200328230794
+value m54_stock_98 cold coolant_c@40s 31.617097598968883
 value m54_stock_98 cold seized false
 value m54_stock_98 cold warnings 
 value m54_stock_98 cold ecu.m54_oem.wear 0
@@ -1372,7 +1372,7 @@ value m54_stock_98 cold m54.head.oem.wear 0
 value m54_stock_98 cold m54.head.oem.fatigue 0
 value m54_stock_98 cold m54.head.oem.inspection Good:Within specification.
 value m54_stock_98 cold m54.head_gasket.oem.wear 0
-value m54_stock_98 cold m54.head_gasket.oem.fatigue 2.7656074194444777E-06
+value m54_stock_98 cold m54.head_gasket.oem.fatigue 2.7657818247450603E-06
 value m54_stock_98 cold m54.head_gasket.oem.inspection Good:Within specification.
 value m54_stock_98 cold m54.intake.disa.wear 0
 value m54_stock_98 cold m54.intake.disa.fatigue 0
@@ -1386,11 +1386,11 @@ value m54_stock_98 cold m54.oil_pan.oem.inspection Good:Within specification.
 value m54_stock_98 cold m54.oil_pump.oem.wear 0
 value m54_stock_98 cold m54.oil_pump.oem.fatigue 0
 value m54_stock_98 cold m54.oil_pump.oem.inspection Good:Within specification.
-value m54_stock_98 cold m54.pistons.oem.wear 1.8834476997649037E-05
-value m54_stock_98 cold m54.pistons.oem.fatigue 1.1062429677777911E-05
+value m54_stock_98 cold m54.pistons.oem.wear 1.883499401501874E-05
+value m54_stock_98 cold m54.pistons.oem.fatigue 1.1063127298980241E-05
 value m54_stock_98 cold m54.pistons.oem.inspection Good:Within specification.
 value m54_stock_98 cold m54.rod_bearings.oem.wear 7.986399999999795E-06
-value m54_stock_98 cold m54.rod_bearings.oem.fatigue 1.659364451666687E-06
+value m54_stock_98 cold m54.rod_bearings.oem.fatigue 1.659469094847036E-06
 value m54_stock_98 cold m54.rod_bearings.oem.inspection Good:Within specification.
 value m54_stock_98 cold m54.rods.oem.wear 0
 value m54_stock_98 cold m54.rods.oem.fatigue 0
@@ -1404,23 +1404,23 @@ value m54_stock_98 cold radiator.m54_oem.inspection Good:Within specification.
 value m54_stock_98 cold throttle.68mm.wear 0
 value m54_stock_98 cold throttle.68mm.fatigue 0
 value m54_stock_98 cold throttle.68mm.inspection Good:Within specification.
-digest m54_stock_98 dyno_sweep 68c34c274ebe5ffba542ffb0185dbb7b8e23f6b419eadda3eae08b052956dd11 samples=180 channels=116
+digest m54_stock_98 dyno_sweep 6041235534d0c9faf1c68cb2727fdcd9a336d68ac7191591e0fa3d08d2d9d93c samples=180 channels=116
 value m54_stock_98 dyno_sweep phase Finished
 value m54_stock_98 dyno_sweep abort 
 value m54_stock_98 dyno_sweep note Reached the rev limiter at 6500 rpm.
-value m54_stock_98 dyno_sweep peak_power_kw 152.5656680757288
+value m54_stock_98 dyno_sweep peak_power_kw 152.56695289367903
 value m54_stock_98 dyno_sweep peak_power_rpm 6475
-value m54_stock_98 dyno_sweep peak_torque_nm 294.5563291541255
-value m54_stock_98 dyno_sweep peak_torque_rpm 2450
-digest m54_stock_98 dyno_steady e1e89b8f060cb6f11f39a83a705079fdd7efe3a0d90423f9d456aa168daa760d samples=18 channels=116
+value m54_stock_98 dyno_sweep peak_torque_nm 297.55561140685927
+value m54_stock_98 dyno_sweep peak_torque_rpm 3075
+digest m54_stock_98 dyno_steady 4d7a8bc397e0fd487ffc6c32880777fbfda534c7d0f1b2b5f284e7f4aeece99e samples=18 channels=116
 value m54_stock_98 dyno_steady phase Finished
 value m54_stock_98 dyno_steady abort 
 value m54_stock_98 dyno_steady note Reached the rev limiter at 6500 rpm.
-value m54_stock_98 dyno_steady peak_power_kw 152.31765183200898
+value m54_stock_98 dyno_steady peak_power_kw 152.31953442134213
 value m54_stock_98 dyno_steady peak_power_rpm 6250
-value m54_stock_98 dyno_steady peak_torque_nm 294.60220151280845
-value m54_stock_98 dyno_steady peak_torque_rpm 2500
-digest m54_stock_98 abuse 897f9ca04fdf920c7ea3c958f09e812d6124420d5673cd04c21eef533e366406 samples=60 channels=116
+value m54_stock_98 dyno_steady peak_torque_nm 297.6315721316674
+value m54_stock_98 dyno_steady peak_torque_rpm 3000.0000000000005
+digest m54_stock_98 abuse 1d0a651ddc6cc56b63fb4fe05fc36a206086a1b4b609377071943b7fc2cef60d samples=60 channels=116
 value m54_stock_98 abuse coolant_c 128
 value m54_stock_98 abuse seized false
 value m54_stock_98 abuse warnings coolant_loss,coolant_temp,oil_temp
@@ -1455,12 +1455,12 @@ value m54_stock_98 abuse m54.head.oem.wear 0
 value m54_stock_98 abuse m54.head.oem.fatigue 0
 value m54_stock_98 abuse m54.head.oem.inspection Good:Within specification.
 value m54_stock_98 abuse m54.head_gasket.oem.wear 0
-value m54_stock_98 abuse m54.head_gasket.oem.fatigue 0.6293842630395591
+value m54_stock_98 abuse m54.head_gasket.oem.fatigue 0.629382883030196
 value m54_stock_98 abuse m54.head_gasket.oem.inspection Major:Fire ring crushed; combustion traces across the gasket.
 value m54_stock_98 abuse m54.intake.disa.wear 0
 value m54_stock_98 abuse m54.intake.disa.fatigue 0
 value m54_stock_98 abuse m54.intake.disa.inspection Good:Within specification.
-value m54_stock_98 abuse m54.main_bearings.oem.wear 0.000901924463882402
+value m54_stock_98 abuse m54.main_bearings.oem.wear 0.0009019119281569743
 value m54_stock_98 abuse m54.main_bearings.oem.fatigue 0
 value m54_stock_98 abuse m54.main_bearings.oem.inspection Good:Within specification.
 value m54_stock_98 abuse m54.oil_pan.oem.wear 0
@@ -1470,9 +1470,9 @@ value m54_stock_98 abuse m54.oil_pump.oem.wear 0
 value m54_stock_98 abuse m54.oil_pump.oem.fatigue 0
 value m54_stock_98 abuse m54.oil_pump.oem.inspection Good:Within specification.
 value m54_stock_98 abuse m54.pistons.oem.wear 1.2000000000001056E-05
-value m54_stock_98 abuse m54.pistons.oem.fatigue 0.005466445337956718
+value m54_stock_98 abuse m54.pistons.oem.fatigue 0.00546643606369512
 value m54_stock_98 abuse m54.pistons.oem.inspection Good:Within specification.
-value m54_stock_98 abuse m54.rod_bearings.oem.wear 0.000901924463882402
+value m54_stock_98 abuse m54.rod_bearings.oem.wear 0.0009019119281569743
 value m54_stock_98 abuse m54.rod_bearings.oem.fatigue 0
 value m54_stock_98 abuse m54.rod_bearings.oem.inspection Good:Within specification.
 value m54_stock_98 abuse m54.rods.oem.wear 0
@@ -1488,164 +1488,164 @@ value m54_stock_98 abuse throttle.68mm.wear 0
 value m54_stock_98 abuse throttle.68mm.fatigue 0
 value m54_stock_98 abuse throttle.68mm.inspection Good:Within specification.
 case m54_stock_95 M54 stock, RON 95 (knock control active)
-digest m54_stock_95 wot 021c7383cb126495794f9ef22a2a19bebb30850bfe3847f645204dbdd4a76c20 samples=25 channels=116
-value m54_stock_95 wot torque_nm@1000 279.45783169249216
-value m54_stock_95 wot power_kw@1000 29.26475570110887
-value m54_stock_95 wot ve@1000 0.9619909613845062
-value m54_stock_95 wot ve_dynamic@1000 0.9752267302274166
-value m54_stock_95 wot lambda@1000 0.9532071500279299
-value m54_stock_95 wot torque_nm@1500 289.6025687686437
-value m54_stock_95 wot power_kw@1500 45.4906651252152
-value m54_stock_95 wot ve@1500 0.9601510861819678
-value m54_stock_95 wot ve_dynamic@1500 0.9785603425132059
-value m54_stock_95 wot lambda@1500 0.9532766026552619
-value m54_stock_95 wot torque_nm@2000 293.06994968317224
-value m54_stock_95 wot power_kw@2000 61.380426727505615
-value m54_stock_95 wot ve@2000 0.9585317508763241
-value m54_stock_95 wot ve_dynamic@2000 0.98428243880851
-value m54_stock_95 wot lambda@2000 0.9529296459979844
-value m54_stock_95 wot torque_nm@2500 294.99777371745796
-value m54_stock_95 wot power_kw@2500 77.23023656134251
-value m54_stock_95 wot ve@2500 0.9586233827279322
-value m54_stock_95 wot ve_dynamic@2500 0.9937783556774564
-value m54_stock_95 wot lambda@2500 0.9327020976107258
-value m54_stock_95 wot torque_nm@3000 294.94127850401793
-value m54_stock_95 wot power_kw@3000 92.65853537886039
-value m54_stock_95 wot ve@3000 0.9615044427315953
-value m54_stock_95 wot ve_dynamic@3000 1.0087895110361458
-value m54_stock_95 wot lambda@3000 0.9025696468848218
-value m54_stock_95 wot torque_nm@3500 294.36241681128155
-value m54_stock_95 wot power_kw@3500 107.88946071718017
-value m54_stock_95 wot ve@3500 0.9664823537542973
-value m54_stock_95 wot ve_dynamic@3500 1.0296182850265616
-value m54_stock_95 wot lambda@3500 0.8820950812338998
-value m54_stock_95 wot torque_nm@4000 290.7911198248375
-value m54_stock_95 wot power_kw@4000 121.8062994361145
-value m54_stock_95 wot ve@4000 0.9677417623218927
+digest m54_stock_95 wot 2dd003ee2b455dbdaac9f45d619d0939d4246d96fe28e0be0e4c702653e667b3 samples=25 channels=116
+value m54_stock_95 wot torque_nm@1000 279.49071788252826
+value m54_stock_95 wot power_kw@1000 29.26819953487627
+value m54_stock_95 wot ve@1000 0.9623630891408365
+value m54_stock_95 wot ve_dynamic@1000 0.9756136325009316
+value m54_stock_95 wot lambda@1000 0.9535764423603351
+value m54_stock_95 wot torque_nm@1500 289.9379555904683
+value m54_stock_95 wot power_kw@1500 45.543347563992945
+value m54_stock_95 wot ve@1500 0.9612578775731698
+value m54_stock_95 wot ve_dynamic@1500 0.9797123003297176
+value m54_stock_95 wot lambda@1500 0.9533872806199309
+value m54_stock_95 wot torque_nm@2000 293.9938631346056
+value m54_stock_95 wot power_kw@2000 61.57393070827733
+value m54_stock_95 wot ve@2000 0.9612432444443137
+value m54_stock_95 wot ve_dynamic@2000 0.9871612103133973
+value m54_stock_95 wot lambda@2000 0.9527688668555744
+value m54_stock_95 wot torque_nm@2500 296.9318380962689
+value m54_stock_95 wot power_kw@2500 77.73657343167935
+value m54_stock_95 wot ve@2500 0.9643925956704402
+value m54_stock_95 wot ve_dynamic@2500 1.0000914307283126
+value m54_stock_95 wot lambda@2500 0.9325585527038274
+value m54_stock_95 wot torque_nm@3000 298.20220744227385
+value m54_stock_95 wot power_kw@3000 93.6829864184907
+value m54_stock_95 wot ve@3000 0.9712621367224703
+value m54_stock_95 wot ve_dynamic@3000 1.0198838884052015
+value m54_stock_95 wot lambda@3000 0.9025337051778823
+value m54_stock_95 wot torque_nm@3500 297.4246684976669
+value m54_stock_95 wot power_kw@3500 109.01183458067581
+value m54_stock_95 wot ve@3500 0.9757655658588847
+value m54_stock_95 wot ve_dynamic@3500 1.0406971371351637
+value m54_stock_95 wot lambda@3500 0.8825930705542439
+value m54_stock_95 wot torque_nm@4000 290.7936243946283
+value m54_stock_95 wot power_kw@4000 121.80734854785518
+value m54_stock_95 wot ve@4000 0.967741728887754
 value m54_stock_95 wot ve_dynamic@4000 1.0502782086597724
-value m54_stock_95 wot lambda@4000 0.8822498991331928
-value m54_stock_95 wot torque_nm@4500 282.7133325088177
-value m54_stock_95 wot power_kw@4500 133.2255192722385
-value m54_stock_95 wot ve@4500 0.9565607294951173
+value m54_stock_95 wot lambda@4000 0.8822498678855011
+value m54_stock_95 wot torque_nm@4500 282.7159772793403
+value m54_stock_95 wot power_kw@4500 133.22676559098514
+value m54_stock_95 wot ve@4500 0.9565607294103471
 value m54_stock_95 wot ve_dynamic@4500 1.058486357969715
-value m54_stock_95 wot lambda@4500 0.8831321978096571
-value m54_stock_95 wot torque_nm@5000 270.1498063392925
-value m54_stock_95 wot power_kw@5000 141.45010782737114
-value m54_stock_95 wot ve@5000 0.9324164596710551
+value m54_stock_95 wot lambda@4500 0.8831321977273482
+value m54_stock_95 wot torque_nm@5000 270.1527053002683
+value m54_stock_95 wot power_kw@5000 141.45162571978855
+value m54_stock_95 wot ve@5000 0.9324164595801004
 value m54_stock_95 wot ve_dynamic@5000 1.0508789837613555
-value m54_stock_95 wot lambda@5000 0.8847211837185834
-value m54_stock_95 wot torque_nm@5500 255.7293056059141
-value m54_stock_95 wot power_kw@5500 147.2895064298458
-value m54_stock_95 wot ve@5500 0.9032076843871718
+value m54_stock_95 wot lambda@5000 0.8847211836270293
+value m54_stock_95 wot torque_nm@5500 255.7322568241136
+value m54_stock_95 wot power_kw@5500 147.29120620950516
+value m54_stock_95 wot ve@5500 0.9032076842911841
 value m54_stock_95 wot ve_dynamic@5500 1.0360170791289698
-value m54_stock_95 wot lambda@5500 0.8866311841207326
-value m54_stock_95 wot torque_nm@6000 240.81560126718486
-value m54_stock_95 wot power_kw@6000 151.30890476215936
-value m54_stock_95 wot ve@6000 0.8725537386210325
+value m54_stock_95 wot lambda@5500 0.8866311840199983
+value m54_stock_95 wot torque_nm@6000 240.8185741146917
+value m54_stock_95 wot power_kw@6000 151.31077265733694
+value m54_stock_95 wot ve@6000 0.8725537385220351
 value m54_stock_95 wot ve_dynamic@6000 1.0179944954264988
-value m54_stock_95 wot lambda@6000 0.887722538425305
-value m54_stock_95 wot torque_nm@6500 -55.91873646524109
-value m54_stock_95 wot power_kw@6500 -38.06267653006543
-value m54_stock_95 wot ve@6500 0.8402813969916896
+value m54_stock_95 wot lambda@6000 0.8877225383168377
+value m54_stock_95 wot torque_nm@6500 -55.915742324505395
+value m54_stock_95 wot power_kw@6500 -38.0606384831153
+value m54_stock_95 wot ve@6500 0.8402813969910891
 value m54_stock_95 wot ve_dynamic@6500 0.9984578623569847
 value m54_stock_95 wot lambda@6500 0
-value m54_stock_95 wot torque_nm@7000 -60.42200450052546
-value m54_stock_95 wot power_kw@7000 -44.291642605938044
+value m54_stock_95 wot torque_nm@7000 -60.41899283772784
+value m54_stock_95 wot power_kw@7000 -44.28943494180336
 value m54_stock_95 wot ve@7000 0.8107066944996894
 value m54_stock_95 wot ve_dynamic@7000 0.9772830121872668
 value m54_stock_95 wot lambda@7000 0
-value m54_stock_95 wot peak_power_kw 152.6395286344482
+value m54_stock_95 wot peak_power_kw 152.64147458698739
 value m54_stock_95 wot peak_power_rpm 6250
-value m54_stock_95 wot peak_torque_nm 294.99847069378546
-value m54_stock_95 wot peak_torque_rpm 2750.0000000000005
-digest m54_stock_95 partload 6d711cfa1fb2a8bb0cf2d0d75dc9fa1e32f1ecc3c148cb381843f994f9c529dd samples=36 channels=116
-digest m54_stock_95 dyno_sweep 6017576426df95ebf2bfe942ce795f139df8b2730376246f68fa0f728c53b392 samples=180 channels=116
+value m54_stock_95 wot peak_torque_nm 298.20220744227385
+value m54_stock_95 wot peak_torque_rpm 3000.0000000000005
+digest m54_stock_95 partload ab78995cf33c6f00d1f4222a741c67a3e153c1ffeca6612f82560f193ff94887 samples=36 channels=116
+digest m54_stock_95 dyno_sweep 1f3276e74e7aeccb94d4848aac7aa1d483c368e04803266a88039ddcae5fb379 samples=180 channels=116
 value m54_stock_95 dyno_sweep phase Finished
 value m54_stock_95 dyno_sweep abort 
 value m54_stock_95 dyno_sweep note Reached the rev limiter at 6500 rpm.
-value m54_stock_95 dyno_sweep peak_power_kw 152.89361378281077
+value m54_stock_95 dyno_sweep peak_power_kw 152.89492089918346
 value m54_stock_95 dyno_sweep peak_power_rpm 6475
-value m54_stock_95 dyno_sweep peak_torque_nm 294.8360993437022
-value m54_stock_95 dyno_sweep peak_torque_rpm 3000.0000000000005
+value m54_stock_95 dyno_sweep peak_torque_nm 298.12837394869723
+value m54_stock_95 dyno_sweep peak_torque_rpm 3075
 case m54_parked_98 M54 with its phaser parked (no cam table): the fixed-cam filling curve
-digest m54_parked_98 wot 5dec85e5a3fb3ae3f93d7d70ed527a48c0a02487bb6b07711244ffbaae454c41 samples=25 channels=116
-value m54_parked_98 wot torque_nm@1000 167.2532575218796
-value m54_parked_98 wot power_kw@1000 17.514720170656624
-value m54_parked_98 wot ve@1000 0.6528881678699879
-value m54_parked_98 wot ve_dynamic@1000 0.6551208255000803
-value m54_parked_98 wot lambda@1000 0.6449365284953638
-value m54_parked_98 wot torque_nm@1500 206.6269804533333
-value m54_parked_98 wot power_kw@1500 32.45689019128169
-value m54_parked_98 wot ve@1500 0.7215333497205096
-value m54_parked_98 wot ve_dynamic@1500 0.7281672356473708
-value m54_parked_98 wot lambda@1500 0.7139251268737594
-value m54_parked_98 wot torque_nm@2000 235.5669175359691
-value m54_parked_98 wot power_kw@2000 49.337019837319545
-value m54_parked_98 wot ve@2000 0.7816262162714589
-value m54_parked_98 wot ve_dynamic@2000 0.7948009760139041
-value m54_parked_98 wot lambda@2000 0.7741967609762339
-value m54_parked_98 wot torque_nm@2500 254.8987521360154
-value m54_parked_98 wot power_kw@2500 66.73233725997596
-value m54_parked_98 wot ve@2500 0.8341027091568357
-value m54_parked_98 wot ve_dynamic@2500 0.8565009738133995
-value m54_parked_98 wot lambda@2500 0.808456456678142
-value m54_parked_98 wot torque_nm@3000 267.3580270539037
-value m54_parked_98 wot power_kw@3000 83.99300136708051
-value m54_parked_98 wot ve@3000 0.8798208175791191
-value m54_parked_98 wot ve_dynamic@3000 0.9152062374793603
-value m54_parked_98 wot lambda@3000 0.8227691288207244
-value m54_parked_98 wot torque_nm@3500 276.8466210464646
-value m54_parked_98 wot power_kw@3500 101.46958626591855
-value m54_parked_98 wot ve@3500 0.9182421256328495
-value m54_parked_98 wot ve_dynamic@3500 0.9715474122914552
-value m54_parked_98 wot lambda@3500 0.8350574521576554
-value m54_parked_98 wot torque_nm@4000 281.8516303930603
-value m54_parked_98 wot power_kw@4000 118.06173485935251
-value m54_parked_98 wot ve@4000 0.943896525832494
+digest m54_parked_98 wot d708d8afd64196e990ed798c498aff031fc24cb22667d0a03de967fec561c868 samples=25 channels=116
+value m54_parked_98 wot torque_nm@1000 167.36953304994708
+value m54_parked_98 wot power_kw@1000 17.52689651548226
+value m54_parked_98 wot ve@1000 0.6531400138947338
+value m54_parked_98 wot ve_dynamic@1000 0.6553807319689318
+value m54_parked_98 wot lambda@1000 0.6451854818463172
+value m54_parked_98 wot torque_nm@1500 206.90353482220007
+value m54_parked_98 wot power_kw@1500 32.50033124995918
+value m54_parked_98 wot ve@1500 0.7223718009030166
+value m54_parked_98 wot ve_dynamic@1500 0.7290244315674984
+value m54_parked_98 wot lambda@1500 0.7140134462916243
+value m54_parked_98 wot torque_nm@2000 236.2989911213511
+value m54_parked_98 wot power_kw@2000 49.490344970501084
+value m54_parked_98 wot ve@2000 0.7838637097891618
+value m54_parked_98 wot ve_dynamic@2000 0.7971255632333003
+value m54_parked_98 wot lambda@2000 0.7740961001393529
+value m54_parked_98 wot torque_nm@2500 256.6042036919553
+value m54_parked_98 wot power_kw@2500 67.17882343324214
+value m54_parked_98 wot ve@2500 0.8391921960832294
+value m54_parked_98 wot ve_dynamic@2500 0.8619419806663189
+value m54_parked_98 wot lambda@2500 0.8083883138490563
+value m54_parked_98 wot torque_nm@3000 270.38423266086227
+value m54_parked_98 wot power_kw@3000 84.94371189738784
+value m54_parked_98 wot ve@3000 0.8888731321442073
+value m54_parked_98 wot ve_dynamic@3000 0.9252714126612807
+value m54_parked_98 wot lambda@3000 0.8228330081458047
+value m54_parked_98 wot torque_nm@3500 279.8241002596451
+value m54_parked_98 wot power_kw@3500 102.56088939519205
+value m54_parked_98 wot ve@3500 0.9271658306544229
+value m54_parked_98 wot ve_dynamic@3500 0.9820014125481766
+value m54_parked_98 wot lambda@3500 0.8356088089692802
+value m54_parked_98 wot torque_nm@4000 281.85390148344743
+value m54_parked_98 wot power_kw@4000 118.0626861714693
+value m54_parked_98 wot ve@4000 0.943896497639011
 value m54_parked_98 wot ve_dynamic@4000 1.019784109124884
-value m54_parked_98 wot lambda@4000 0.8576913792265997
-value m54_parked_98 wot torque_nm@4500 279.28870689673545
-value m54_parked_98 wot power_kw@4500 131.61170247260657
-value m54_parked_98 wot ve@4500 0.9483114185271808
+value m54_parked_98 wot lambda@4000 0.8576913529955477
+value m54_parked_98 wot torque_nm@4500 279.2911058855771
+value m54_parked_98 wot power_kw@4500 131.6128329694647
+value m54_parked_98 wot ve@4500 0.9483114185255644
 value m54_parked_98 wot ve_dynamic@4500 1.047192699972792
-value m54_parked_98 wot lambda@4500 0.8727939751921647
-value m54_parked_98 wot torque_nm@5000 269.29159471939016
-value m54_parked_98 wot power_kw@5000 141.000749273986
-value m54_parked_98 wot ve@5000 0.9315344556770369
+value m54_parked_98 wot lambda@4500 0.8727939751906014
+value m54_parked_98 wot torque_nm@5000 269.2940688888332
+value m54_parked_98 wot power_kw@5000 141.00204474607702
+value m54_parked_98 wot ve@5000 0.9315344556770365
 value m54_parked_98 wot ve_dynamic@5000 1.0495061665412844
-value m54_parked_98 wot lambda@5000 0.881476554924835
-value m54_parked_98 wot torque_nm@5500 255.129668813385
-value m54_parked_98 wot power_kw@5500 146.94414043043668
+value m54_parked_98 wot lambda@5000 0.8814765549248347
+value m54_parked_98 wot torque_nm@5500 255.1323448760637
+value m54_parked_98 wot power_kw@5500 146.94568173189288
 value m54_parked_98 wot ve@5500 0.9032777023444142
 value m54_parked_98 wot ve_dynamic@5500 1.0360177957368286
 value m54_parked_98 wot lambda@5500 0.8843401203796938
-value m54_parked_98 wot torque_nm@6000 240.23528110446992
-value m54_parked_98 wot power_kw@6000 150.94427885017632
+value m54_parked_98 wot torque_nm@6000 240.23797592779718
+value m54_parked_98 wot power_kw@6000 150.94597205760985
 value m54_parked_98 wot ve@6000 0.8726226428463155
 value m54_parked_98 wot ve_dynamic@6000 1.017994495430464
 value m54_parked_98 wot lambda@6000 0.8854305735339819
-value m54_parked_98 wot torque_nm@6500 -55.99788394226392
-value m54_parked_98 wot power_kw@6500 -38.11655050874453
+value m54_parked_98 wot torque_nm@6500 -55.995173171349464
+value m54_parked_98 wot power_kw@6500 -38.11470534551328
 value m54_parked_98 wot ve@6500 0.8402816567987547
 value m54_parked_98 wot ve_dynamic@6500 0.9984578623569847
 value m54_parked_98 wot lambda@6500 0
-value m54_parked_98 wot torque_nm@7000 -60.50172534762243
-value m54_parked_98 wot power_kw@7000 -44.35008103903954
+value m54_parked_98 wot torque_nm@7000 -60.498999536553306
+value m54_parked_98 wot power_kw@7000 -44.3480829151659
 value m54_parked_98 wot ve@7000 0.8107066945138278
 value m54_parked_98 wot ve_dynamic@7000 0.9772830121872668
 value m54_parked_98 wot lambda@7000 0
-value m54_parked_98 wot peak_power_kw 152.26636957498164
+value m54_parked_98 wot peak_power_kw 152.268133275073
 value m54_parked_98 wot peak_power_rpm 6250
-value m54_parked_98 wot peak_torque_nm 281.8516303930603
+value m54_parked_98 wot peak_torque_nm 281.85390148344743
 value m54_parked_98 wot peak_torque_rpm 4000
-digest m54_parked_98 partload 27f9d7d4bb65d5c26dc6ce145cdb0cc5c15417b96125974d1c8f63c160a249aa samples=36 channels=116
-digest m54_parked_98 dyno_sweep 309c630d2f76b44a9160764ebfaa9b21e872fde96e26ed752ea38fe943c99af7 samples=180 channels=116
+digest m54_parked_98 partload 845a40aa330d5635a379d7b905c2713d2c8bf00b4c1456583591e5f9c336874b samples=36 channels=116
+digest m54_parked_98 dyno_sweep 2ee005b01e7e7f0fd74aff901e182f52fcfd26d66949aaa3c76c3b46db332ae9 samples=180 channels=116
 value m54_parked_98 dyno_sweep phase Finished
 value m54_parked_98 dyno_sweep abort 
 value m54_parked_98 dyno_sweep note Reached the rev limiter at 6500 rpm.
-value m54_parked_98 dyno_sweep peak_power_kw 152.54411283193207
+value m54_parked_98 dyno_sweep peak_power_kw 152.5451970980685
 value m54_parked_98 dyno_sweep peak_power_rpm 6475
-value m54_parked_98 dyno_sweep peak_torque_nm 281.9075472018816
+value m54_parked_98 dyno_sweep peak_torque_nm 281.9093165479333
 value m54_parked_98 dyno_sweep peak_torque_rpm 4100
 case fail_k20_overrev K20 over-rev: 9,300 rpm closed throttle
 digest fail_k20_overrev hold 58209f606b3486803596105b426e1d9d9a84a04c0f2f602a4bbc8d146a54aa40 samples=4 channels=116
@@ -1991,7 +1991,7 @@ value fail_k20_overheat hold throttle.60mm.wear 0
 value fail_k20_overheat hold throttle.60mm.fatigue 0
 value fail_k20_overheat hold throttle.60mm.inspection Good:Within specification.
 case fail_m54_overrev M54 over-rev: 9,000 rpm closed throttle
-digest fail_m54_overrev hold a698238288a783a31b32883688fd6bdeafcd319dd3b64537dacc9446f80bb23c samples=4 channels=116
+digest fail_m54_overrev hold 4f9d57c913bc71f197fb83f4e2fd07d6ead0e81b4e7fd51019038665b5bda060 samples=4 channels=116
 value fail_m54_overrev hold failure0 ENGINE FAILURE — Flywheel burst\nComponent: Flywheel (M54 OEM dual-mass flywheel)\nCause: Flywheel exceeded its burst speed\n\nMeasured at failure:\n  Engine speed: 9,000 rpm\n  Engine speed (flywheel): 9000.0 rpm (rated 7500.0 rpm, 120 %)\n  Time under damaging load (part's lifetime): 0.0 s, peak 120 % of the rating\n\nContributing factors:\n  - The flywheel is rated to 7,500 rpm.\n\nRecommendations:\n  - Fit a flywheel rated above the engine's maximum speed (chromoly), and respect the rev limit.\n
 value fail_m54_overrev hold failure1 ENGINE FAILURE — Bent valves\nComponent: Cylinder head (M54 OEM cylinder head)\nCause: Floating valves were struck by the pistons (over-rev beyond valve float)\n\nMeasured at failure:\n  Engine speed: 9,000 rpm\n  Engine speed vs valve-contact limit (110 % of float speed): 9000.0 rpm (rated 7776.5 rpm, 116 %)\n  Valve float speed: 7,070 rpm\n  Valve spring force at full lift: 640 N\n  Time under damaging load (part's lifetime): 0.0 s, peak 116 % of the rating\n\nContributing factors:\n  - Engine speed (9,000 rpm) was above the rev limiter (6,500 rpm): over-rev (missed shift or forced by the dyno/drivetrain).\n  - Cam lift 9.7 mm with 105 g valves needs more spring force than 640 N at this speed.\n\nRecommendations:\n  - Fit stiffer valve springs (and lighter valves), or lower the rev limit below the float speed.\n  - The head needs new valves and guides; check the pistons for valve strikes.\n\nCollateral damage:\n  - M54 OEM cast pistons (10.2:1): valve impressions in the crowns\n  - M54 OEM valve springs: damaged by the valve strike\n
 value fail_m54_overrev hold seized true
@@ -2042,7 +2042,7 @@ value fail_m54_overrev hold m54.oil_pump.oem.wear 0
 value fail_m54_overrev hold m54.oil_pump.oem.fatigue 0
 value fail_m54_overrev hold m54.oil_pump.oem.inspection Good:Within specification.
 value fail_m54_overrev hold m54.pistons.oem.wear 0.400000202
-value fail_m54_overrev hold m54.pistons.oem.fatigue 1.2996927223327744E-09
+value fail_m54_overrev hold m54.pistons.oem.fatigue 1.2992925286344295E-09
 value fail_m54_overrev hold m54.pistons.oem.inspection Minor:Rings and skirts worn (40 %); expect blow-by and reduced compression.
 value fail_m54_overrev hold m54.rod_bearings.oem.wear 2.0199999999999945E-07
 value fail_m54_overrev hold m54.rod_bearings.oem.fatigue 0
@@ -2060,8 +2060,8 @@ value fail_m54_overrev hold throttle.68mm.wear 0
 value fail_m54_overrev hold throttle.68mm.fatigue 0
 value fail_m54_overrev hold throttle.68mm.inspection Good:Within specification.
 case fail_m54_detonation M54 12° over-advanced on RON 91, knock control off
-digest fail_m54_detonation hold d80c4e6d2561273bca1fd9674d6d9090853a3ceb8d4c56b2d570ea6c02126dfd samples=2 channels=116
-value fail_m54_detonation hold failure0 ENGINE FAILURE — Detonation damage\nComponent: Pistons (M54 OEM cast pistons (10.2:1))\nCause: Sustained detonation (knock) eroded and cracked the pistons\n\nMeasured at failure:\n  Engine speed: 2,500 rpm\n  Knock: 21.4° past the knock limit (peak), 1.1 s of knocking\n  Spark advance: 33.5° BTDC vs knock limit 12.0°\n  Fuel: Regular unleaded (RON 91) (RON 91)\n  Compression ratio: 10.2:1\n  Charge temperature: 28 °C\n  Time under damaging load (part's lifetime): 1.1 s\n\nContributing factors:\n  - Spark timing (33.5°) was beyond what the fuel tolerates under these conditions (12.0°).\n  - RON 91 fuel has limited knock resistance.\n  - A lean mixture (λ 0.94) under load is knock-prone.\n  - Knock control was disabled in the tune.\n\nRecommendations:\n  - Remove at least 24° of timing around 2,500 rpm / 101 kPa.\n  - Use higher-octane fuel (RON 98, race fuel or E85 with a matching calibration).\n  - Replace the pistons (and inspect the head gasket and rod bearings).\n\nCollateral damage:\n  - M54 OEM block (aluminium, iron liners): cylinder bore scored by piston debris\n
+digest fail_m54_detonation hold f0e555613d55008abce585bcc336147e4b626327e69322c8ee5768e3d70977d8 samples=2 channels=116
+value fail_m54_detonation hold failure0 ENGINE FAILURE — Detonation damage\nComponent: Pistons (M54 OEM cast pistons (10.2:1))\nCause: Sustained detonation (knock) eroded and cracked the pistons\n\nMeasured at failure:\n  Engine speed: 2,500 rpm\n  Knock: 21.4° past the knock limit (peak), 1.1 s of knocking\n  Spark advance: 33.5° BTDC vs knock limit 12.1°\n  Fuel: Regular unleaded (RON 91) (RON 91)\n  Compression ratio: 10.2:1\n  Charge temperature: 28 °C\n  Time under damaging load (part's lifetime): 1.1 s\n\nContributing factors:\n  - Spark timing (33.5°) was beyond what the fuel tolerates under these conditions (12.1°).\n  - RON 91 fuel has limited knock resistance.\n  - A lean mixture (λ 0.94) under load is knock-prone.\n  - Knock control was disabled in the tune.\n\nRecommendations:\n  - Remove at least 24° of timing around 2,500 rpm / 101 kPa.\n  - Use higher-octane fuel (RON 98, race fuel or E85 with a matching calibration).\n  - Replace the pistons (and inspect the head gasket and rod bearings).\n\nCollateral damage:\n  - M54 OEM block (aluminium, iron liners): cylinder bore scored by piston debris\n
 value fail_m54_detonation hold seized true
 value fail_m54_detonation hold warnings knock,stress_RodBearingFatigue
 value fail_m54_detonation hold ecu.m54_oem.wear 0
@@ -2095,12 +2095,12 @@ value fail_m54_detonation hold m54.head.oem.wear 0
 value fail_m54_detonation hold m54.head.oem.fatigue 0
 value fail_m54_detonation hold m54.head.oem.inspection Good:Within specification.
 value fail_m54_detonation hold m54.head_gasket.oem.wear 0
-value fail_m54_detonation hold m54.head_gasket.oem.fatigue 0.25021047143076885
+value fail_m54_detonation hold m54.head_gasket.oem.fatigue 0.2508495054837258
 value fail_m54_detonation hold m54.head_gasket.oem.inspection Minor:Fire rings slightly distorted.
 value fail_m54_detonation hold m54.intake.disa.wear 0
 value fail_m54_detonation hold m54.intake.disa.fatigue 0
 value fail_m54_detonation hold m54.intake.disa.inspection Good:Within specification.
-value fail_m54_detonation hold m54.main_bearings.oem.wear 2.2799999999999934E-07
+value fail_m54_detonation hold m54.main_bearings.oem.wear 2.2899999999999934E-07
 value fail_m54_detonation hold m54.main_bearings.oem.fatigue 0
 value fail_m54_detonation hold m54.main_bearings.oem.inspection Good:Within specification.
 value fail_m54_detonation hold m54.oil_pan.oem.wear 0
@@ -2109,11 +2109,11 @@ value fail_m54_detonation hold m54.oil_pan.oem.inspection Good:Within specificat
 value fail_m54_detonation hold m54.oil_pump.oem.wear 0
 value fail_m54_detonation hold m54.oil_pump.oem.fatigue 0
 value fail_m54_detonation hold m54.oil_pump.oem.inspection Good:Within specification.
-value fail_m54_detonation hold m54.pistons.oem.wear 0.011644015205176664
+value fail_m54_detonation hold m54.pistons.oem.wear 0.011684603566856414
 value fail_m54_detonation hold m54.pistons.oem.fatigue 1
 value fail_m54_detonation hold m54.pistons.oem.inspection Failed:FAILED: detonation damage — sustained detonation (knock) eroded and cracked the pistons.
-value fail_m54_detonation hold m54.rod_bearings.oem.wear 2.2799999999999934E-07
-value fail_m54_detonation hold m54.rod_bearings.oem.fatigue 0.1909045407514617
+value fail_m54_detonation hold m54.rod_bearings.oem.wear 2.2899999999999934E-07
+value fail_m54_detonation hold m54.rod_bearings.oem.fatigue 0.19433729695855945
 value fail_m54_detonation hold m54.rod_bearings.oem.inspection Good:Within specification.
 value fail_m54_detonation hold m54.rods.oem.wear 0
 value fail_m54_detonation hold m54.rods.oem.fatigue 0
@@ -2128,7 +2128,7 @@ value fail_m54_detonation hold throttle.68mm.wear 0
 value fail_m54_detonation hold throttle.68mm.fatigue 0
 value fail_m54_detonation hold throttle.68mm.inspection Good:Within specification.
 case fail_m54_oil_starvation M54 1.25 g sustained cornering at 6,000 rpm
-digest fail_m54_oil_starvation hold b2d2f8afdef3dfde1a187810ccdf109edaf60423e4c5c70a9d7c8a495a684262 samples=16 channels=116
+digest fail_m54_oil_starvation hold ee044fac2d2708d983f473e4f028f327bdd4086f4ca9760b42424cbc6e2afe71 samples=16 channels=116
 value fail_m54_oil_starvation hold failure0 ENGINE FAILURE — Spun rod bearing\nComponent: Rod bearings (M54 OEM rod bearings)\nCause: Oil starvation: the bearings wore through without an oil film\n\nMeasured at failure:\n  Engine speed: 6,000 rpm\n  Oil pressure: 0.00 bar (bearings need 1.80 bar)\n  Oil temperature: 115 °C (max 115 °C)\n\nContributing factors:\n  - Oil pressure fell as low as 0 % of the requirement and stayed below it for 29.3 s.\n  - Sustained 1.25 g exceeded the oil pan's 1.00 g: oil sloshed away from the pickup.\n  - Bearing clearance had grown with wear (mains 71 % worn), bleeding off even more oil pressure.\n  - High engine speed (6,000 rpm) raises the pressure the bearings need.\n\nRecommendations:\n  - Fit a baffled oil pan.\n  - Replace the bearings and regrind or replace the crankshaft.\n  - A high-volume oil pump raises pressure at every speed; watch the oil pressure gauge and back off when it drops.\n\nCollateral damage:\n  - M54 OEM forged crankshaft (89.6 mm): journals scored and overheated (needs regrinding or replacement)\n  - M54 OEM connecting rods (135 mm): big ends overheated\n
 value fail_m54_oil_starvation hold seized true
 value fail_m54_oil_starvation hold warnings oil_pressure,oil_surge
@@ -2168,7 +2168,7 @@ value fail_m54_oil_starvation hold m54.head_gasket.oem.inspection Good:Within sp
 value fail_m54_oil_starvation hold m54.intake.disa.wear 0
 value fail_m54_oil_starvation hold m54.intake.disa.fatigue 0
 value fail_m54_oil_starvation hold m54.intake.disa.inspection Good:Within specification.
-value fail_m54_oil_starvation hold m54.main_bearings.oem.wear 0.7084368014753687
+value fail_m54_oil_starvation hold m54.main_bearings.oem.wear 0.7084361855048286
 value fail_m54_oil_starvation hold m54.main_bearings.oem.fatigue 0
 value fail_m54_oil_starvation hold m54.main_bearings.oem.inspection Major:Bearings heavily worn and scored; clearance 0.068 mm (new 0.040 mm).
 value fail_m54_oil_starvation hold m54.oil_pan.oem.wear 0
@@ -2178,7 +2178,7 @@ value fail_m54_oil_starvation hold m54.oil_pump.oem.wear 0
 value fail_m54_oil_starvation hold m54.oil_pump.oem.fatigue 0
 value fail_m54_oil_starvation hold m54.oil_pump.oem.inspection Good:Within specification.
 value fail_m54_oil_starvation hold m54.pistons.oem.wear 5.8569999999994935E-06
-value fail_m54_oil_starvation hold m54.pistons.oem.fatigue 0.00015521167809950107
+value fail_m54_oil_starvation hold m54.pistons.oem.fatigue 0.00015521099427572883
 value fail_m54_oil_starvation hold m54.pistons.oem.inspection Good:Within specification.
 value fail_m54_oil_starvation hold m54.rod_bearings.oem.wear 1
 value fail_m54_oil_starvation hold m54.rod_bearings.oem.fatigue 1
@@ -2196,7 +2196,7 @@ value fail_m54_oil_starvation hold throttle.68mm.wear 0
 value fail_m54_oil_starvation hold throttle.68mm.fatigue 0
 value fail_m54_oil_starvation hold throttle.68mm.inspection Good:Within specification.
 case fail_m54_overheat M54 6,000 rpm WOT with 0.5 m/s cooling air
-digest fail_m54_overheat hold 3545edc19b7310d6417979e1b0ccab08b04b838fbc3e50014760507ab80a510d samples=22 channels=116
+digest fail_m54_overheat hold 5ce40ba1da767edd345e78cd249e1e20331f8ff3dc1ecf42f10dcb5067a6a1ac samples=22 channels=116
 value fail_m54_overheat hold failure0 COMPONENT FAILURE — Blown head gasket\nComponent: Head gasket (M54 OEM MLS head gasket (0.7 mm))\nCause: Head gasket could not seal the combustion pressure or overheating\n\nMeasured at failure:\n  Engine speed: 6,000 rpm\n  Peak cylinder pressure (head gasket): 60.2 bar (rated 140.0 bar, 43 %)\n  Peak cylinder pressure: 60 bar (gasket rated 140 bar)\n  Maximum coolant temperature: 128 °C\n  Time under damaging load (part's lifetime): 56.2 s\n\nContributing factors:\n  - Coolant reached 128 °C (boiling): the head and block expanded and the gasket lost clamp.\n  - 28 % of the coolant boiled away, leaving hot spots around the combustion chambers.\n\nRecommendations:\n  - Fix the cooling problem before rebuilding: larger radiator, more airflow, check the heat load.\n  - Check the cylinder head for warping before refitting it. Symptoms of a blown gasket: coolant loss, white exhaust smoke, low compression.\n
 value fail_m54_overheat hold seized false
 value fail_m54_overheat hold warnings coolant_loss,oil_temp
@@ -2228,7 +2228,7 @@ value fail_m54_overheat hold m54.flywheel.dual_mass.wear 0
 value fail_m54_overheat hold m54.flywheel.dual_mass.fatigue 0
 value fail_m54_overheat hold m54.flywheel.dual_mass.inspection Good:Within specification.
 value fail_m54_overheat hold m54.head.oem.wear 0
-value fail_m54_overheat hold m54.head.oem.fatigue 0.05364377227706364
+value fail_m54_overheat hold m54.head.oem.fatigue 0.053643682247063916
 value fail_m54_overheat hold m54.head.oem.inspection Good:Within specification.
 value fail_m54_overheat hold m54.head_gasket.oem.wear 0
 value fail_m54_overheat hold m54.head_gasket.oem.fatigue 1
@@ -2236,7 +2236,7 @@ value fail_m54_overheat hold m54.head_gasket.oem.inspection Failed:FAILED: blown
 value fail_m54_overheat hold m54.intake.disa.wear 0
 value fail_m54_overheat hold m54.intake.disa.fatigue 0
 value fail_m54_overheat hold m54.intake.disa.inspection Good:Within specification.
-value fail_m54_overheat hold m54.main_bearings.oem.wear 0.0026335109414800722
+value fail_m54_overheat hold m54.main_bearings.oem.wear 0.0026334994041315005
 value fail_m54_overheat hold m54.main_bearings.oem.fatigue 0
 value fail_m54_overheat hold m54.main_bearings.oem.inspection Good:Within specification.
 value fail_m54_overheat hold m54.oil_pan.oem.wear 0
@@ -2246,9 +2246,9 @@ value fail_m54_overheat hold m54.oil_pump.oem.wear 0
 value fail_m54_overheat hold m54.oil_pump.oem.fatigue 0
 value fail_m54_overheat hold m54.oil_pump.oem.inspection Good:Within specification.
 value fail_m54_overheat hold m54.pistons.oem.wear 1.434599999999807E-05
-value fail_m54_overheat hold m54.pistons.oem.fatigue 0.005603240335950095
+value fail_m54_overheat hold m54.pistons.oem.fatigue 0.005603238143318823
 value fail_m54_overheat hold m54.pistons.oem.inspection Good:Within specification.
-value fail_m54_overheat hold m54.rod_bearings.oem.wear 0.0026335109414800722
+value fail_m54_overheat hold m54.rod_bearings.oem.wear 0.0026334994041315005
 value fail_m54_overheat hold m54.rod_bearings.oem.fatigue 0
 value fail_m54_overheat hold m54.rod_bearings.oem.inspection Good:Within specification.
 value fail_m54_overheat hold m54.rods.oem.wear 0
@@ -2276,16 +2276,16 @@ digest scenario_project_car drive 3f13c4c5d88068d048689bc8016585cf20fa5f69375803
 value scenario_project_car drive laps 0
 value scenario_project_car drive autopilot_recoveries 6
 case scenario_isar_c30_six Scenario 'isar_c30_six' (M54 car): dyno pull and a lap
-digest scenario_isar_c30_six dyno_sweep de1050932d21c23c60b5c2d27663598422515a9827432d9d1a07e9d3c25d0f0b samples=180 channels=116
+digest scenario_isar_c30_six dyno_sweep a726bd53c4398d503df3573cc6911e784a99dc53c61bb5dee110ccb2e85d812a samples=180 channels=116
 value scenario_isar_c30_six dyno_sweep phase Finished
 value scenario_isar_c30_six dyno_sweep abort 
 value scenario_isar_c30_six dyno_sweep note Reached the rev limiter at 6500 rpm.
-value scenario_isar_c30_six dyno_sweep peak_power_kw 151.51311806742632
+value scenario_isar_c30_six dyno_sweep peak_power_kw 151.51445735450554
 value scenario_isar_c30_six dyno_sweep peak_power_rpm 6475
-value scenario_isar_c30_six dyno_sweep peak_torque_nm 292.7383057278201
-value scenario_isar_c30_six dyno_sweep peak_torque_rpm 2575
-digest scenario_isar_c30_six drive a33293f637d7c395535276ecdb97e846d11c2c03a4ca3729a8fe7a6503af1e12 samples=1081 channels=157
-value scenario_isar_c30_six drive lap1_s 52.78199999990794
+value scenario_isar_c30_six dyno_sweep peak_torque_nm 295.83377260352705
+value scenario_isar_c30_six dyno_sweep peak_torque_rpm 3075
+digest scenario_isar_c30_six drive e31edfb4f6c2872e98cafeb6242ac96e4df80069bd2600c52ef5161a94b68c4e samples=1081 channels=157
+value scenario_isar_c30_six drive lap1_s 52.78399999990794
 value scenario_isar_c30_six drive laps 1
 value scenario_isar_c30_six drive autopilot_recoveries 0
 case drive_k20_stock Kestrel S2, stock K20, RON 95: out lap + 2 laps
@@ -2453,19 +2453,19 @@ value drive_k20_t28 wear turbo.t28_ball.wear 0.009593724743130558
 value drive_k20_t28 wear turbo.t28_ball.fatigue 1.0785103216150964E-05
 value drive_k20_t28 wear turbo.t28_ball.inspection Good:Within specification.
 case drive_m54_stock Isar C30, stock M54, RON 98: out lap + 2 laps
-digest drive_m54_stock drive 161827d854af7bc78f49692e2108af64fb07b67e4986902b8032254b073196b2 samples=1586 channels=157
-value drive_m54_stock drive lap1_s 52.193999999913224
-value drive_m54_stock drive lap2_s 52.19200000009556
+digest drive_m54_stock drive d7ee632feb32c843bab7155ab5a753611277de8ca74f7714f1a2f339a32d03ca samples=1586 channels=157
+value drive_m54_stock drive lap1_s 52.19199999991323
+value drive_m54_stock drive lap2_s 52.19200000009555
 value drive_m54_stock drive laps 2
 value drive_m54_stock drive autopilot_recoveries 0
-digest drive_m54_stock wear 2b9c4e61f68cb1e6ebc9a987d269daaf97e917ec568aae29e7c5e036cbd3498b samples=0 channels=0
-value drive_m54_stock wear brakes.wear 0.008987716589515343
-value drive_m54_stock wear clutch.wear 0.0031522657528097074
+digest drive_m54_stock wear dbb03c6cd136c8e4411830441a8d4a30571f18e8a9cd9322127034f1b858a7e9 samples=0 channels=0
+value drive_m54_stock wear brakes.wear 0.008988259287068756
+value drive_m54_stock wear clutch.wear 0.003152110622519767
 value drive_m54_stock wear differential.wear 0
 value drive_m54_stock wear gearbox.wear 0
 value drive_m54_stock wear suspension.wear 0
-value drive_m54_stock wear tires_front.wear 0.006258242697429893
-value drive_m54_stock wear tires_rear.wear 0.007792259768370277
+value drive_m54_stock wear tires_front.wear 0.006259671310020431
+value drive_m54_stock wear tires_rear.wear 0.007793452148321333
 value drive_m54_stock wear seized false
 value drive_m54_stock wear warnings 
 value drive_m54_stock wear ecu.m54_oem.wear 0
@@ -2514,7 +2514,7 @@ value drive_m54_stock wear m54.oil_pump.oem.wear 0
 value drive_m54_stock wear m54.oil_pump.oem.fatigue 0
 value drive_m54_stock wear m54.oil_pump.oem.inspection Good:Within specification.
 value drive_m54_stock wear m54.pistons.oem.wear 3.1719600000021034E-05
-value drive_m54_stock wear m54.pistons.oem.fatigue 4.993668611024491E-05
+value drive_m54_stock wear m54.pistons.oem.fatigue 4.994941298284788E-05
 value drive_m54_stock wear m54.pistons.oem.inspection Good:Within specification.
 value drive_m54_stock wear m54.rod_bearings.oem.wear 3.1719600000021034E-05
 value drive_m54_stock wear m54.rod_bearings.oem.fatigue 0

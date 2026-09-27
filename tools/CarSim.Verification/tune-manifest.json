@@ -42,9 +42,9 @@
     {
       "tune": "m54.stock", "engine": "isar_m54", "layer": "base", "file": "content/base/tunes/m54_stock.json", "fuel": "gasoline_98",
       "build": {},
-      "steps": [ { "calibrator": "cams", "step_deg": 2.5 }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "steps": [ { "calibrator": "cams", "step_deg": 2.5 }, { "calibrator": "runner_switch" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
       "hand_authored": [ "target_lambda" ],
-      "provenance": "No M54 table was edited by hand (PR #4): calibrate-cams --step 2.5, calibrate-ve, calibrate-spark, calibrate-ve on RON 98."
+      "provenance": "No M54 table was edited by hand (PR #4): calibrate-cams --step 2.5, the DISA switch speed at the stages' full-load torque crossover (Intake Gas Dynamics 2.0), calibrate-ve, calibrate-spark, calibrate-ve on RON 98."
     },
     {
       "tune": "syn.s16.stock", "engine": "syn_i4_sohc", "layer": "test", "file": "content/test/engine-matrix/syn_i4_sohc.json", "fuel": "gasoline_95",

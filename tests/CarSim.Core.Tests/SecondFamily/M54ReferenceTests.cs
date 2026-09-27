@@ -168,7 +168,7 @@ public class M54ReferenceTests
         // Not a validation target: the model's own numbers, pinned loosely so calibration drift shows up here
         // (compare SIMULATION_SPEC.md, "Calibration reference (Isar M54)"). Re-pinned deliberately by Intake Gas Dynamics 2.0
         // (the runner's wave gain, v₀ and the ceiling re-anchored on the K20, the tune regenerated): 303.9 N·m / 153.0 kW
-        // before, 294.6 N·m / 152.3 kW after (the DISA stages are not authored yet at this commit).
+        // before; after it 294.6 N·m / 152.3 kW with one 380 mm runner, 297.8 N·m / 153.9 kW with the DISA stages authored.
         var curve = FullLoadCurve();
         var peakT = SimFactory.PeakTorque(curve);
         var peakP = SimFactory.PeakPower(curve);

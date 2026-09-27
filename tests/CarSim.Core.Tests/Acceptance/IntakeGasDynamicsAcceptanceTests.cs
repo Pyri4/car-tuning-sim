@@ -223,11 +223,13 @@ public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
         Assert.InRange(peakTorque.Torque, 270, 330);
         Assert.InRange(shipped.Max(p => p.PowerKw), 144.5, 195.5);
 
-        double at1500 = shipped.Single(p => p.Rpm == 1500).Torque;
+        double at1500 = shipped.Single(p => Math.Abs(p.Rpm - 1500) < 1).Torque; // held speeds come back through rad/s
         output.WriteLine($"Held-out validation (reported, not asserted): peak {peakTorque.Torque:F1} N·m at {peakTorque.Rpm:F0} rpm " +
                          $"(reference 300 N·m at 3,500), {peakTorque.Torque / at1500 - 1:P1} above 1,500 rpm; peak power {shipped.Max(p => p.PowerKw):F1} kW (reference 170).");
-        foreach (var p in shipped.Where(p => p.Rpm % 500 == 0))
-            output.WriteLine($"  {p.Rpm,5:F0} rpm  {p.Torque,6:F1} N·m  {p.PowerKw,6:F1} kW  stage {(p.SwitchedRunner ? "open" : "closed")}");
+        output.WriteLine($"DISA stage crossover {crossover:F0} rpm (derived for 3,925), tune switch {tune.IntakeRunnerSwitchRpm:F0} rpm");
+        foreach (var (p, i) in shipped.Select((p, i) => (p, i)).Where(x => Math.Abs(x.p.Rpm % 250) < 1 || Math.Abs(x.p.Rpm % 250 - 250) < 1))
+            output.WriteLine($"  {p.Rpm,5:F0} rpm  {p.Torque,6:F1} N·m  {p.PowerKw,6:F1} kW  VE {p.VolumetricEfficiency:F3}  G {p.IntakeWaveGain:F4}  " +
+                             $"stage {(p.SwitchedRunner ? "open" : "closed")}  cam {p.IntakeCamAdvance:F1}°  (closed {closed[i].Torque:F1}, open {open[i].Torque:F1} N·m)");
     }
 }
 

@@ -138,12 +138,15 @@ internal static class IntakeRig
     /// <summary>
     /// Two intake stages held over the same sweep act through filling: wherever their dynamic VE differs by at least
     /// 0.5 %, full-load torque differs in the same direction (same tune, cams and fuel, so fuelling and spark cannot
-    /// reverse a filling advantage).
+    /// reverse a filling advantage). Only where both fire: at the rev limiter's fuel cut the engine only motors, and more
+    /// filling there means more pumping loss, not more torque (Phase 1 correction of the rig; a sweep that ends on the
+    /// limit, like the M54's to 6,500 rpm, reached it).
     /// </summary>
     public static void AssertStagesActThroughFilling(IReadOnlyList<EngineTelemetry> first, IReadOnlyList<EngineTelemetry> second)
     {
         foreach (var (a, b) in first.Zip(second))
         {
+            if (!a.Firing || !b.Firing) continue;
             double ve = b.VeDynamic / a.VeDynamic - 1;
             if (Math.Abs(ve) < 0.005) continue;
             Assert.True(Math.Sign(b.Torque - a.Torque) == Math.Sign(ve),
@@ -153,7 +156,8 @@ internal static class IntakeRig
 
     /// <summary>
     /// With the switch speed at the stages' crossover, the switched curve is the upper envelope of the two stages held,
-    /// within 0.5 %, away from the switch (± the ECU's 150 rpm hysteresis).
+    /// within 0.5 %, away from the switch (± the ECU's 150 rpm hysteresis), wherever the engine fires (not in the rev
+    /// limiter's fuel cut; see <see cref="AssertStagesActThroughFilling"/>).
     /// </summary>
     public static void AssertSwitchFollowsTheUpperEnvelope(IReadOnlyList<EngineTelemetry> stageA, IReadOnlyList<EngineTelemetry> stageB,
         IReadOnlyList<EngineTelemetry> switched, double switchRpm)
@@ -161,6 +165,7 @@ internal static class IntakeRig
         for (int i = 0; i < switched.Count; i++)
         {
             if (Math.Abs(switched[i].Rpm - switchRpm) <= EcuController.SwitchHysteresisRpm) continue;
+            if (!switched[i].Firing || !stageA[i].Firing || !stageB[i].Firing) continue;
             double best = Math.Max(stageA[i].Torque, stageB[i].Torque);
             Assert.True(switched[i].Torque >= best * (1 - 0.005),
                 $"{switched[i].Rpm:F0} rpm: switched {switched[i].Torque:F1} N·m below the better stage's {best:F1} N·m (switch {switchRpm:F0} rpm)");
