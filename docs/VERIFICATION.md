@@ -77,9 +77,18 @@ the tune's comment and the manifest.
 the checked-in values are reproduced; `--write 1` rewrites only the calibrated tables in place, keeping the file's
 layout and number style (a test proves every tune file round-trips byte-identically through the writer).
 
-**Phase 0 state (the pre-change calibration baseline).** No shipped tune is an exact fixed point of its recipe today —
-the tables were calibrated under earlier states of the model (the turbo tables before later physics fixes; the synthetic
-maps by an earlier script):
+**Current state (2026-09-27, after the pre-physics regeneration): every tune is a fixed point of its recipe.**
+`carsim regenerate-tunes` reports 12 of 12 reproduced. 39 spark cells in 10 tunes are rounding 2-cycles and keep their
+values. The hand-authored spark audit is unchanged: 74 (K20 stock) and 80 (turbo base) cells above the ceiling.
+
+The regeneration ran under the existing physics, with the two rules above, in its own commit, and re-baselined the
+fingerprint. Every changed cell and its effect on outputs are listed in
+[milestones/intake-gas-dynamics-2/TUNE_REGENERATION_2026-09-27.md](milestones/intake-gas-dynamics-2/TUNE_REGENERATION_2026-09-27.md).
+The M54 is bit-identical, and the K20 stock moved by 11 VE cells of 0.001.
+
+**Phase 0 state (the pre-change calibration baseline, before that regeneration).** No shipped tune was an exact fixed
+point of its recipe: the tables were calibrated under earlier states of the model (the turbo tables before later physics
+fixes; the synthetic maps by an earlier script):
 
 | Tune | Result of its recipe against the checked-in tables |
 |---|---|
@@ -95,7 +104,12 @@ maps by an earlier script):
 
 The driver itself is deterministic, and its output on the K20 factory recipe is pinned by the fingerprint case
 `k20_regen_stock_ve`. Regenerating these tables is a content change with fingerprint consequences (the K20 moves by
-11 VE cells), so Phase 0 does not do it; see the milestone's question Q5.
+11 VE cells), so Phase 0 did not do it; the design resolution did, separately from any physics (Q5).
+
+The Phase 0 table overstated some differences, for two reasons:
+- **Rounding 2-cycles.** Most of its 0.5° spark differences are rounding 2-cycles, which return to the checked-in value
+  on a second pass.
+- **Recipe order.** `syn.r6`'s VE looked reproduced only because the recipe measured it before moving the switch speed.
 
 ## Mutation harness
 `tools/CarSim.MutationCheck/mutations.json` lists known bugs as exact text replacements and the tests that must fail

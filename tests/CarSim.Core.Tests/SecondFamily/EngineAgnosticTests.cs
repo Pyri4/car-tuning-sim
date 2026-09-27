@@ -297,10 +297,13 @@ public class EngineAgnosticTests
         // Full-precision values from the pre-milestone code (main at the merge of PR #2), stock K20 on RON 95, default
         // dyno sweep. The generic cam-timing terms are exactly zero for cams without authored centrelines, so nothing
         // moved. Update deliberately if K20 physics is ever changed on purpose.
+        // Re-pinned 2026-09-27 for a content change, not physics: the pre-physics tune regeneration (Intake Gas Dynamics
+        // 2.0 design resolution, Q5) moved 11 cells of k20.stock's VE table by 0.001, so peak power moved by 2e-8 and peak
+        // torque by 8e-9 relative (was 110488.59485226133 W, 189.1821087807875 N·m; the regression fingerprint has the diff).
         var run = new DynoRunner(SimFactory.Create(), new DynoSettings()).RunToCompletion();
         Assert.Equal(221, run.Samples.Count);
-        Assert.Equal(110488.59485226133, run.PeakPower!.Power, 1e-6);
-        Assert.Equal(189.1821087807875, run.PeakTorque!.Torque, 1e-9);
+        Assert.Equal(110488.5926433362, run.PeakPower!.Power, 1e-6);
+        Assert.Equal(189.18210731949648, run.PeakTorque!.Torque, 1e-9);
         var at2000 = SimFactory.At(SimFactory.Create(), 2000);
         Assert.Equal(0.0, at2000.IntakeCamAdvance);
         Assert.False(at2000.CamTuningFloorActive);

@@ -308,7 +308,7 @@ value k20_stock_95 geometry displacement_cc 1998.22885687171
 value k20_stock_95 geometry compression_ratio 10.504282637185355
 value k20_stock_95 geometry mass_kg 128.57999999999998
 value k20_stock_95 geometry issues [Info] compression_ratio: Static compression ratio 10.50:1 (2.00 L, bore 86.0 × stroke 86.0 mm).
-digest k20_stock_95 wot efc2fa0c7b59ef916e420ed00f8f496b027fef5c22cab81129e87d75918106bd samples=30 channels=112
+digest k20_stock_95 wot a406d663c2e1c8cafbfab06b1c51d50da3082fc1297c512e84d44d50f9c579eb samples=30 channels=112
 value k20_stock_95 wot torque_nm@1000 125.89750225620065
 value k20_stock_95 wot power_kw@1000 13.183955606446144
 value k20_stock_95 wot ve@1000 0.6774989139080895
@@ -354,46 +354,46 @@ value k20_stock_95 wot power_kw@5000 95.39151920664474
 value k20_stock_95 wot ve@5000 0.9204085481967996
 value k20_stock_95 wot ve_dynamic@5000 1.0186344899698911
 value k20_stock_95 wot lambda@5000 0.8807782433298881
-value k20_stock_95 wot torque_nm@5500 175.65640185379388
-value k20_stock_95 wot power_kw@5500 101.17082463031414
-value k20_stock_95 wot ve@5500 0.9047783645459316
+value k20_stock_95 wot torque_nm@5500 175.65749144826285
+value k20_stock_95 wot power_kw@5500 101.17145219167699
+value k20_stock_95 wot ve@5500 0.9047788455239872
 value k20_stock_95 wot ve_dynamic@5500 1.0195589803135563
-value k20_stock_95 wot lambda@5500 0.8827775250995461
-value k20_stock_95 wot torque_nm@6000 168.0988928353557
-value k20_stock_95 wot power_kw@6000 105.61964936162629
-value k20_stock_95 wot ve@6000 0.8848883645045684
+value k20_stock_95 wot lambda@5500 0.8827557563593773
+value k20_stock_95 wot torque_nm@6000 168.09889240518035
+value k20_stock_95 wot power_kw@6000 105.61964909133913
+value k20_stock_95 wot ve@6000 0.8848883654494356
 value k20_stock_95 wot ve_dynamic@6000 1.015222091779705
-value k20_stock_95 wot lambda@6000 0.8842151631940453
-value k20_stock_95 wot torque_nm@6500 159.79510446259565
-value k20_stock_95 wot power_kw@6500 108.76907735618254
-value k20_stock_95 wot ve@6500 0.8619195042831708
+value k20_stock_95 wot lambda@6000 0.8842151642026408
+value k20_stock_95 wot torque_nm@6500 159.79510355650837
+value k20_stock_95 wot power_kw@6500 108.76907673942847
+value k20_stock_95 wot ve@6500 0.8619195042832176
 value k20_stock_95 wot ve_dynamic@6500 1.006321218929351
-value k20_stock_95 wot lambda@6500 0.8851665560345654
-value k20_stock_95 wot torque_nm@7000 150.8140674470967
-value k20_stock_95 wot power_kw@7000 110.55248548161873
+value k20_stock_95 wot lambda@6500 0.8851665560346167
+value k20_stock_95 wot torque_nm@7000 150.81406654232902
+value k20_stock_95 wot power_kw@7000 110.55248481838936
 value k20_stock_95 wot ve@7000 0.836458536611639
 value k20_stock_95 wot ve_dynamic@7000 0.9928687423359128
 value k20_stock_95 wot lambda@7000 0.8861224808753545
-value k20_stock_95 wot torque_nm@7500 141.29548295943954
-value k20_stock_95 wot power_kw@7500 110.97321281269926
+value k20_stock_95 wot torque_nm@7500 141.29548206239147
+value k20_stock_95 wot power_kw@7500 110.97321210815934
 value k20_stock_95 wot ve@7500 0.809016395036821
 value k20_stock_95 wot ve_dynamic@7500 0.9748825785457116
 value k20_stock_95 wot lambda@7500 0.887584881387533
-value k20_stock_95 wot torque_nm@8000 -44.32052219033759
-value k20_stock_95 wot power_kw@8000 -37.129873844380796
+value k20_stock_95 wot torque_nm@8000 -44.32052308724158
+value k20_stock_95 wot power_kw@8000 -37.12987459576932
 value k20_stock_95 wot ve@8000 0.7777619110224264
 value k20_stock_95 wot ve_dynamic@8000 0.9490738638408664
 value k20_stock_95 wot lambda@8000 0
-value k20_stock_95 wot peak_power_kw 110.97321281269926
+value k20_stock_95 wot peak_power_kw 110.97321210815934
 value k20_stock_95 wot peak_power_rpm 7500
 value k20_stock_95 wot peak_torque_nm 189.19981808970292
 value k20_stock_95 wot peak_torque_rpm 3750
-digest k20_stock_95 partload f73b59a17e0613fa7d20847e9f75e2836cb5027fae67068b6abde76df835b009 samples=42 channels=112
-digest k20_stock_95 cold 44380885a70a8a4d61aa2dc88f2c404be3bb40c4e6494cb1eb1798feab99f0de samples=400 channels=112
+digest k20_stock_95 partload 159787cba9d0a9638ae5353276c40d608d7f1822685b14e9e31848acc7aa478a samples=42 channels=112
+digest k20_stock_95 cold 4e2050acd8a063de77be9eb379ea104b91bf294ff224857d4aff05b6856c1cdb samples=400 channels=112
 value k20_stock_95 cold rpm@10s 850.1132837652871
 value k20_stock_95 cold rpm@29s 850.0520379395293
 value k20_stock_95 cold first_fire_s 0.08200000000000006
-value k20_stock_95 cold coolant_c@40s 32.11558807675067
+value k20_stock_95 cold coolant_c@40s 32.115574327829336
 value k20_stock_95 cold seized false
 value k20_stock_95 cold warnings 
 value k20_stock_95 cold ecu.k20_oem.wear 0
@@ -415,7 +415,7 @@ value k20_stock_95 cold k20.cams.oem.wear 0
 value k20_stock_95 cold k20.cams.oem.fatigue 0
 value k20_stock_95 cold k20.cams.oem.inspection Good:Within specification.
 value k20_stock_95 cold k20.crankshaft.oem.wear 0
-value k20_stock_95 cold k20.crankshaft.oem.fatigue 1.4384730913214365E-12
+value k20_stock_95 cold k20.crankshaft.oem.fatigue 1.4489459386275333E-12
 value k20_stock_95 cold k20.crankshaft.oem.inspection Good:Within specification.
 value k20_stock_95 cold k20.exhaust_manifold.oem.wear 0
 value k20_stock_95 cold k20.exhaust_manifold.oem.fatigue 0
@@ -459,19 +459,19 @@ value k20_stock_95 cold radiator.oem.inspection Good:Within specification.
 value k20_stock_95 cold throttle.60mm.wear 0
 value k20_stock_95 cold throttle.60mm.fatigue 0
 value k20_stock_95 cold throttle.60mm.inspection Good:Within specification.
-digest k20_stock_95 dyno_sweep 10edb440234e00106e1c4811b66ee3e69d2c54a9dd4fe780c34653ceb0fa8f86 samples=221 channels=112
+digest k20_stock_95 dyno_sweep 1811941faa84d90995456d7e84c02f5e3c9307050d987879ccd2d15b252daa49 samples=221 channels=112
 value k20_stock_95 dyno_sweep phase Finished
 value k20_stock_95 dyno_sweep abort 
 value k20_stock_95 dyno_sweep note 
-value k20_stock_95 dyno_sweep peak_power_kw 110.48859485226133
+value k20_stock_95 dyno_sweep peak_power_kw 110.4885926433362
 value k20_stock_95 dyno_sweep peak_power_rpm 7350.000000000001
-value k20_stock_95 dyno_sweep peak_torque_nm 189.1821087807875
+value k20_stock_95 dyno_sweep peak_torque_nm 189.18210731949648
 value k20_stock_95 dyno_sweep peak_torque_rpm 3800
-digest k20_stock_95 dyno_steady 9264772e7e26ecbc7686502513c3e8cf232918988cfbff06cebde8e1a1407561 samples=23 channels=112
+digest k20_stock_95 dyno_steady 98e387fde096a88aeadd26bb6fc73771ca24a17bce37a51d684282f69fb3ba1a samples=23 channels=112
 value k20_stock_95 dyno_steady phase Finished
 value k20_stock_95 dyno_steady abort 
 value k20_stock_95 dyno_steady note 
-value k20_stock_95 dyno_steady peak_power_kw 110.98925819254684
+value k20_stock_95 dyno_steady peak_power_kw 110.98925748911859
 value k20_stock_95 dyno_steady peak_power_rpm 7500
 value k20_stock_95 dyno_steady peak_torque_nm 189.21615396094893
 value k20_stock_95 dyno_steady peak_torque_rpm 3750
@@ -543,7 +543,7 @@ value k20_stock_95 abuse throttle.60mm.wear 0
 value k20_stock_95 abuse throttle.60mm.fatigue 0
 value k20_stock_95 abuse throttle.60mm.inspection Good:Within specification.
 case k20_stock_98 K20 stock, RON 98
-digest k20_stock_98 wot 5b70ca944c9e56c948a9560a95b18ef00f9c93eac53f4308ddfb2e952ae170ca samples=30 channels=112
+digest k20_stock_98 wot 27e5889fd62cfa650a6d8bc5292a038e391340980716dd1d5f06f017f2c4306c samples=30 channels=112
 value k20_stock_98 wot torque_nm@1000 125.65567627994272
 value k20_stock_98 wot power_kw@1000 13.158631649430843
 value k20_stock_98 wot ve@1000 0.6775289480624671
@@ -589,51 +589,51 @@ value k20_stock_98 wot power_kw@5000 95.15329008326675
 value k20_stock_98 wot ve@5000 0.9204701932865729
 value k20_stock_98 wot ve_dynamic@5000 1.0186344899698911
 value k20_stock_98 wot lambda@5000 0.8784913361287054
-value k20_stock_98 wot torque_nm@5500 175.29610499580306
-value k20_stock_98 wot power_kw@5500 100.96330853724865
-value k20_stock_98 wot ve@5500 0.9048446737650636
+value k20_stock_98 wot torque_nm@5500 175.29719065079766
+value k20_stock_98 wot power_kw@5500 100.96393382963714
+value k20_stock_98 wot ve@5500 0.9048451558798414
 value k20_stock_98 wot ve_dynamic@5500 1.0195589803135563
-value k20_stock_98 wot lambda@5500 0.8804918352903428
-value k20_stock_98 wot torque_nm@6000 167.74804117898373
-value k20_stock_98 wot power_kw@6000 105.39920276439467
-value k20_stock_98 wot ve@6000 0.8849551774655272
+value k20_stock_98 wot lambda@5500 0.8804701113272946
+value k20_stock_98 wot torque_nm@6000 167.7480407475106
+value k20_stock_98 wot power_kw@6000 105.39920249329212
+value k20_stock_98 wot ve@6000 0.8849551784108561
 value k20_stock_98 wot ve_dynamic@6000 1.015222091779705
-value k20_stock_98 wot lambda@6000 0.8819283857006458
-value k20_stock_98 wot torque_nm@6500 159.45472668133402
-value k20_stock_98 wot power_kw@6500 108.53738954982025
-value k20_stock_98 wot ve@6500 0.8619861005002477
+value k20_stock_98 wot lambda@6000 0.8819283867070579
+value k20_stock_98 wot torque_nm@6500 159.45472577393522
+value k20_stock_98 wot power_kw@6500 108.53738893217347
+value k20_stock_98 wot ve@6500 0.8619861005002943
 value k20_stock_98 wot ve_dynamic@6500 1.006321218929351
-value k20_stock_98 wot lambda@6500 0.88287951930583
-value k20_stock_98 wot torque_nm@7000 150.48505705394308
-value k20_stock_98 wot power_kw@7000 110.31130826699864
-value k20_stock_98 wot ve@7000 0.8365242779251973
+value k20_stock_98 wot lambda@6500 0.8828795193058817
+value k20_stock_98 wot torque_nm@7000 150.4850561478403
+value k20_stock_98 wot power_kw@7000 110.3113076027906
+value k20_stock_98 wot ve@7000 0.8365242779251971
 value k20_stock_98 wot ve_dynamic@7000 0.9928687423359128
-value k20_stock_98 wot lambda@7000 0.883834738929879
-value k20_stock_98 wot torque_nm@7500 140.9785605364526
-value k20_stock_98 wot power_kw@7500 110.72430252374583
+value k20_stock_98 wot lambda@7000 0.8838347389298788
+value k20_stock_98 wot torque_nm@7500 140.9785596380562
+value k20_stock_98 wot power_kw@7500 110.72430181814697
 value k20_stock_98 wot ve@7500 0.8090807435493244
 value k20_stock_98 wot ve_dynamic@7500 0.9748825785457116
 value k20_stock_98 wot lambda@7500 0.8852947125931853
-value k20_stock_98 wot torque_nm@8000 -44.324256912332444
-value k20_stock_98 wot power_kw@8000 -37.13300263776272
+value k20_stock_98 wot torque_nm@8000 -44.324257810568255
+value k20_stock_98 wot power_kw@8000 -37.133003390267
 value k20_stock_98 wot ve@8000 0.7777619127460387
 value k20_stock_98 wot ve_dynamic@8000 0.9490738638408664
 value k20_stock_98 wot lambda@8000 0
-value k20_stock_98 wot peak_power_kw 110.72430252374583
+value k20_stock_98 wot peak_power_kw 110.72430181814697
 value k20_stock_98 wot peak_power_rpm 7500
 value k20_stock_98 wot peak_torque_nm 188.7252891446915
 value k20_stock_98 wot peak_torque_rpm 3750
-digest k20_stock_98 partload 177ab2a204dadae2f229917b8d78146539619df662a64eec544ea3186fb85279 samples=42 channels=112
-digest k20_stock_98 dyno_sweep 5fad87dc19bb074541fc5277d9a26fb546e0c7d59cc4ff7dd073f49325adb8b0 samples=221 channels=112
+digest k20_stock_98 partload 2e02c9c33358c51b67778ad819204b1591abea0615dbd14a1e3e614cf458f7bd samples=42 channels=112
+digest k20_stock_98 dyno_sweep fe0fda21ece5e29bf9f21b01a1e2bd160f25dc5125c55bb15e4910a72952ccb6 samples=221 channels=112
 value k20_stock_98 dyno_sweep phase Finished
 value k20_stock_98 dyno_sweep abort 
 value k20_stock_98 dyno_sweep note 
-value k20_stock_98 dyno_sweep peak_power_kw 110.24299599942184
+value k20_stock_98 dyno_sweep peak_power_kw 110.24299378760581
 value k20_stock_98 dyno_sweep peak_power_rpm 7350.000000000001
-value k20_stock_98 dyno_sweep peak_torque_nm 188.70536026103966
+value k20_stock_98 dyno_sweep peak_torque_nm 188.70535879877676
 value k20_stock_98 dyno_sweep peak_torque_rpm 3800
 case k20_short_runner_95 K20 with the short-runner intake (runner-length response)
-digest k20_short_runner_95 wot c1922ee7547611e24d3e1e905ac0109fc855c8d13234832a15767d1174ac19d1 samples=30 channels=112
+digest k20_short_runner_95 wot 28d118cc122a339d80a2af3ff0ac595ed5c619215b1bed8766c1f0012356becd samples=30 channels=112
 value k20_short_runner_95 wot torque_nm@1000 123.56241506275786
 value k20_short_runner_95 wot power_kw@1000 12.939425847365763
 value k20_short_runner_95 wot ve@1000 0.6632645362008347
@@ -684,46 +684,46 @@ value k20_short_runner_95 wot power_kw@5500 101.77937407113457
 value k20_short_runner_95 wot ve@5500 0.9087039668565203
 value k20_short_runner_95 wot ve_dynamic@5500 1.0185241956139561
 value k20_short_runner_95 wot lambda@5500 0.8796515863684741
-value k20_short_runner_95 wot torque_nm@6000 169.9636925845948
-value k20_short_runner_95 wot power_kw@6000 106.79133760015141
-value k20_short_runner_95 wot ve@6000 0.8931176322740457
+value k20_short_runner_95 wot torque_nm@6000 169.96369260781537
+value k20_short_runner_95 wot power_kw@6000 106.79133761474132
+value k20_short_runner_95 wot ve@6000 0.8931176324065543
 value k20_short_runner_95 wot ve_dynamic@6000 1.0197945510024289
-value k20_short_runner_95 wot lambda@6000 0.8845938061797528
-value k20_short_runner_95 wot torque_nm@6500 162.34258882604368
-value k20_short_runner_95 wot power_kw@6500 110.5030949578069
-value k20_short_runner_95 wot ve@6500 0.8740029918907966
+value k20_short_runner_95 wot lambda@6000 0.8845938063175538
+value k20_short_runner_95 wot torque_nm@6500 162.34258878358284
+value k20_short_runner_95 wot power_kw@6500 110.50309492890472
+value k20_short_runner_95 wot ve@6500 0.8740029918908039
 value k20_short_runner_95 wot ve_dynamic@6500 1.0165635386085519
-value k20_short_runner_95 wot lambda@6500 0.8890127489505808
-value k20_short_runner_95 wot torque_nm@7000 154.01539519161545
-value k20_short_runner_95 wot power_kw@7000 112.89918128386515
+value k20_short_runner_95 wot lambda@6500 0.8890127489505889
+value k20_short_runner_95 wot torque_nm@7000 154.01539514922752
+value k20_short_runner_95 wot power_kw@7000 112.89918125279317
 value k20_short_runner_95 wot ve@7000 0.8524286738120931
 value k20_short_runner_95 wot ve_dynamic@7000 1.009594587423578
 value k20_short_runner_95 wot lambda@7000 0.8938976595905879
-value k20_short_runner_95 wot torque_nm@7500 145.12095737164606
-value k20_short_runner_95 wot power_kw@7500 113.97773339017019
+value k20_short_runner_95 wot torque_nm@7500 145.12095732963687
+value k20_short_runner_95 wot power_kw@7500 113.97773335717625
 value k20_short_runner_95 wot ve@7500 0.8288905196334669
 value k20_short_runner_95 wot ve_dynamic@7500 0.9989056139938283
 value k20_short_runner_95 wot lambda@7500 0.8998195538387628
-value k20_short_runner_95 wot torque_nm@8000 -44.42178471147771
-value k20_short_runner_95 wot power_kw@8000 -37.21470733571354
+value k20_short_runner_95 wot torque_nm@8000 -44.42178475348068
+value k20_short_runner_95 wot power_kw@8000 -37.214707370901856
 value k20_short_runner_95 wot ve@8000 0.802389386472602
 value k20_short_runner_95 wot ve_dynamic@8000 0.9810959644690073
 value k20_short_runner_95 wot lambda@8000 0
-value k20_short_runner_95 wot peak_power_kw 113.97773339017019
+value k20_short_runner_95 wot peak_power_kw 113.97773335717625
 value k20_short_runner_95 wot peak_power_rpm 7500
 value k20_short_runner_95 wot peak_torque_nm 185.75479345480753
 value k20_short_runner_95 wot peak_torque_rpm 4000
-digest k20_short_runner_95 partload 6a4e64ed4b83ece6298fe4c29becd095f113ee4737e8c8e64407112070242d36 samples=42 channels=112
-digest k20_short_runner_95 dyno_sweep 23485c3de4d1f75c357b45bb90b8559b1f82f9f01c3229289d750b1cb0b90bf2 samples=221 channels=112
+digest k20_short_runner_95 partload 66262f848bb514575d92fb11978b736e3db63b505ad1db8140c8c1d5aa7c8538 samples=42 channels=112
+digest k20_short_runner_95 dyno_sweep 5c94d47115cd9ce74137f1ea85ce0bf169590f6a27795e4f843c76e4684b553d samples=221 channels=112
 value k20_short_runner_95 dyno_sweep phase Finished
 value k20_short_runner_95 dyno_sweep abort 
 value k20_short_runner_95 dyno_sweep note 
-value k20_short_runner_95 dyno_sweep peak_power_kw 113.44726663415365
+value k20_short_runner_95 dyno_sweep peak_power_kw 113.44726432856122
 value k20_short_runner_95 dyno_sweep peak_power_rpm 7500
-value k20_short_runner_95 dyno_sweep peak_torque_nm 185.71419446464083
+value k20_short_runner_95 dyno_sweep peak_torque_nm 185.71419258107596
 value k20_short_runner_95 dyno_sweep peak_torque_rpm 4025
 case k20_na_built_98 K20 NA build: race cams, performance springs, ported head, 4-2-1 header, 76 mm exhaust
-digest k20_na_built_98 wot 227f1ba8a59db451fe01c622b668c210fd71f75ae1f9b9c2f418826defb4f692 samples=30 channels=112
+digest k20_na_built_98 wot 65302f4ed353fb79fd4595e25f517ef9cc52f493d933d042d4f184aaed9b3d89 samples=30 channels=112
 value k20_na_built_98 wot torque_nm@1000 84.78546252314028
 value k20_na_built_98 wot power_kw@1000 8.87871287313034
 value k20_na_built_98 wot ve@1000 0.5013831202593555
@@ -769,48 +769,48 @@ value k20_na_built_98 wot power_kw@5000 95.1193760317696
 value k20_na_built_98 wot ve@5000 0.9183980916667575
 value k20_na_built_98 wot ve_dynamic@5000 0.975470081766795
 value k20_na_built_98 wot lambda@5000 0.8764132010381466
-value k20_na_built_98 wot torque_nm@5500 182.43757389467862
-value k20_na_built_98 wot power_kw@5500 105.07649934581568
-value k20_na_built_98 wot ve@5500 0.9406784931873605
+value k20_na_built_98 wot torque_nm@5500 182.43905799259312
+value k20_na_built_98 wot power_kw@5500 105.07735412485168
+value k20_na_built_98 wot ve@5500 0.9406790669132058
 value k20_na_built_98 wot ve_dynamic@5500 1.0154564135715463
-value k20_na_built_98 wot lambda@5500 0.9175783984270806
-value k20_na_built_98 wot torque_nm@6000 180.3344543456209
-value k20_na_built_98 wot power_kw@6000 113.30747939226532
-value k20_na_built_98 wot ve@6000 0.9521620706720676
+value k20_na_built_98 wot lambda@5500 0.9175485184838338
+value k20_na_built_98 wot torque_nm@6000 180.3344534347369
+value k20_na_built_98 wot power_kw@6000 113.30747881994002
+value k20_na_built_98 wot ve@6000 0.952162071437498
 value k20_na_built_98 wot ve_dynamic@6000 1.045660274201309
-value k20_na_built_98 wot lambda@6000 0.9540429485870839
-value k20_na_built_98 wot torque_nm@6500 174.14942684020804
-value k20_na_built_98 wot power_kw@6500 118.53975466408198
-value k20_na_built_98 wot ve@6500 0.9503104477447722
+value k20_na_built_98 wot lambda@6000 0.9540429494150471
+value k20_na_built_98 wot torque_nm@6500 174.1494256358166
+value k20_na_built_98 wot power_kw@6500 118.53975384427874
+value k20_na_built_98 wot ve@6500 0.9503104477448112
 value k20_na_built_98 wot ve_dynamic@6500 1.06112125175409
-value k20_na_built_98 wot lambda@6500 0.981408298978911
-value k20_na_built_98 wot torque_nm@7000 165.79591813859898
-value k20_na_built_98 wot power_kw@7000 121.5347556311927
+value k20_na_built_98 wot lambda@6500 0.9814082989789545
+value k20_na_built_98 wot torque_nm@7000 165.79591693879559
+value k20_na_built_98 wot power_kw@7000 121.53475475169087
 value k20_na_built_98 wot ve@7000 0.9320705361265554
 value k20_na_built_98 wot ve_dynamic@7000 1.060883879966027
 value k20_na_built_98 wot lambda@7000 0.994814868211819
-value k20_na_built_98 wot torque_nm@7500 156.1426555924873
-value k20_na_built_98 wot power_kw@7500 122.63415493033982
+value k20_na_built_98 wot torque_nm@7500 156.1426544057446
+value k20_na_built_98 wot power_kw@7500 122.63415399827429
 value k20_na_built_98 wot ve@7500 0.9047525339816208
 value k20_na_built_98 wot ve_dynamic@7500 1.0491260539585447
 value k20_na_built_98 wot lambda@7500 1.0012418013730082
-value k20_na_built_98 wot torque_nm@8000 -43.87836532846454
-value k20_na_built_98 wot power_kw@8000 -36.75945337798221
+value k20_na_built_98 wot torque_nm@8000 -43.878366514961144
+value k20_na_built_98 wot power_kw@8000 -36.75945437197928
 value k20_na_built_98 wot ve@8000 0.8875077135321762
 value k20_na_built_98 wot ve_dynamic@8000 1.0344118931380581
 value k20_na_built_98 wot lambda@8000 0
-value k20_na_built_98 wot peak_power_kw 122.63415493033982
+value k20_na_built_98 wot peak_power_kw 122.63415399827429
 value k20_na_built_98 wot peak_power_rpm 7500
-value k20_na_built_98 wot peak_torque_nm 182.43757389467862
+value k20_na_built_98 wot peak_torque_nm 182.43905799259312
 value k20_na_built_98 wot peak_torque_rpm 5500.000000000001
-digest k20_na_built_98 partload 74825110e8cf6f62f71eec6f3ba13ea388d2f85dac6a4185d60147169bf2118f samples=42 channels=112
-digest k20_na_built_98 dyno_sweep bb9374c758384f3809732ab66cdf60323ff6f28cd921bf47c1c823865105b3f8 samples=221 channels=112
+digest k20_na_built_98 partload ea4bf9742c886364e3b8e972c6d9dca579bb0fe3a420fb47993d7171454a99ab samples=42 channels=112
+digest k20_na_built_98 dyno_sweep 302c85a32cf276cd6fe29e452271c9bc8c71c0ada690150e6d9052f0d5435af9 samples=221 channels=112
 value k20_na_built_98 dyno_sweep phase Finished
 value k20_na_built_98 dyno_sweep abort 
 value k20_na_built_98 dyno_sweep note 
-value k20_na_built_98 dyno_sweep peak_power_kw 122.06941664913913
+value k20_na_built_98 dyno_sweep peak_power_kw 122.06940950439
 value k20_na_built_98 dyno_sweep peak_power_rpm 7500
-value k20_na_built_98 dyno_sweep peak_torque_nm 182.3155991500827
+value k20_na_built_98 dyno_sweep peak_torque_nm 182.3164820518488
 value k20_na_built_98 dyno_sweep peak_torque_rpm 5375
 case k20_t28_98 K20 T28 turbo build (the turbo tests' recipe), turbo base tune, RON 98
 digest k20_t28_98 geometry 619bb6e14457cb1f23ee2ea29c9815f9ececb293bfc11d03ae716a1c61f96944 samples=2 channels=24
@@ -818,7 +818,7 @@ value k20_t28_98 geometry displacement_cc 1998.22885687171
 value k20_t28_98 geometry compression_ratio 8.859458664374266
 value k20_t28_98 geometry mass_kg 138.60000000000002
 value k20_t28_98 geometry issues [Info] compression_ratio: Static compression ratio 8.86:1 (2.00 L, bore 86.0 × stroke 86.0 mm).
-digest k20_t28_98 wot 8755894e8667ba2f96acc9d472a0b5f51d6a66d9edf9ee115ca52e42677c7a84 samples=29 channels=118
+digest k20_t28_98 wot 7cf92e4f12d663b6f5c2fb78747a7361c38caa1ebfac369d3b1e8d3059c45ab1 samples=29 channels=118
 value k20_t28_98 wot torque_nm@1000 130.44333387696966
 value k20_t28_98 wot power_kw@1000 13.659993980588283
 value k20_t28_98 wot ve@1000 0.6777494043615193
@@ -834,76 +834,76 @@ value k20_t28_98 wot power_kw@2000 33.283275529079106
 value k20_t28_98 wot ve@2000 0.8139750140647628
 value k20_t28_98 wot ve_dynamic@2000 0.8234517886388456
 value k20_t28_98 wot lambda@2000 0.910892877291194
-value k20_t28_98 wot torque_nm@2500 174.17325646611744
-value k20_t28_98 wot power_kw@2500 45.59845191381379
-value k20_t28_98 wot ve@2500 0.8888366374439653
+value k20_t28_98 wot torque_nm@2500 174.16311270648652
+value k20_t28_98 wot power_kw@2500 45.595796283752435
+value k20_t28_98 wot ve@2500 0.8888400387373445
 value k20_t28_98 wot ve_dynamic@2500 0.878897395342131
-value k20_t28_98 wot lambda@2500 0.8956865645158362
-value k20_t28_98 wot torque_nm@3000 188.72808590829126
-value k20_t28_98 wot power_kw@3000 59.29067682155512
-value k20_t28_98 wot ve@3000 0.9643649388327131
+value k20_t28_98 wot lambda@2500 0.8959573816279808
+value k20_t28_98 wot torque_nm@3000 188.72916316258141
+value k20_t28_98 wot power_kw@3000 59.29101525097152
+value k20_t28_98 wot ve@3000 0.9643700414243545
 value k20_t28_98 wot ve_dynamic@3000 0.9251760658628458
-value k20_t28_98 wot lambda@3000 0.8431520319222658
-value k20_t28_98 wot torque_nm@3500 204.94255647865464
-value k20_t28_98 wot power_kw@3500 75.11537014814613
-value k20_t28_98 wot ve@3500 1.05546146765613
+value k20_t28_98 wot lambda@3000 0.8431510351439655
+value k20_t28_98 wot torque_nm@3500 204.94261057921176
+value k20_t28_98 wot power_kw@3500 75.11538997703597
+value k20_t28_98 wot ve@3500 1.0554617217254516
 value k20_t28_98 wot ve_dynamic@3500 0.9622878002009901
-value k20_t28_98 wot lambda@3500 0.8255264496804218
-value k20_t28_98 wot torque_nm@4000 230.63239090600362
-value k20_t28_98 wot power_kw@4000 96.60706999335338
-value k20_t28_98 wot ve@4000 1.1957028668370129
+value k20_t28_98 wot lambda@3500 0.8255263918834623
+value k20_t28_98 wot torque_nm@4000 230.6323968184954
+value k20_t28_98 wot power_kw@4000 96.60707246997215
+value k20_t28_98 wot ve@4000 1.1957028804654353
 value k20_t28_98 wot ve_dynamic@4000 0.9902325983565641
-value k20_t28_98 wot lambda@4000 0.8054427329606554
-value k20_t28_98 wot torque_nm@4500 292.1168663686984
-value k20_t28_98 wot power_kw@4500 137.65683020603612
-value k20_t28_98 wot ve@4500 1.5283536310713763
+value k20_t28_98 wot lambda@4000 0.8054427311595935
+value k20_t28_98 wot torque_nm@4500 292.19177340791214
+value k20_t28_98 wot power_kw@4500 137.69212931665052
+value k20_t28_98 wot ve@4500 1.5285628610567508
 value k20_t28_98 wot ve_dynamic@4500 1.0090104603295675
-value k20_t28_98 wot lambda@4500 0.7716317412447722
-value k20_t28_98 wot torque_nm@5000 288.9168719997103
-value k20_t28_98 wot power_kw@5000 151.27652042873873
-value k20_t28_98 wot ve@5000 1.5270533355033196
+value k20_t28_98 wot lambda@4500 0.7719903273201651
+value k20_t28_98 wot torque_nm@5000 288.8479161674361
+value k20_t28_98 wot power_kw@5000 151.24041523938962
+value k20_t28_98 wot ve@5000 1.5270727252571266
 value k20_t28_98 wot ve_dynamic@5000 1.0186213861200006
-value k20_t28_98 wot lambda@5000 0.7724679125295237
-value k20_t28_98 wot torque_nm@5500 278.9728907588253
-value k20_t28_98 wot power_kw@5500 160.6768504290828
-value k20_t28_98 wot ve@5500 1.4999075647480709
+value k20_t28_98 wot lambda@5000 0.7716773889345804
+value k20_t28_98 wot torque_nm@5500 278.93946360842415
+value k20_t28_98 wot power_kw@5500 160.65759777255883
+value k20_t28_98 wot ve@5500 1.4999214067711804
 value k20_t28_98 wot ve_dynamic@5500 1.0195326878639317
-value k20_t28_98 wot lambda@5500 0.7714093345539105
-value k20_t28_98 wot torque_nm@6000 268.01183376334035
-value k20_t28_98 wot power_kw@6000 168.3968016052078
-value k20_t28_98 wot ve@6000 1.465806096253666
+value k20_t28_98 wot lambda@5500 0.7710078769405373
+value k20_t28_98 wot torque_nm@6000 267.7412151110446
+value k20_t28_98 wot power_kw@6000 168.22676689121243
+value k20_t28_98 wot ve@6000 1.4658946261151296
 value k20_t28_98 wot ve_dynamic@6000 1.0151712145765777
-value k20_t28_98 wot lambda@6000 0.7745153249327835
-value k20_t28_98 wot torque_nm@6500 255.75446480321477
-value k20_t28_98 wot power_kw@6500 174.08654201218988
-value k20_t28_98 wot ve@6500 1.4268989341587885
+value k20_t28_98 wot lambda@6000 0.7712278040570081
+value k20_t28_98 wot torque_nm@6500 255.52146156678253
+value k20_t28_98 wot power_kw@6500 173.92794174009163
+value k20_t28_98 wot ve@6500 1.4269866894120362
 value k20_t28_98 wot ve_dynamic@6500 1.0062262731979386
-value k20_t28_98 wot lambda@6500 0.7733346681078126
-value k20_t28_98 wot torque_nm@7000 242.1633259053358
-value k20_t28_98 wot power_kw@7000 177.51498931438385
-value k20_t28_98 wot ve@7000 1.3813462291300986
+value k20_t28_98 wot lambda@6500 0.7703934438432725
+value k20_t28_98 wot torque_nm@7000 241.99582753970958
+value k20_t28_98 wot power_kw@7000 177.39220659956462
+value k20_t28_98 wot ve@7000 1.3814031300422036
 value k20_t28_98 wot ve_dynamic@7000 0.9926978637280142
-value k20_t28_98 wot lambda@7000 0.7728443453608657
-value k20_t28_98 wot torque_nm@7500 -41.84531749973048
-value k20_t28_98 wot power_kw@7500 -32.86523551107142
-value k20_t28_98 wot ve@7500 0.8121959916042338
+value k20_t28_98 wot lambda@7000 0.7706816121699395
+value k20_t28_98 wot torque_nm@7500 -41.84674911052696
+value k20_t28_98 wot power_kw@7500 -32.86635989556167
+value k20_t28_98 wot ve@7500 0.8121598289040151
 value k20_t28_98 wot ve_dynamic@7500 0.9745859861668046
 value k20_t28_98 wot lambda@7500 0
-value k20_t28_98 wot torque_nm@8000 -45.143507720215155
-value k20_t28_98 wot power_kw@8000 -37.819336589627206
-value k20_t28_98 wot ve@8000 0.7599053475159004
+value k20_t28_98 wot torque_nm@8000 -45.14465002870173
+value k20_t28_98 wot power_kw@8000 -37.82029356774709
+value k20_t28_98 wot ve@8000 0.7599053410049683
 value k20_t28_98 wot ve_dynamic@8000 0.9485791217959576
 value k20_t28_98 wot lambda@8000 0
-value k20_t28_98 wot peak_power_kw 177.51498931438385
+value k20_t28_98 wot peak_power_kw 177.39220659956462
 value k20_t28_98 wot peak_power_rpm 7000
-value k20_t28_98 wot peak_torque_nm 292.5095421815111
+value k20_t28_98 wot peak_torque_nm 292.49107020349754
 value k20_t28_98 wot peak_torque_rpm 4750
-digest k20_t28_98 partload df43943cab31eb6ba192345f2991205ef27e972505f37923433363d7e0571fee samples=36 channels=118
-digest k20_t28_98 cold cc3ea1090e14f030b65d829e0f4c5ef044203d5ade1751db614256047c4abef8 samples=400 channels=118
-value k20_t28_98 cold rpm@10s 900.150444443517
-value k20_t28_98 cold rpm@29s 900.0655471080169
+digest k20_t28_98 partload fe7bcc2a62275e5b8f91b2a0550cf049586eb7e3ff245713df9a5fe088797077 samples=36 channels=118
+digest k20_t28_98 cold b9b81fbee5f1a0ee85ee176d9ddf1b9297d5c344e164659efe4a367044b25ae8 samples=400 channels=118
+value k20_t28_98 cold rpm@10s 900.1460823278402
+value k20_t28_98 cold rpm@29s 900.0674171896015
 value k20_t28_98 cold first_fire_s 0.08200000000000006
-value k20_t28_98 cold coolant_c@40s 32.27411682416306
+value k20_t28_98 cold coolant_c@40s 32.323900002429525
 value k20_t28_98 cold seized false
 value k20_t28_98 cold warnings 
 value k20_t28_98 cold ecu.standalone.wear 0
@@ -972,26 +972,26 @@ value k20_t28_98 cold radiator.oem.inspection Good:Within specification.
 value k20_t28_98 cold throttle.60mm.wear 0
 value k20_t28_98 cold throttle.60mm.fatigue 0
 value k20_t28_98 cold throttle.60mm.inspection Good:Within specification.
-value k20_t28_98 cold turbo.t28_ball.wear 0.00042011887998593273
-value k20_t28_98 cold turbo.t28_ball.fatigue 3.9802127858177636E-08
+value k20_t28_98 cold turbo.t28_ball.wear 0.00041941350136920916
+value k20_t28_98 cold turbo.t28_ball.fatigue 3.208535107043744E-08
 value k20_t28_98 cold turbo.t28_ball.inspection Good:Within specification.
-digest k20_t28_98 dyno_sweep 653b4109693660ec354d4343b61fefe822626a3e1183827acb04a0f86d416598 samples=216 channels=118
+digest k20_t28_98 dyno_sweep 88dd18b1a4f144345907c3c1c8ba83d41fbea62d2c47c7279932bc9c835f5eef samples=216 channels=118
 value k20_t28_98 dyno_sweep phase Finished
 value k20_t28_98 dyno_sweep abort 
 value k20_t28_98 dyno_sweep note Reached the rev limiter at 7400 rpm.
-value k20_t28_98 dyno_sweep peak_power_kw 176.90433965776919
+value k20_t28_98 dyno_sweep peak_power_kw 176.78404908992795
 value k20_t28_98 dyno_sweep peak_power_rpm 7000
-value k20_t28_98 dyno_sweep peak_torque_nm 295.94565545814095
+value k20_t28_98 dyno_sweep peak_torque_nm 295.91990448984444
 value k20_t28_98 dyno_sweep peak_torque_rpm 4850
-digest k20_t28_98 dyno_steady b5a08ea8ddae6a32a569568e0af522928134e9895c7768eaea581a2c05fe290b samples=22 channels=118
+digest k20_t28_98 dyno_steady e117be22ca8840e4bfb49f9caf237e8dc941c137c9fb924275269d29e3f72cae samples=22 channels=118
 value k20_t28_98 dyno_steady phase Finished
 value k20_t28_98 dyno_steady abort 
 value k20_t28_98 dyno_steady note Reached the rev limiter at 7500 rpm.
-value k20_t28_98 dyno_steady peak_power_kw 177.5294404102106
+value k20_t28_98 dyno_steady peak_power_kw 177.4066582738056
 value k20_t28_98 dyno_steady peak_power_rpm 7000
-value k20_t28_98 dyno_steady peak_torque_nm 292.5274134871004
+value k20_t28_98 dyno_steady peak_torque_nm 292.5089407488851
 value k20_t28_98 dyno_steady peak_torque_rpm 4750
-digest k20_t28_98 abuse ff5d55be9cb308e69474e4e54e210047b59cb758f169356a176557102328f822 samples=60 channels=118
+digest k20_t28_98 abuse 352de870193b02813ff8526e2fc9b6e23f323d69dd988bd373ed28166f51f335 samples=60 channels=118
 value k20_t28_98 abuse coolant_c 128
 value k20_t28_98 abuse seized false
 value k20_t28_98 abuse warnings coolant_loss,coolant_temp,oil_temp
@@ -1026,15 +1026,15 @@ value k20_t28_98 abuse k20.flywheel.oem.wear 0
 value k20_t28_98 abuse k20.flywheel.oem.fatigue 0
 value k20_t28_98 abuse k20.flywheel.oem.inspection Good:Within specification.
 value k20_t28_98 abuse k20.head.oem.wear 0
-value k20_t28_98 abuse k20.head.oem.fatigue 0.08302814485785932
+value k20_t28_98 abuse k20.head.oem.fatigue 0.0818643113496332
 value k20_t28_98 abuse k20.head.oem.inspection Good:Within specification.
 value k20_t28_98 abuse k20.head_gasket.race.wear 0
-value k20_t28_98 abuse k20.head_gasket.race.fatigue 0.884334086794754
+value k20_t28_98 abuse k20.head_gasket.race.fatigue 0.8827268749750925
 value k20_t28_98 abuse k20.head_gasket.race.inspection Major:Fire ring crushed; combustion traces across the gasket.
 value k20_t28_98 abuse k20.intake.oem.wear 0
 value k20_t28_98 abuse k20.intake.oem.fatigue 0
 value k20_t28_98 abuse k20.intake.oem.inspection Good:Within specification.
-value k20_t28_98 abuse k20.main_bearings.oem.wear 0.002743383157404191
+value k20_t28_98 abuse k20.main_bearings.oem.wear 0.002712848900245203
 value k20_t28_98 abuse k20.main_bearings.oem.fatigue 0
 value k20_t28_98 abuse k20.main_bearings.oem.inspection Good:Within specification.
 value k20_t28_98 abuse k20.oil_pan.oem.wear 0
@@ -1044,9 +1044,9 @@ value k20_t28_98 abuse k20.oil_pump.oem.wear 0
 value k20_t28_98 abuse k20.oil_pump.oem.fatigue 0
 value k20_t28_98 abuse k20.oil_pump.oem.inspection Good:Within specification.
 value k20_t28_98 abuse k20.pistons.forged_lc.wear 1.2000000000001056E-05
-value k20_t28_98 abuse k20.pistons.forged_lc.fatigue 0.0024061333405403502
+value k20_t28_98 abuse k20.pistons.forged_lc.fatigue 0.00237646917689335
 value k20_t28_98 abuse k20.pistons.forged_lc.inspection Good:Within specification.
-value k20_t28_98 abuse k20.rod_bearings.oem.wear 0.002743383157404191
+value k20_t28_98 abuse k20.rod_bearings.oem.wear 0.002712848900245203
 value k20_t28_98 abuse k20.rod_bearings.oem.fatigue 0
 value k20_t28_98 abuse k20.rod_bearings.oem.inspection Good:Within specification.
 value k20_t28_98 abuse k20.rods.forged_h.wear 0
@@ -1062,10 +1062,10 @@ value k20_t28_98 abuse throttle.60mm.wear 0
 value k20_t28_98 abuse throttle.60mm.fatigue 0
 value k20_t28_98 abuse throttle.60mm.inspection Good:Within specification.
 value k20_t28_98 abuse turbo.t28_ball.wear 0
-value k20_t28_98 abuse turbo.t28_ball.fatigue 2.110152302432986E-05
+value k20_t28_98 abuse turbo.t28_ball.fatigue 1.9217022265758958E-05
 value k20_t28_98 abuse turbo.t28_ball.inspection Good:Within specification.
 case k20_t28_95 K20 T28 turbo build on RON 95 (knock-limited)
-digest k20_t28_95 wot e1058d3d4de8110b31e48126f97d6bfa81463042bd7481fdc1433f1d0f3d8ee9 samples=29 channels=118
+digest k20_t28_95 wot 3f70c0d9ddb0e1b873a5f8014c09c725fee1c0f660a631f1ef7d43eded4d5f4a samples=29 channels=118
 value k20_t28_95 wot torque_nm@1000 129.41374828477387
 value k20_t28_95 wot power_kw@1000 13.552176029498808
 value k20_t28_95 wot ve@1000 0.6777176299032716
@@ -1081,81 +1081,81 @@ value k20_t28_95 wot power_kw@2000 33.35014248071929
 value k20_t28_95 wot ve@2000 0.8139931633401324
 value k20_t28_95 wot ve_dynamic@2000 0.8234517886388456
 value k20_t28_95 wot lambda@2000 0.9132468876614123
-value k20_t28_95 wot torque_nm@2500 174.56744157393294
-value k20_t28_95 wot power_kw@2500 45.70164933371943
-value k20_t28_95 wot ve@2500 0.889035490929436
+value k20_t28_95 wot torque_nm@2500 174.5571993206682
+value k20_t28_95 wot power_kw@2500 45.69896791808504
+value k20_t28_95 wot ve@2500 0.8890389609178664
 value k20_t28_95 wot ve_dynamic@2500 0.878897395342131
-value k20_t28_95 wot lambda@2500 0.8978921366221146
-value k20_t28_95 wot torque_nm@3000 189.32843376512182
-value k20_t28_95 wot power_kw@3000 59.479281663216845
-value k20_t28_95 wot ve@3000 0.964833491867613
+value k20_t28_95 wot lambda@2500 0.8981651330913552
+value k20_t28_95 wot torque_nm@3000 189.32952611376848
+value k20_t28_95 wot power_kw@3000 59.4796248346652
+value k20_t28_95 wot ve@3000 0.9648386560313557
 value k20_t28_95 wot ve_dynamic@3000 0.9251760658628458
-value k20_t28_95 wot lambda@3000 0.8452431760851187
-value k20_t28_95 wot torque_nm@3500 205.7175469809486
-value k20_t28_95 wot power_kw@3500 75.39941900281714
-value k20_t28_95 wot ve@3500 1.0566212343665702
+value k20_t28_95 wot lambda@3000 0.8452421639129558
+value k20_t28_95 wot torque_nm@3500 205.71760230866192
+value k20_t28_95 wot power_kw@3500 75.39943928148321
+value k20_t28_95 wot ve@3500 1.0566214940644019
 value k20_t28_95 wot ve_dynamic@3500 0.9622878002009901
-value k20_t28_95 wot lambda@3500 0.8273810817534829
-value k20_t28_95 wot torque_nm@4000 231.88766386467654
-value k20_t28_95 wot power_kw@4000 97.13287750071562
-value k20_t28_95 wot ve@4000 1.1989385446674052
+value k20_t28_95 wot lambda@3500 0.8273810224584683
+value k20_t28_95 wot torque_nm@4000 231.8876699344437
+value k20_t28_95 wot power_kw@4000 97.13288004321373
+value k20_t28_95 wot ve@4000 1.198938558954021
 value k20_t28_95 wot ve_dynamic@4000 0.9902325983565641
-value k20_t28_95 wot lambda@4000 0.80707178007679
-value k20_t28_95 wot torque_nm@4500 295.57637482255757
-value k20_t28_95 wot power_kw@4500 139.28708515758748
-value k20_t28_95 wot ve@4500 1.5411306165601188
+value k20_t28_95 wot lambda@4000 0.80707177817794
+value k20_t28_95 wot torque_nm@4500 295.6617896590099
+value k20_t28_95 wot power_kw@4500 139.32733595099344
+value k20_t28_95 wot ve@4500 1.5413723686937202
 value k20_t28_95 wot ve_dynamic@4500 1.0090104603295675
-value k20_t28_95 wot lambda@4500 0.773025829620399
-value k20_t28_95 wot torque_nm@5000 289.82046898602715
-value k20_t28_95 wot power_kw@5000 151.74964270440856
-value k20_t28_95 wot ve@5000 1.5269844364403447
+value k20_t28_95 wot lambda@4500 0.7734116432029785
+value k20_t28_95 wot torque_nm@5000 289.7511694216981
+value k20_t28_95 wot power_kw@5000 151.71335753737637
+value k20_t28_95 wot ve@5000 1.5270037595049293
 value k20_t28_95 wot ve_dynamic@5000 1.0186213861200006
-value k20_t28_95 wot lambda@5000 0.7744919390894616
-value k20_t28_95 wot torque_nm@5500 279.8552565694601
-value k20_t28_95 wot power_kw@5500 161.1850566529688
-value k20_t28_95 wot ve@5500 1.4998292403950706
+value k20_t28_95 wot lambda@5000 0.773699407813646
+value k20_t28_95 wot torque_nm@5500 279.82165964397046
+value k20_t28_95 wot power_kw@5500 161.16570621301352
+value k20_t28_95 wot ve@5500 1.4998430643384486
 value k20_t28_95 wot ve_dynamic@5500 1.0195326878639317
-value k20_t28_95 wot lambda@5500 0.7734286738661691
-value k20_t28_95 wot torque_nm@6000 268.87236513564727
-value k20_t28_95 wot power_kw@6000 168.93748941269237
-value k20_t28_95 wot ve@6000 1.4657250309321586
+value k20_t28_95 wot lambda@5500 0.7730261597264881
+value k20_t28_95 wot torque_nm@6000 268.6003898411768
+value k20_t28_95 wot power_kw@6000 168.7666022952791
+value k20_t28_95 wot ve@6000 1.4658135352429995
 value k20_t28_95 wot ve_dynamic@6000 1.0151712145765777
-value k20_t28_95 wot lambda@6000 0.7765413524309652
-value k20_t28_95 wot torque_nm@6500 256.58941113973725
-value k20_t28_95 wot power_kw@6500 174.65487195553138
-value k20_t28_95 wot ve@6500 1.4268176538544128
+value k20_t28_95 wot lambda@6000 0.7732451322252915
+value k20_t28_95 wot torque_nm@6500 256.355216708665
+value k20_t28_95 wot power_kw@6500 174.49546086296164
+value k20_t28_95 wot ve@6500 1.426905309665099
 value k20_t28_95 wot ve_dynamic@6500 1.0062262731979386
-value k20_t28_95 wot lambda@6500 0.7753563935042105
-value k20_t28_95 wot torque_nm@7000 242.97307865208077
-value k20_t28_95 wot power_kw@7000 178.1085690798101
-value k20_t28_95 wot ve@7000 1.3812780943224579
+value k20_t28_95 wot lambda@6500 0.7724073719545488
+value k20_t28_95 wot torque_nm@7000 242.8047292579726
+value k20_t28_95 wot power_kw@7000 177.98516252853125
+value k20_t28_95 wot ve@7000 1.3813348985136702
 value k20_t28_95 wot ve_dynamic@7000 0.9926978637280142
-value k20_t28_95 wot lambda@7000 0.7748644016946593
-value k20_t28_95 wot torque_nm@7500 -41.83882719780685
-value k20_t28_95 wot power_kw@7500 -32.86013803986071
-value k20_t28_95 wot ve@7500 0.8122669542734269
+value k20_t28_95 wot lambda@7000 0.7726959666828469
+value k20_t28_95 wot torque_nm@7500 -41.840256879650354
+value k20_t28_95 wot power_kw@7500 -32.86126090935484
+value k20_t28_95 wot ve@7500 0.8122308312592622
 value k20_t28_95 wot ve_dynamic@7500 0.9745859861668046
 value k20_t28_95 wot lambda@7500 0
-value k20_t28_95 wot torque_nm@8000 -45.137574411275274
-value k20_t28_95 wot power_kw@8000 -37.814365912353345
-value k20_t28_95 wot ve@8000 0.7599053604145585
+value k20_t28_95 wot torque_nm@8000 -45.138715175059474
+value k20_t28_95 wot power_kw@8000 -37.81532159638638
+value k20_t28_95 wot ve@8000 0.759905353915235
 value k20_t28_95 wot ve_dynamic@8000 0.9485791217959576
 value k20_t28_95 wot lambda@8000 0
-value k20_t28_95 wot peak_power_kw 178.1085690798101
+value k20_t28_95 wot peak_power_kw 177.98516252853125
 value k20_t28_95 wot peak_power_rpm 7000
-value k20_t28_95 wot peak_torque_nm 295.57637482255757
+value k20_t28_95 wot peak_torque_nm 295.6617896590099
 value k20_t28_95 wot peak_torque_rpm 4500
-digest k20_t28_95 partload 04219d7de9d840fef8baef9e549535f88ba59eff23fa3869505346c9df9c510e samples=36 channels=118
-digest k20_t28_95 dyno_sweep 0b1ecd31416e8b9b8eac027d8175203d50c067118d315206e1c2cae198ea053f samples=216 channels=118
+digest k20_t28_95 partload 961d35163aca5e50c944be31f674d91597d1b0faced9fb533dad53ca37e48c5e samples=36 channels=118
+digest k20_t28_95 dyno_sweep 8721fa2e2250350a67516c6318bb97ebc1c58e66788c80ed96a37cb9894df684 samples=216 channels=118
 value k20_t28_95 dyno_sweep phase Finished
 value k20_t28_95 dyno_sweep abort 
 value k20_t28_95 dyno_sweep note Reached the rev limiter at 7400 rpm.
-value k20_t28_95 dyno_sweep peak_power_kw 177.49890192890385
+value k20_t28_95 dyno_sweep peak_power_kw 177.37798923349877
 value k20_t28_95 dyno_sweep peak_power_rpm 7000
-value k20_t28_95 dyno_sweep peak_torque_nm 296.85930715096964
+value k20_t28_95 dyno_sweep peak_torque_nm 296.8091697347378
 value k20_t28_95 dyno_sweep peak_torque_rpm 4825
 case k20_t35_98 K20 T35 turbo build (tubular manifold)
-digest k20_t35_98 wot 1ee38f6400ac5b4ce57a383219d2395ea6a23b385c661debb749e621d5405535 samples=29 channels=118
+digest k20_t35_98 wot 078b1a99367dc9a2f02779a9a55010b1273430b434a2c7ccb62d981165c95498 samples=29 channels=118
 value k20_t35_98 wot torque_nm@1000 130.46368196104115
 value k20_t35_98 wot power_kw@1000 13.662124826969402
 value k20_t35_98 wot ve@1000 0.6777405377375757
@@ -1171,83 +1171,83 @@ value k20_t35_98 wot power_kw@2000 32.99794700640953
 value k20_t35_98 wot ve@2000 0.8077825381539866
 value k20_t35_98 wot ve_dynamic@2000 0.8234519658367565
 value k20_t35_98 wot lambda@2000 0.9156194993691474
-value k20_t35_98 wot torque_nm@2500 166.80056726160097
-value k20_t35_98 wot power_kw@2500 43.66828639363798
-value k20_t35_98 wot ve@2500 0.8571490663070901
+value k20_t35_98 wot torque_nm@2500 166.79741107376833
+value k20_t35_98 wot power_kw@2500 43.667460105595616
+value k20_t35_98 wot ve@2500 0.857147656115017
 value k20_t35_98 wot ve_dynamic@2500 0.8788979357272353
-value k20_t35_98 wot lambda@2500 0.9148646382286201
-value k20_t35_98 wot torque_nm@3000 177.08038341326
-value k20_t35_98 wot power_kw@3000 55.63144316259614
-value k20_t35_98 wot ve@3000 0.9069912582129254
+value k20_t35_98 wot lambda@2500 0.9149383934400789
+value k20_t35_98 wot torque_nm@3000 177.08034165160785
+value k20_t35_98 wot power_kw@3000 55.63143004278619
+value k20_t35_98 wot ve@3000 0.906991065464408
 value k20_t35_98 wot ve_dynamic@3000 0.9251776179961545
-value k20_t35_98 wot lambda@3000 0.8569788593337913
-value k20_t35_98 wot torque_nm@3500 184.4776287138822
-value k20_t35_98 wot power_kw@3500 67.61458236390641
-value k20_t35_98 wot ve@3500 0.9520940640003082
+value k20_t35_98 wot lambda@3000 0.8569788923186589
+value k20_t35_98 wot torque_nm@3500 184.47761928513026
+value k20_t35_98 wot power_kw@3500 67.61457890808832
+value k20_t35_98 wot ve@3500 0.952094017152373
 value k20_t35_98 wot ve_dynamic@3500 0.962291999101134
-value k20_t35_98 wot lambda@3500 0.8527472058475707
-value k20_t35_98 wot torque_nm@4000 190.0492539008642
-value k20_t35_98 wot power_kw@4000 79.60764531669017
-value k20_t35_98 wot ve@4000 0.99008099763034
+value k20_t35_98 wot lambda@3500 0.852747215522236
+value k20_t35_98 wot torque_nm@4000 190.04925334979532
+value k20_t35_98 wot power_kw@4000 79.60764508585898
+value k20_t35_98 wot ve@4000 0.9900809918306693
 value k20_t35_98 wot ve_dynamic@4000 0.9902432968580711
-value k20_t35_98 wot lambda@4000 0.8476524046005663
-value k20_t35_98 wot torque_nm@4500 194.5066355366863
-value k20_t35_98 wot power_kw@4500 91.65909259147816
-value k20_t35_98 wot ve@4500 1.024329509303302
+value k20_t35_98 wot lambda@4000 0.8476524058525364
+value k20_t35_98 wot torque_nm@4500 194.50663614286964
+value k20_t35_98 wot power_kw@4500 91.65909287713532
+value k20_t35_98 wot ve@4500 1.0243295088021362
 value k20_t35_98 wot ve_dynamic@4500 1.0090361341935319
-value k20_t35_98 wot lambda@4500 0.8415155288345503
-value k20_t35_98 wot torque_nm@5000 198.2263911504208
-value k20_t35_98 wot power_kw@5000 103.79109569762979
-value k20_t35_98 wot ve@5000 1.0569833748823725
+value k20_t35_98 wot lambda@4500 0.8415155289468226
+value k20_t35_98 wot torque_nm@5000 198.246132754772
+value k20_t35_98 wot power_kw@5000 103.80143237749643
+value k20_t35_98 wot ve@5000 1.05704949171685
 value k20_t35_98 wot ve_dynamic@5000 1.0186794144934281
-value k20_t35_98 wot lambda@5000 0.8313600845329485
-value k20_t35_98 wot torque_nm@5500 201.8408955772142
-value k20_t35_98 wot power_kw@5500 116.25201036888281
-value k20_t35_98 wot ve@5500 1.0925059575404537
+value k20_t35_98 wot lambda@5000 0.8319049430903541
+value k20_t35_98 wot torque_nm@5500 201.57248810942988
+value k20_t35_98 wot power_kw@5500 116.09741876524016
+value k20_t35_98 wot ve@5500 1.091411893414039
 value k20_t35_98 wot ve_dynamic@5500 1.0196562172936792
-value k20_t35_98 wot lambda@5500 0.8248497693825217
-value k20_t35_98 wot torque_nm@6000 208.00877739370637
-value k20_t35_98 wot power_kw@6000 130.69576938845253
-value k20_t35_98 wot ve@6000 1.1419276641419724
+value k20_t35_98 wot lambda@5500 0.8210138406676327
+value k20_t35_98 wot torque_nm@6000 206.70619910979724
+value k20_t35_98 wot power_kw@6000 129.8773353149616
+value k20_t35_98 wot ve@6000 1.1359545646202065
 value k20_t35_98 wot ve_dynamic@6000 1.0154188891102174
-value k20_t35_98 wot lambda@6000 0.8197185510247957
-value k20_t35_98 wot torque_nm@6500 217.0596195692924
-value k20_t35_98 wot power_kw@6500 147.74779634980825
-value k20_t35_98 wot ve@6500 1.211760991359329
+value k20_t35_98 wot lambda@6000 0.8093052233066249
+value k20_t35_98 wot torque_nm@6500 214.74282548393614
+value k20_t35_98 wot power_kw@6500 146.17080463948056
+value k20_t35_98 wot ve@6500 1.202041713419917
 value k20_t35_98 wot ve_dynamic@6500 1.0066939794217782
-value k20_t35_98 wot lambda@6500 0.7992835091026284
-value k20_t35_98 wot torque_nm@7000 235.38213159168848
-value k20_t35_98 wot power_kw@7000 172.54411425877603
-value k20_t35_98 wot ve@7000 1.3317773684361063
+value k20_t35_98 wot lambda@6500 0.7924133116753042
+value k20_t35_98 wot torque_nm@7000 232.94741581620366
+value k20_t35_98 wot power_kw@7000 170.75937438021282
+value k20_t35_98 wot ve@7000 1.3207836531630455
 value k20_t35_98 wot ve_dynamic@7000 0.9935297152630599
-value k20_t35_98 wot lambda@7000 0.782239683924819
-value k20_t35_98 wot torque_nm@7500 -41.09634638506199
-value k20_t35_98 wot power_kw@7500 -32.276994973173046
-value k20_t35_98 wot ve@7500 0.8277420865058261
+value k20_t35_98 wot lambda@7000 0.7792079335956357
+value k20_t35_98 wot torque_nm@7500 -41.10332094873852
+value k20_t35_98 wot power_kw@7500 -32.28247278267509
+value k20_t35_98 wot ve@7500 0.8277260793138086
 value k20_t35_98 wot ve_dynamic@7500 0.9759794617826987
 value k20_t35_98 wot lambda@7500 0
-value k20_t35_98 wot torque_nm@8000 -44.3257659791319
-value k20_t35_98 wot power_kw@8000 -37.13426687060831
-value k20_t35_98 wot ve@8000 0.7827866438651386
+value k20_t35_98 wot torque_nm@8000 -44.33259182227238
+value k20_t35_98 wot power_kw@8000 -37.13998527558555
+value k20_t35_98 wot ve@8000 0.782786554346578
 value k20_t35_98 wot ve_dynamic@8000 0.9507700104563256
 value k20_t35_98 wot lambda@8000 0
-value k20_t35_98 wot peak_power_kw 181.95765512224847
+value k20_t35_98 wot peak_power_kw 182.13243687460164
 value k20_t35_98 wot peak_power_rpm 7250
-value k20_t35_98 wot peak_torque_nm 239.66449858854762
+value k20_t35_98 wot peak_torque_nm 239.89471138730022
 value k20_t35_98 wot peak_torque_rpm 7250
-digest k20_t35_98 partload ac28929c73f8d3ab79b554b5fa66768e64b9149f9c5348318a0eb2969b2014a1 samples=36 channels=118
-digest k20_t35_98 dyno_sweep c34adca88f057247ecf92ef096501f0a07f20519934b414a52c6c1064b2fac8f samples=216 channels=118
+digest k20_t35_98 partload 8a967b898244cc7f6ad59f4e99c79dac7e8b8b7ea9cedcd4924b9f725859ea76 samples=36 channels=118
+digest k20_t35_98 dyno_sweep ca9c05e9b4f17e7515ba51f9948188f15c2dc0d88d0c5b47bfec2b72f3f1f063 samples=216 channels=118
 value k20_t35_98 dyno_sweep phase Finished
 value k20_t35_98 dyno_sweep abort 
 value k20_t35_98 dyno_sweep note Reached the rev limiter at 7400 rpm.
-value k20_t35_98 dyno_sweep peak_power_kw 172.84514037717642
+value k20_t35_98 dyno_sweep peak_power_kw 170.87096037157107
 value k20_t35_98 dyno_sweep peak_power_rpm 7375
-value k20_t35_98 dyno_sweep peak_torque_nm 223.80332323069973
+value k20_t35_98 dyno_sweep peak_torque_nm 221.24711572063646
 value k20_t35_98 dyno_sweep peak_torque_rpm 7375
 case k20_regen_stock_ve Tune regeneration: k20.stock's recipe (calibrate-ve on the stock engine, RON 95)
-digest k20_regen_stock_ve regen 01f013e9b8e0bc1b6533d7ec6e88ad1ee8cae427179b00ffcff86ee95ee55018 samples=1 channels=3
-value k20_regen_stock_ve regen volumetric_efficiency.differing_from_checked_in 11
-value k20_regen_stock_ve regen volumetric_efficiency.max_abs_difference 0.0010000000000000009
+digest k20_regen_stock_ve regen 3b3db26fabcbd9c15f3f95414abc54a70488001c1e60da0db5df50ef819c35aa samples=1 channels=3
+value k20_regen_stock_ve regen volumetric_efficiency.differing_from_checked_in 0
+value k20_regen_stock_ve regen volumetric_efficiency.max_abs_difference 0
 value k20_regen_stock_ve regen audit hand-authored ignition_advance_deg: 74 of 180 cells above the calibrator's knock/MBT ceiling on gasoline_95 (max 11.5°): 20 kPa/3000 rpm 40° vs 28.5°; 20 kPa/2500 rpm 38° vs 27.5°; 20 kPa/3500 rpm 40° vs 29.5°; 30 kPa/3500 rpm 39° vs 28.5°; 30 kPa/4000 rpm 40° vs 29.5°; 20 kPa/4000 rpm 40° vs 30°; …
 case m54_stock_98 M54 stock, RON 98, factory tune with VANOS
 digest m54_stock_98 geometry 53fb6cebbd5caa01d0c0cbfb3bacbb494f07d4aa84ee6c039448f11d76ec95c7 samples=2 channels=24
@@ -1776,7 +1776,7 @@ value fail_k20_detonation hold throttle.60mm.wear 0
 value fail_k20_detonation hold throttle.60mm.fatigue 0
 value fail_k20_detonation hold throttle.60mm.inspection Good:Within specification.
 case fail_k20_turbo_lean K20 turbo on the stock ECU (MAP sensor saturates, runs lean)
-digest fail_k20_turbo_lean hold 405e8cbd7535b53cffc8308c5fb1543ace793109cc576afc4297b6469e385b7b samples=39 channels=118
+digest fail_k20_turbo_lean hold c13e237c4cb2d28e8800c92cb2fc3bc1efe81a7a93130a63b69847aef5e595a9 samples=39 channels=118
 value fail_k20_turbo_lean hold failure0 ENGINE FAILURE — Detonation damage\nComponent: Pistons (K20 OEM cast pistons (10.5:1))\nCause: Sustained detonation (knock) eroded and cracked the pistons\n\nMeasured at failure:\n  Engine speed: 5,500 rpm\n  Knock: 4.3° past the knock limit (peak), 74.2 s of knocking\n  Spark advance: 15.8° BTDC vs knock limit 14.0°\n  Fuel: Premium unleaded (RON 95) (RON 95)\n  Compression ratio: 10.5:1\n  Charge temperature: 70 °C\n  Time under damaging load (part's lifetime): 74.2 s\n\nContributing factors:\n  - Spark timing (15.8°) was beyond what the fuel tolerates under these conditions (14.0°).\n  - RON 95 fuel has limited knock resistance.\n  - High compression (10.5:1) raises end-gas temperature and pressure.\n  - Boost (50 kPa) raises cylinder pressure and end-gas temperature.\n  - Hot intake charge (70 °C).\n  - A lean mixture (λ 1.29) under load is knock-prone.\n  - The ECU's MAP sensor was saturated, so it used timing meant for a much lighter load.\n  - Knock control was at its 10° limit and could not remove more timing.\n\nRecommendations:\n  - Fit an ECU with a MAP sensor that covers the boost level (standalone ECU): until the ECU can see the boost, no timing table can be right.\n  - Remove at least 7° of timing around 5,500 rpm / 151 kPa.\n  - Use higher-octane fuel (RON 98, race fuel or E85 with a matching calibration).\n  - Lower the compression ratio (dished pistons or a thicker gasket) for boost.\n  - Fit an intercooler.\n  - Replace the pistons (and inspect the head gasket and rod bearings).\n\nCollateral damage:\n  - K20 OEM block: cylinder bore scored by piston debris\n
 value fail_k20_turbo_lean hold seized true
 value fail_k20_turbo_lean hold warnings knock,lean,map_saturated
@@ -1811,7 +1811,7 @@ value fail_k20_turbo_lean hold k20.head.oem.wear 0
 value fail_k20_turbo_lean hold k20.head.oem.fatigue 0
 value fail_k20_turbo_lean hold k20.head.oem.inspection Good:Within specification.
 value fail_k20_turbo_lean hold k20.head_gasket.oem.wear 0
-value fail_k20_turbo_lean hold k20.head_gasket.oem.fatigue 0.2500159534040978
+value fail_k20_turbo_lean hold k20.head_gasket.oem.fatigue 0.25001596143807586
 value fail_k20_turbo_lean hold k20.head_gasket.oem.inspection Minor:Fire rings slightly distorted.
 value fail_k20_turbo_lean hold k20.intake.oem.wear 0
 value fail_k20_turbo_lean hold k20.intake.oem.fatigue 0
@@ -1825,11 +1825,11 @@ value fail_k20_turbo_lean hold k20.oil_pan.oem.inspection Good:Within specificat
 value fail_k20_turbo_lean hold k20.oil_pump.oem.wear 0
 value fail_k20_turbo_lean hold k20.oil_pump.oem.fatigue 0
 value fail_k20_turbo_lean hold k20.oil_pump.oem.inspection Good:Within specification.
-value fail_k20_turbo_lean hold k20.pistons.oem.wear 0.06342569004722322
+value fail_k20_turbo_lean hold k20.pistons.oem.wear 0.06342568665345283
 value fail_k20_turbo_lean hold k20.pistons.oem.fatigue 1
 value fail_k20_turbo_lean hold k20.pistons.oem.inspection Failed:FAILED: detonation damage — sustained detonation (knock) eroded and cracked the pistons.
 value fail_k20_turbo_lean hold k20.rod_bearings.oem.wear 1.5001000000002552E-05
-value fail_k20_turbo_lean hold k20.rod_bearings.oem.fatigue 0.1500095720424582
+value fail_k20_turbo_lean hold k20.rod_bearings.oem.fatigue 0.1500095768628462
 value fail_k20_turbo_lean hold k20.rod_bearings.oem.inspection Good:Within specification.
 value fail_k20_turbo_lean hold k20.rods.oem.wear 0
 value fail_k20_turbo_lean hold k20.rods.oem.fatigue 0
@@ -1844,7 +1844,7 @@ value fail_k20_turbo_lean hold throttle.60mm.wear 0
 value fail_k20_turbo_lean hold throttle.60mm.fatigue 0
 value fail_k20_turbo_lean hold throttle.60mm.inspection Good:Within specification.
 value fail_k20_turbo_lean hold turbo.t28_ball.wear 0
-value fail_k20_turbo_lean hold turbo.t28_ball.fatigue 1.663516532012805E-07
+value fail_k20_turbo_lean hold turbo.t28_ball.fatigue 1.6635115343963586E-07
 value fail_k20_turbo_lean hold turbo.t28_ball.inspection Good:Within specification.
 case fail_k20_oil_starvation K20 1.25 g sustained cornering at 6,500 rpm
 digest fail_k20_oil_starvation hold 8859b0cc984f3b9d36d1b32d8d67d7954337d15a31444ac96005bbd44a5478b1 samples=16 channels=112
@@ -2256,17 +2256,18 @@ value fail_m54_overheat hold throttle.68mm.wear 0
 value fail_m54_overheat hold throttle.68mm.fatigue 0
 value fail_m54_overheat hold throttle.68mm.inspection Good:Within specification.
 case scenario_project_car Scenario 'project_car' (worn K20): dyno pull and a lap
-digest scenario_project_car dyno_sweep 360a2a8dbf3c5efdc8fc6d7f438d6995c0be4dd0c8063b1b74a6031b02acb038 samples=221 channels=112
+digest scenario_project_car dyno_sweep df3f1e8fcac50fba2f5dc80a55045f27db06cc7e3184cade65d7eb8074e9c035 samples=221 channels=112
 value scenario_project_car dyno_sweep phase Finished
 value scenario_project_car dyno_sweep abort 
 value scenario_project_car dyno_sweep note 
-value scenario_project_car dyno_sweep peak_power_kw 102.28158991016161
+value scenario_project_car dyno_sweep peak_power_kw 102.2815963903211
 value scenario_project_car dyno_sweep peak_power_rpm 7250
-value scenario_project_car dyno_sweep peak_torque_nm 177.36778232538444
+value scenario_project_car dyno_sweep peak_torque_nm 177.36778798399362
 value scenario_project_car dyno_sweep peak_torque_rpm 3775.0000000000005
-digest scenario_project_car drive 7d1081afa7288cf12f40680e669590f3311240889204c3fc8300c4bc5fc8ab95 samples=4001 channels=153
-value scenario_project_car drive laps 0
-value scenario_project_car drive autopilot_recoveries 6
+digest scenario_project_car drive 9b155e14f69086ac8ee6900db41aca5e9648f6b7db2523d58f310a1a6426f208 samples=3513 channels=153
+value scenario_project_car drive lap1_s 59.56400000028441
+value scenario_project_car drive laps 1
+value scenario_project_car drive autopilot_recoveries 5
 case scenario_isar_c30_six Scenario 'isar_c30_six' (M54 car): dyno pull and a lap
 digest scenario_isar_c30_six dyno_sweep 465431699b504b1a226489646cbe5b7a4a7761b73b47b25820abaeecb9ac8b85 samples=180 channels=112
 value scenario_isar_c30_six dyno_sweep phase Finished
@@ -2281,19 +2282,19 @@ value scenario_isar_c30_six drive lap1_s 52.849999999909095
 value scenario_isar_c30_six drive laps 1
 value scenario_isar_c30_six drive autopilot_recoveries 0
 case drive_k20_stock Kestrel S2, stock K20, RON 95: out lap + 2 laps
-digest drive_k20_stock drive a096192ab11c7678d360b051ec997625027bbece86075f85e33e0d89bb4f806c samples=1582 channels=153
+digest drive_k20_stock drive 48476c93991a47d30c6a6230a8a2ad85c917b9cf70c51864dffa957ce3c2a386 samples=1582 channels=153
 value drive_k20_stock drive lap1_s 51.831999999912846
 value drive_k20_stock drive lap2_s 51.83600000009373
 value drive_k20_stock drive laps 2
 value drive_k20_stock drive autopilot_recoveries 0
-digest drive_k20_stock wear c0670ecf806e2d6c9a51632e494aace81ac042f4ee74d8a3c7f2b4239a05680b samples=0 channels=0
-value drive_k20_stock wear brakes.wear 0.009265966388387812
-value drive_k20_stock wear clutch.wear 0.0017551181868785204
+digest drive_k20_stock wear 492758b1924154ec20931f96d42dfa44af23f84a91255e25698f0b713d8abc50 samples=0 channels=0
+value drive_k20_stock wear brakes.wear 0.00926662463653843
+value drive_k20_stock wear clutch.wear 0.0017550508377637776
 value drive_k20_stock wear differential.wear 0
 value drive_k20_stock wear gearbox.wear 0
 value drive_k20_stock wear suspension.wear 0
-value drive_k20_stock wear tires_front.wear 0.004492192770062409
-value drive_k20_stock wear tires_rear.wear 0.0051093071820897925
+value drive_k20_stock wear tires_front.wear 0.004493300930305109
+value drive_k20_stock wear tires_rear.wear 0.005109456358220237
 value drive_k20_stock wear seized false
 value drive_k20_stock wear warnings 
 value drive_k20_stock wear ecu.k20_oem.wear 0
@@ -2342,7 +2343,7 @@ value drive_k20_stock wear k20.oil_pump.oem.wear 0
 value drive_k20_stock wear k20.oil_pump.oem.fatigue 0
 value drive_k20_stock wear k20.oil_pump.oem.inspection Good:Within specification.
 value drive_k20_stock wear k20.pistons.oem.wear 3.163960000002086E-05
-value drive_k20_stock wear k20.pistons.oem.fatigue 0.00011006656739604921
+value drive_k20_stock wear k20.pistons.oem.fatigue 0.00011006760162007776
 value drive_k20_stock wear k20.pistons.oem.inspection Good:Within specification.
 value drive_k20_stock wear k20.rod_bearings.oem.wear 3.163960000002086E-05
 value drive_k20_stock wear k20.rod_bearings.oem.fatigue 0
@@ -2360,19 +2361,19 @@ value drive_k20_stock wear throttle.60mm.wear 0
 value drive_k20_stock wear throttle.60mm.fatigue 0
 value drive_k20_stock wear throttle.60mm.inspection Good:Within specification.
 case drive_k20_t28 Kestrel S2, K20 T28 build, RON 98: out lap + 2 laps
-digest drive_k20_t28 drive c320de0e3f4091e534f5e8894571e3c1c6961b3d234a152243cd8d2a486490b2 samples=1539 channels=159
-value drive_k20_t28 drive lap1_s 50.37199999992153
-value drive_k20_t28 drive lap2_s 50.38400000006587
+digest drive_k20_t28 drive 3ae124d588285294589398c05a356ecfb9a9f41f5860a290aaf1500c5a85bd13 samples=1539 channels=159
+value drive_k20_t28 drive lap1_s 50.373999999921516
+value drive_k20_t28 drive lap2_s 50.38200000006589
 value drive_k20_t28 drive laps 2
 value drive_k20_t28 drive autopilot_recoveries 0
-digest drive_k20_t28 wear d7d2e8f8b6493a29318965c3b0720b36bef3eeb6eda7da66fcb9366802b6e00a samples=0 channels=0
-value drive_k20_t28 wear brakes.wear 0.011697826666168372
-value drive_k20_t28 wear clutch.wear 0.0044959385589373934
+digest drive_k20_t28 wear 60034343f0bf45c6e3d0204018e18cdea91baa3817aba15684c69279d558e2c7 samples=0 channels=0
+value drive_k20_t28 wear brakes.wear 0.011692730923943552
+value drive_k20_t28 wear clutch.wear 0.004489938893961162
 value drive_k20_t28 wear differential.wear 0
 value drive_k20_t28 wear gearbox.wear 0
 value drive_k20_t28 wear suspension.wear 0
-value drive_k20_t28 wear tires_front.wear 0.004919572033505273
-value drive_k20_t28 wear tires_rear.wear 0.006974537630517847
+value drive_k20_t28 wear tires_front.wear 0.004919415773320495
+value drive_k20_t28 wear tires_rear.wear 0.00696980376107384
 value drive_k20_t28 wear seized false
 value drive_k20_t28 wear warnings 
 value drive_k20_t28 wear ecu.standalone.wear 0
@@ -2424,7 +2425,7 @@ value drive_k20_t28 wear k20.oil_pump.oem.wear 0
 value drive_k20_t28 wear k20.oil_pump.oem.fatigue 0
 value drive_k20_t28 wear k20.oil_pump.oem.inspection Good:Within specification.
 value drive_k20_t28 wear k20.pistons.forged_lc.wear 3.1799230018218196E-05
-value drive_k20_t28 wear k20.pistons.forged_lc.fatigue 4.094024776933947E-05
+value drive_k20_t28 wear k20.pistons.forged_lc.fatigue 4.048132450609944E-05
 value drive_k20_t28 wear k20.pistons.forged_lc.inspection Good:Within specification.
 value drive_k20_t28 wear k20.rod_bearings.oem.wear 3.077960000001897E-05
 value drive_k20_t28 wear k20.rod_bearings.oem.fatigue 2.3392020915190007E-07
@@ -2441,8 +2442,8 @@ value drive_k20_t28 wear radiator.oem.inspection Good:Within specification.
 value drive_k20_t28 wear throttle.60mm.wear 0
 value drive_k20_t28 wear throttle.60mm.fatigue 0
 value drive_k20_t28 wear throttle.60mm.inspection Good:Within specification.
-value drive_k20_t28 wear turbo.t28_ball.wear 0.00967288332127122
-value drive_k20_t28 wear turbo.t28_ball.fatigue 1.0795306776071401E-05
+value drive_k20_t28 wear turbo.t28_ball.wear 0.009662583265677408
+value drive_k20_t28 wear turbo.t28_ball.fatigue 1.071612118083402E-05
 value drive_k20_t28 wear turbo.t28_ball.inspection Good:Within specification.
 case drive_m54_stock Isar C30, stock M54, RON 98: out lap + 2 laps
 digest drive_m54_stock drive fa91ccef4412a6034c8b21dc4f6a1dd31ddb10cb79c3a503d6b95508b63f5198 samples=1585 channels=153
@@ -2529,75 +2530,75 @@ value syn_i4_sohc geometry displacement_cc 1597.9443997108926
 value syn_i4_sohc geometry compression_ratio 9.59311604104961
 value syn_i4_sohc geometry mass_kg 119.32
 value syn_i4_sohc geometry issues [Info] compression_ratio: Static compression ratio 9.59:1 (1.60 L, bore 79.0 × stroke 81.5 mm).
-digest syn_i4_sohc wot 48d92636690fd60c3a6f82710c7273a2c5439d6cc54be42768951beeed779db3 samples=25 channels=112
+digest syn_i4_sohc wot 2f7deb0816594b1fac9aaee59ffe6c297a00ab34c5f985d24e3533199f19f8f7 samples=25 channels=112
 value syn_i4_sohc wot torque_nm@1000 107.71211607921316
 value syn_i4_sohc wot power_kw@1000 11.279586419235569
 value syn_i4_sohc wot ve@1000 0.6857992006163331
 value syn_i4_sohc wot ve_dynamic@1000 0.6937163250207906
 value syn_i4_sohc wot lambda@1000 0.8776037647207885
-value syn_i4_sohc wot torque_nm@1500 123.77163347139526
-value syn_i4_sohc wot power_kw@1500 19.442002721827198
-value syn_i4_sohc wot ve@1500 0.7568093702598251
+value syn_i4_sohc wot torque_nm@1500 123.5451884571868
+value syn_i4_sohc wot power_kw@1500 19.40643282217323
+value syn_i4_sohc wot ve@1500 0.7568080471010546
 value syn_i4_sohc wot ve_dynamic@1500 0.7702526757449649
-value syn_i4_sohc wot lambda@1500 0.8769649911438184
-value syn_i4_sohc wot torque_nm@2000 133.75758545611157
-value syn_i4_sohc wot power_kw@2000 28.014123188721936
-value syn_i4_sohc wot ve@2000 0.8134352271323386
+value syn_i4_sohc wot lambda@1500 0.8769634554935126
+value syn_i4_sohc wot torque_nm@2000 133.75757761538046
+value syn_i4_sohc wot power_kw@2000 28.014121546563054
+value syn_i4_sohc wot ve@2000 0.8134352193523888
 value syn_i4_sohc wot ve_dynamic@2000 0.8365744955755623
-value syn_i4_sohc wot lambda@2000 0.8771819042688734
-value syn_i4_sohc wot torque_nm@2500 139.92550071976768
-value syn_i4_sohc wot power_kw@2500 36.632410425924625
-value syn_i4_sohc wot ve@2500 0.8548599866215024
+value syn_i4_sohc wot lambda@2000 0.8771818958516491
+value syn_i4_sohc wot torque_nm@2500 139.92549505982987
+value syn_i4_sohc wot power_kw@2500 36.63240894415637
+value syn_i4_sohc wot ve@2500 0.8548599866208739
 value syn_i4_sohc wot ve_dynamic@2500 0.8926818033000005
-value syn_i4_sohc wot lambda@2500 0.8767579321018826
-value syn_i4_sohc wot torque_nm@3000 142.81528074042498
-value syn_i4_sohc wot power_kw@3000 44.8667436794483
+value syn_i4_sohc wot lambda@2500 0.8767579321012343
+value syn_i4_sohc wot torque_nm@3000 142.81527429462164
+value syn_i4_sohc wot power_kw@3000 44.86674165443946
 value syn_i4_sohc wot ve@3000 0.8809593500681183
 value syn_i4_sohc wot ve_dynamic@3000 0.9385746383696825
 value syn_i4_sohc wot lambda@3000 0.8771476136581173
-value syn_i4_sohc wot torque_nm@3500 142.89069857090834
-value syn_i4_sohc wot power_kw@3500 52.37217637127924
+value syn_i4_sohc wot torque_nm@3500 142.89069144485123
+value syn_i4_sohc wot power_kw@3500 52.372173759442894
 value syn_i4_sohc wot ve@3500 0.8925304451328911
 value syn_i4_sohc wot ve_dynamic@3500 0.9742530807680816
 value syn_i4_sohc wot lambda@3500 0.8764062325746741
-value syn_i4_sohc wot torque_nm@4000 140.51398220849637
-value syn_i4_sohc wot power_kw@4000 58.85835923104788
+value syn_i4_sohc wot torque_nm@4000 140.51397450304552
+value syn_i4_sohc wot power_kw@4000 58.85835600339617
 value syn_i4_sohc wot ve@4000 0.8910425458512461
 value syn_i4_sohc wot ve_dynamic@4000 0.9997172869755591
 value syn_i4_sohc wot lambda@4000 0.8765496380047239
-value syn_i4_sohc wot torque_nm@4500 136.05904456218772
-value syn_i4_sohc wot power_kw@4500 64.11631422765228
+value syn_i4_sohc wot torque_nm@4500 136.0590363727354
+value syn_i4_sohc wot power_kw@4500 64.11631036846379
 value syn_i4_sohc wot ve@4500 0.8785103716821167
 value syn_i4_sohc wot ve_dynamic@4500 1.014967552237223
 value syn_i4_sohc wot lambda@4500 0.876540313694422
-value syn_i4_sohc wot torque_nm@5000 129.93958460239836
-value syn_i4_sohc wot power_kw@5000 68.03620739956735
+value syn_i4_sohc wot torque_nm@5000 129.93957601848183
+value syn_i4_sohc wot power_kw@5000 68.03620290503916
 value syn_i4_sohc wot ve@5000 0.8571168837343874
 value syn_i4_sohc wot ve_dynamic@5000 1.0200045429741933
 value syn_i4_sohc wot lambda@5000 0.8764282551176812
-value syn_i4_sohc wot torque_nm@5500 122.85403884566557
-value syn_i4_sohc wot power_kw@5500 70.75884674858597
+value syn_i4_sohc wot torque_nm@5500 122.85402995093695
+value syn_i4_sohc wot power_kw@5500 70.75884162559005
 value syn_i4_sohc wot ve@5500 0.8303758391787153
 value syn_i4_sohc wot ve_dynamic@5500 1.0174189549695394
 value syn_i4_sohc wot lambda@5500 0.8767117908797736
-value syn_i4_sohc wot torque_nm@6000 115.24622338665559
-value syn_i4_sohc wot power_kw@6000 72.41133774909709
+value syn_i4_sohc wot torque_nm@6000 115.2462142589449
+value syn_i4_sohc wot power_kw@6000 72.4113320139873
 value syn_i4_sohc wot ve@6000 0.8010278046631447
 value syn_i4_sohc wot ve_dynamic@6000 1.009729759228056
 value syn_i4_sohc wot lambda@6000 0.8767735521954167
-value syn_i4_sohc wot torque_nm@6500 -27.78543894919454
-value syn_i4_sohc wot power_kw@6500 -18.912948357237404
+value syn_i4_sohc wot torque_nm@6500 -27.785448282234146
+value syn_i4_sohc wot power_kw@6500 -18.912954710035947
 value syn_i4_sohc wot ve@6500 0.7708826765554836
 value syn_i4_sohc wot ve_dynamic@6500 0.9969395176599807
 value syn_i4_sohc wot lambda@6500 0
-value syn_i4_sohc wot torque_nm@7000 -29.993311636099186
-value syn_i4_sohc wot power_kw@7000 -21.98624574831964
+value syn_i4_sohc wot torque_nm@7000 -29.993321153305168
+value syn_i4_sohc wot power_kw@7000 -21.986252724796
 value syn_i4_sohc wot ve@7000 0.7396409746089606
 value syn_i4_sohc wot ve_dynamic@7000 0.9790522065908464
 value syn_i4_sohc wot lambda@7000 0
-value syn_i4_sohc wot peak_power_kw 72.84243714502583
+value syn_i4_sohc wot peak_power_kw 72.84243111262487
 value syn_i4_sohc wot peak_power_rpm 6250
-value syn_i4_sohc wot peak_torque_nm 143.196731098203
+value syn_i4_sohc wot peak_torque_nm 143.19672429934957
 value syn_i4_sohc wot peak_torque_rpm 3250
 digest syn_i4_sohc partload 5b56dc171c7d6986749986fe881dc31f452323803117016bd4cdb9bb82e0105f samples=36 channels=112
 digest syn_i4_sohc dyno_sweep 296ad377ae44820fe5c0526551b806c567541f0572431550b819afe6a39d936b samples=180 channels=112
@@ -2614,7 +2615,7 @@ value syn_i3_turbo_vvl geometry displacement_cc 1198.413296468407
 value syn_i3_turbo_vvl geometry compression_ratio 9.505777501729137
 value syn_i3_turbo_vvl geometry mass_kg 120.22
 value syn_i3_turbo_vvl geometry issues [Info] compression_ratio: Static compression ratio 9.51:1 (1.20 L, bore 78.0 × stroke 83.6 mm).
-digest syn_i3_turbo_vvl wot 23a3678f9ca6ee129068278536379383d65f66e4c5f16358b3277bdfb542e512 samples=25 channels=118
+digest syn_i3_turbo_vvl wot b97496d08777f1dc7c02dec3bd16d651faf25e1fc6456edb2f561b85fe13dad9 samples=25 channels=118
 value syn_i3_turbo_vvl wot torque_nm@1000 82.49687828514627
 value syn_i3_turbo_vvl wot power_kw@1000 8.639052892156895
 value syn_i3_turbo_vvl wot ve@1000 0.6992905289386341
@@ -2655,43 +2656,43 @@ value syn_i3_turbo_vvl wot power_kw@4500 60.02201223929449
 value syn_i3_turbo_vvl wot ve@4500 1.076006403681823
 value syn_i3_turbo_vvl wot ve_dynamic@4500 1.0196028123309897
 value syn_i3_turbo_vvl wot lambda@4500 0.853036111804799
-value syn_i3_turbo_vvl wot torque_nm@5000 136.01547659843567
-value syn_i3_turbo_vvl wot power_kw@5000 71.21753700935999
-value syn_i3_turbo_vvl wot ve@5000 1.147832179444615
+value syn_i3_turbo_vvl wot torque_nm@5000 136.00094559990913
+value syn_i3_turbo_vvl wot power_kw@5000 71.20992859632327
+value syn_i3_turbo_vvl wot ve@5000 1.1477236736189866
 value syn_i3_turbo_vvl wot ve_dynamic@5000 0.9956105537999936
-value syn_i3_turbo_vvl wot lambda@5000 0.8300674949508167
-value syn_i3_turbo_vvl wot torque_nm@5500 150.87188052896707
-value syn_i3_turbo_vvl wot power_kw@5500 86.89596510889798
-value syn_i3_turbo_vvl wot ve@5500 1.275099625595618
+value syn_i3_turbo_vvl wot lambda@5000 0.8300995088550348
+value syn_i3_turbo_vvl wot torque_nm@5500 150.87140864356783
+value syn_i3_turbo_vvl wot power_kw@5500 86.895693322419
+value syn_i3_turbo_vvl wot ve@5500 1.2750952142853795
 value syn_i3_turbo_vvl wot ve_dynamic@5500 1.0103171090810432
-value syn_i3_turbo_vvl wot lambda@5500 0.7952292063833893
-value syn_i3_turbo_vvl wot torque_nm@6000 175.53691801080168
-value syn_i3_turbo_vvl wot power_kw@6000 110.29309841130569
-value syn_i3_turbo_vvl wot ve@6000 1.4732508069014263
+value syn_i3_turbo_vvl wot lambda@5500 0.7952290728119058
+value syn_i3_turbo_vvl wot torque_nm@6000 175.53705248392023
+value syn_i3_turbo_vvl wot power_kw@6000 110.29318290325796
+value syn_i3_turbo_vvl wot ve@6000 1.4732507336876273
 value syn_i3_turbo_vvl wot ve_dynamic@6000 1.0183490279804654
-value syn_i3_turbo_vvl wot lambda@6000 0.7954928456500561
-value syn_i3_turbo_vvl wot torque_nm@6500 -21.175222604878307
-value syn_i3_turbo_vvl wot power_kw@6500 -14.413516817616411
-value syn_i3_turbo_vvl wot ve@6500 0.921129165341759
+value syn_i3_turbo_vvl wot lambda@6000 0.795492855394929
+value syn_i3_turbo_vvl wot torque_nm@6500 -21.175068575435045
+value syn_i3_turbo_vvl wot power_kw@6500 -14.413411973100143
+value syn_i3_turbo_vvl wot ve@6500 0.9211291653726942
 value syn_i3_turbo_vvl wot ve_dynamic@6500 1.0198609424707672
 value syn_i3_turbo_vvl wot lambda@6500 0
-value syn_i3_turbo_vvl wot torque_nm@7000 -23.109449855975363
-value syn_i3_turbo_vvl wot power_kw@7000 -16.940111509074576
-value syn_i3_turbo_vvl wot ve@7000 0.8764360511410171
+value syn_i3_turbo_vvl wot torque_nm@7000 -23.109291578637112
+value syn_i3_turbo_vvl wot power_kw@7000 -16.939995485725856
+value syn_i3_turbo_vvl wot ve@7000 0.8764360511412215
 value syn_i3_turbo_vvl wot ve_dynamic@7000 1.0173432559822104
 value syn_i3_turbo_vvl wot lambda@7000 0
-value syn_i3_turbo_vvl wot peak_power_kw 113.54615731621931
+value syn_i3_turbo_vvl wot peak_power_kw 113.54625061717783
 value syn_i3_turbo_vvl wot peak_power_rpm 6250
-value syn_i3_turbo_vvl wot peak_torque_nm 175.53691801080168
+value syn_i3_turbo_vvl wot peak_torque_nm 175.53705248392023
 value syn_i3_turbo_vvl wot peak_torque_rpm 6000.000000000001
 digest syn_i3_turbo_vvl partload c298c2b570cc3dfee5bbb7e31d8f4a5e0b9b0580824f935f0789266c70e4b746 samples=36 channels=118
-digest syn_i3_turbo_vvl dyno_sweep dc708f5e23ced0e3ccba9d7148f8bc04aa3e09f37b05b55a72db3bbaee3580d3 samples=180 channels=118
+digest syn_i3_turbo_vvl dyno_sweep 3e0b5db152c3e3a8ab79ae6ff1a11ac3a281fa0f6be74246f46965b52b74d18e samples=180 channels=118
 value syn_i3_turbo_vvl dyno_sweep phase Finished
 value syn_i3_turbo_vvl dyno_sweep abort 
 value syn_i3_turbo_vvl dyno_sweep note Reached the rev limiter at 6500 rpm.
-value syn_i3_turbo_vvl dyno_sweep peak_power_kw 116.0643496968227
+value syn_i3_turbo_vvl dyno_sweep peak_power_kw 116.06434099528322
 value syn_i3_turbo_vvl dyno_sweep peak_power_rpm 6475
-value syn_i3_turbo_vvl dyno_sweep peak_torque_nm 175.7148261948747
+value syn_i3_turbo_vvl dyno_sweep peak_torque_nm 175.71458006366547
 value syn_i3_turbo_vvl dyno_sweep peak_torque_rpm 6225
 case syn_i4_turbo Synthetic family syn_i4_turbo, its calibrated tune on gasoline_98
 digest syn_i4_turbo geometry f81519c139be4804bbf775a8170255d8b02d83c8c8c8be941479a3a9db2297c1 samples=2 channels=24
@@ -2699,7 +2700,7 @@ value syn_i4_turbo geometry displacement_cc 1998.22885687171
 value syn_i4_turbo geometry compression_ratio 9.297752753928904
 value syn_i4_turbo geometry mass_kg 130.48000000000002
 value syn_i4_turbo geometry issues [Info] compression_ratio: Static compression ratio 9.30:1 (2.00 L, bore 86.0 × stroke 86.0 mm).
-digest syn_i4_turbo wot 9d1a1746a54c162ff51869b7532e27bed57e253f25475a25ec31d2d48a6d0642 samples=27 channels=118
+digest syn_i4_turbo wot 83adfd55bbbbb0a0fc92417204a33cad3bd2cfe2d0193c7231a8c3a322696726 samples=27 channels=118
 value syn_i4_turbo wot torque_nm@1000 161.64833489014478
 value syn_i4_turbo wot power_kw@1000 16.927774045196713
 value syn_i4_turbo wot ve@1000 0.8136736236207301
@@ -2735,53 +2736,53 @@ value syn_i4_turbo wot power_kw@4000 105.05407381131945
 value syn_i4_turbo wot ve@4000 1.244065094142316
 value syn_i4_turbo wot ve_dynamic@4000 1.0199390893483093
 value syn_i4_turbo wot lambda@4000 0.810207899799953
-value syn_i4_turbo wot torque_nm@4500 304.105390977274
-value syn_i4_turbo wot power_kw@4500 143.30628933168836
-value syn_i4_turbo wot ve@4500 1.4979237206879203
-value syn_i4_turbo wot ve_dynamic@4500 1.0199896256264445
-value syn_i4_turbo wot lambda@4500 0.7947901306867875
-value syn_i4_turbo wot torque_nm@5000 332.82794734880576
-value syn_i4_turbo wot power_kw@5000 174.26830571672977
-value syn_i4_turbo wot ve@5000 1.6403687235565128
-value syn_i4_turbo wot ve_dynamic@5000 1.0199996998849765
-value syn_i4_turbo wot lambda@5000 0.7959869816707893
-value syn_i4_turbo wot torque_nm@5500 320.3291142523888
-value syn_i4_turbo wot power_kw@5500 184.4963252121422
-value syn_i4_turbo wot ve@5500 1.5997811263566066
-value syn_i4_turbo wot ve_dynamic@5500 1.01270330566597
-value syn_i4_turbo wot lambda@5500 0.7960647441467462
-value syn_i4_turbo wot torque_nm@6000 310.47683627512566
-value syn_i4_turbo wot power_kw@6000 195.07834959034716
-value syn_i4_turbo wot ve@6000 1.5732138426844988
-value syn_i4_turbo wot ve_dynamic@6000 1.0170343135642868
-value syn_i4_turbo wot lambda@6000 0.7947839236522293
-value syn_i4_turbo wot torque_nm@6500 299.6116564894176
-value syn_i4_turbo wot power_kw@6500 203.9391854406883
-value syn_i4_turbo wot ve@6500 1.5418699813056576
-value syn_i4_turbo wot ve_dynamic@6500 1.019999868129054
-value syn_i4_turbo wot lambda@6500 0.7955184907786249
-value syn_i4_turbo wot torque_nm@7000 -39.06453881097077
-value syn_i4_turbo wot power_kw@7000 -28.635802567031124
-value syn_i4_turbo wot ve@7000 0.8570575996999892
-value syn_i4_turbo wot ve_dynamic@7000 1.0021043819765638
+value syn_i4_turbo wot torque_nm@4500 303.37643973219804
+value syn_i4_turbo wot power_kw@4500 142.962779150235
+value syn_i4_turbo wot ve@4500 1.4945720879112832
+value syn_i4_turbo wot ve_dynamic@4500 1.0187452237720496
+value syn_i4_turbo wot lambda@4500 0.7947333261212216
+value syn_i4_turbo wot torque_nm@5000 332.8312066688627
+value syn_i4_turbo wot power_kw@5000 174.27001229272088
+value syn_i4_turbo wot ve@5000 1.64038472467764
+value syn_i4_turbo wot ve_dynamic@5000 1.0199997440619715
+value syn_i4_turbo wot lambda@5000 0.7959868711406751
+value syn_i4_turbo wot torque_nm@5500 320.16718891632644
+value syn_i4_turbo wot power_kw@5500 184.40306291367153
+value syn_i4_turbo wot ve@5500 1.5998250049253468
+value syn_i4_turbo wot ve_dynamic@5500 1.0127041765069658
+value syn_i4_turbo wot lambda@5500 0.7943948680514125
+value syn_i4_turbo wot torque_nm@6000 311.25581260744826
+value syn_i4_turbo wot power_kw@6000 195.56779485493615
+value syn_i4_turbo wot ve@6000 1.5765837448877962
+value syn_i4_turbo wot ve_dynamic@6000 1.0199340565631327
+value syn_i4_turbo wot lambda@6000 0.7957055098940425
+value syn_i4_turbo wot torque_nm@6500 299.61101728053546
+value syn_i4_turbo wot power_kw@6500 203.93875034500385
+value syn_i4_turbo wot ve@6500 1.5418661774870186
+value syn_i4_turbo wot ve_dynamic@6500 1.0199998518158375
+value syn_i4_turbo wot lambda@6500 0.7955184292461496
+value syn_i4_turbo wot torque_nm@7000 -39.10161009680411
+value syn_i4_turbo wot power_kw@7000 -28.662977238852193
+value syn_i4_turbo wot ve@7000 0.8590475068258094
+value syn_i4_turbo wot ve_dynamic@7000 1.00654334348231
 value syn_i4_turbo wot lambda@7000 0
-value syn_i4_turbo wot torque_nm@7500 -42.34612258750872
-value syn_i4_turbo wot power_kw@7500 -33.25856690723255
-value syn_i4_turbo wot ve@7500 0.7976969681704897
-value syn_i4_turbo wot ve_dynamic@7500 0.9766386593229575
+value syn_i4_turbo wot torque_nm@7500 -42.40602458019598
+value syn_i4_turbo wot power_kw@7500 -33.305613822272974
+value syn_i4_turbo wot ve@7500 0.8015989731329499
+value syn_i4_turbo wot ve_dynamic@7500 0.9844627822056969
 value syn_i4_turbo wot lambda@7500 0
-value syn_i4_turbo wot peak_power_kw 207.21352718039284
+value syn_i4_turbo wot peak_power_kw 207.19771789468078
 value syn_i4_turbo wot peak_power_rpm 6750
-value syn_i4_turbo wot peak_torque_nm 338.8079685778155
+value syn_i4_turbo wot peak_torque_nm 338.6041664212876
 value syn_i4_turbo wot peak_torque_rpm 4750
-digest syn_i4_turbo partload 79b32253675669762daa62dd5f920e9b0e704c3d48910bd84853bd2fd44ceaf3 samples=36 channels=118
-digest syn_i4_turbo dyno_sweep 4b000a8092664846b97764831485a6a5fd58ccfca6c4d2c0d8e60bd7c6992cf4 samples=200 channels=118
+digest syn_i4_turbo partload 90453860fc177bd7157b60ea245a2759cb6782ff0ff8782a22b43d2fcaf58a4b samples=36 channels=118
+digest syn_i4_turbo dyno_sweep 54da9b470c3d41e6762b3965491c23853a65be42eb999423ff7d2d51f8b4176c samples=200 channels=118
 value syn_i4_turbo dyno_sweep phase Finished
 value syn_i4_turbo dyno_sweep abort 
 value syn_i4_turbo dyno_sweep note Reached the rev limiter at 7000 rpm.
-value syn_i4_turbo dyno_sweep peak_power_kw 208.74042266837282
+value syn_i4_turbo dyno_sweep peak_power_kw 208.6992273120579
 value syn_i4_turbo dyno_sweep peak_power_rpm 6975
-value syn_i4_turbo dyno_sweep peak_torque_nm 339.30032093528433
+value syn_i4_turbo dyno_sweep peak_torque_nm 339.31356474880585
 value syn_i4_turbo dyno_sweep peak_torque_rpm 4975.000000000001
 case syn_i6_vis Synthetic family syn_i6_vis, its calibrated tune on gasoline_95
 digest syn_i6_vis geometry 26186312d33cd9777c404d77d65f719ace38cc546457e6d979deebb001ce282f samples=2 channels=24
@@ -2789,7 +2790,7 @@ value syn_i6_vis geometry displacement_cc 2493.7962484195778
 value syn_i6_vis geometry compression_ratio 10.503503595955836
 value syn_i6_vis geometry mass_kg 142.93
 value syn_i6_vis geometry issues [Info] compression_ratio: Static compression ratio 10.50:1 (2.49 L, bore 84.0 × stroke 75.0 mm).
-digest syn_i6_vis wot 6a5a0d89069077f06fedeb23c63274af652752dd68c0f2c79456a722172b015d samples=27 channels=112
+digest syn_i6_vis wot fc5460c1b64f4cd93d9f153daf1df9324329939e47c9dcd4bc61e5a75c6a93ff samples=27 channels=112
 value syn_i6_vis wot torque_nm@1000 160.67671968260555
 value syn_i6_vis wot power_kw@1000 16.82602673859267
 value syn_i6_vis wot ve@1000 0.6575567908110093
@@ -2805,73 +2806,73 @@ value syn_i6_vis wot power_kw@2000 42.71164430650026
 value syn_i6_vis wot ve@2000 0.7830929114401036
 value syn_i6_vis wot ve_dynamic@2000 0.7953612943716013
 value syn_i6_vis wot lambda@2000 0.876806560100543
-value syn_i6_vis wot torque_nm@2500 217.7034730919456
-value syn_i6_vis wot power_kw@2500 56.99463597721996
-value syn_i6_vis wot ve@2500 0.8318272773562279
+value syn_i6_vis wot torque_nm@2500 217.72332549274233
+value syn_i6_vis wot power_kw@2500 56.99983332359489
+value syn_i6_vis wot ve@2500 0.8318274066455765
 value syn_i6_vis wot ve_dynamic@2500 0.8498504088394584
-value syn_i6_vis wot lambda@2500 0.8775117348417517
-value syn_i6_vis wot torque_nm@3000 227.29857394274953
-value syn_i6_vis wot power_kw@3000 71.40795300699783
-value syn_i6_vis wot ve@3000 0.8707948082730821
+value syn_i6_vis wot lambda@2500 0.8775118719863167
+value syn_i6_vis wot torque_nm@3000 227.29857726329936
+value syn_i6_vis wot power_kw@3000 71.40795405017933
+value syn_i6_vis wot ve@3000 0.8707948087399033
 value syn_i6_vis wot ve_dynamic@3000 0.8967836801076512
-value syn_i6_vis wot lambda@3000 0.8769346566610751
-value syn_i6_vis wot torque_nm@3500 233.3887922507343
-value syn_i6_vis wot power_kw@3500 85.54146010259514
-value syn_i6_vis wot ve@3500 0.8998955513007426
+value syn_i6_vis wot lambda@3000 0.8769346571353063
+value syn_i6_vis wot torque_nm@3500 233.38879554939984
+value syn_i6_vis wot power_kw@3500 85.54146131161922
+value syn_i6_vis wot ve@3500 0.8998955513007738
 value syn_i6_vis wot ve_dynamic@3500 0.9361622653197722
-value syn_i6_vis wot lambda@3500 0.8769456768598833
-value syn_i6_vis wot torque_nm@4000 236.51515743966317
-value syn_i6_vis wot power_kw@4000 99.07123747667721
+value syn_i6_vis wot lambda@3500 0.8769456768599144
+value syn_i6_vis wot torque_nm@4000 236.51516095631436
+value syn_i6_vis wot power_kw@4000 99.07123894972862
 value syn_i6_vis wot ve@4000 0.9193460427007902
 value syn_i6_vis wot ve_dynamic@4000 0.9679887028023669
 value syn_i6_vis wot lambda@4000 0.8767233385172108
-value syn_i6_vis wot torque_nm@4500 236.8177901307849
-value syn_i6_vis wot power_kw@4500 111.5977544571365
+value syn_i6_vis wot torque_nm@4500 236.81779381316684
+value syn_i6_vis wot power_kw@4500 111.59775619241809
 value syn_i6_vis wot ve@4500 0.9295989851416551
 value syn_i6_vis wot ve_dynamic@4500 0.9922682106412692
 value syn_i6_vis wot lambda@4500 0.8764812528397169
-value syn_i6_vis wot torque_nm@5000 228.97232444290114
-value syn_i6_vis wot power_kw@5000 119.88962872419947
-value syn_i6_vis wot ve@5000 0.9114916438349261
-value syn_i6_vis wot ve_dynamic@5000 0.9842883554986052
-value syn_i6_vis wot lambda@5000 0.8762002500110377
-value syn_i6_vis wot torque_nm@5500 226.46055272018995
-value syn_i6_vis wot power_kw@5500 130.43191493816602
-value syn_i6_vis wot ve@5500 0.9126198352199516
-value syn_i6_vis wot ve_dynamic@5500 1.0016231839284941
-value syn_i6_vis wot lambda@5500 0.8786229999380177
-value syn_i6_vis wot torque_nm@6000 222.0564708854669
-value syn_i6_vis wot power_kw@6000 139.52219552317172
-value syn_i6_vis wot ve@6000 0.9076548863423095
-value syn_i6_vis wot ve_dynamic@6000 1.013393161392374
-value syn_i6_vis wot lambda@6000 0.8799801337043006
-value syn_i6_vis wot torque_nm@6500 215.9175541148553
-value syn_i6_vis wot power_kw@6500 146.97041705413295
-value syn_i6_vis wot ve@6500 0.8971663343454452
+value syn_i6_vis wot torque_nm@5000 234.53961439354256
+value syn_i6_vis wot power_kw@5000 122.80465492575604
+value syn_i6_vis wot ve@5000 0.9313136790060518
+value syn_i6_vis wot ve_dynamic@5000 1.0090108170370515
+value syn_i6_vis wot lambda@5000 0.8771527596657396
+value syn_i6_vis wot torque_nm@5500 230.00233538464548
+value syn_i6_vis wot power_kw@5500 132.47183531136463
+value syn_i6_vis wot ve@5500 0.9253351051085361
+value syn_i6_vis wot ve_dynamic@5500 1.0182344807644537
+value syn_i6_vis wot lambda@5500 0.8782936702133071
+value syn_i6_vis wot torque_nm@6000 223.39758258604508
+value syn_i6_vis wot power_kw@6000 140.36484085640768
+value syn_i6_vis wot ve@6000 0.9125251360700178
+value syn_i6_vis wot ve_dynamic@6000 1.0201296595550418
+value syn_i6_vis wot lambda@6000 0.8802483227793259
+value syn_i6_vis wot torque_nm@6500 215.9247993210957
+value syn_i6_vis wot power_kw@6500 146.9753487095843
+value syn_i6_vis wot ve@6500 0.8971663904488527
 value syn_i6_vis wot ve_dynamic@6500 1.019643971667812
-value syn_i6_vis wot lambda@6500 0.8815337185997871
-value syn_i6_vis wot torque_nm@7000 -42.0699232718954
-value syn_i6_vis wot power_kw@7000 -30.838864440550328
-value syn_i6_vis wot ve@7000 0.87915272244912
+value syn_i6_vis wot lambda@6500 0.8815337778136615
+value syn_i6_vis wot torque_nm@7000 -42.06271174071696
+value syn_i6_vis wot power_kw@7000 -30.833578112097026
+value syn_i6_vis wot ve@7000 0.8791527224509691
 value syn_i6_vis wot ve_dynamic@7000 1.0207108463414507
 value syn_i6_vis wot lambda@7000 0
-value syn_i6_vis wot torque_nm@7500 -45.12715738276587
-value syn_i6_vis wot power_kw@7500 -35.44278652777191
-value syn_i6_vis wot ve@7500 0.863664967278755
+value syn_i6_vis wot torque_nm@7500 -45.1199376902604
+value syn_i6_vis wot power_kw@7500 -35.43711619453782
+value syn_i6_vis wot ve@7500 0.8636649672787551
 value syn_i6_vis wot ve_dynamic@7500 1.018807351552115
 value syn_i6_vis wot lambda@7500 0
-value syn_i6_vis wot peak_power_kw 149.98220287972043
+value syn_i6_vis wot peak_power_kw 149.9872837934587
 value syn_i6_vis wot peak_power_rpm 6750
-value syn_i6_vis wot peak_torque_nm 237.01519966824432
+value syn_i6_vis wot peak_torque_nm 237.01520327402628
 value syn_i6_vis wot peak_torque_rpm 4250
-digest syn_i6_vis partload 96712074f35c737581d279a8e35cd22d542e17434c60e2b12218659108027aa6 samples=36 channels=112
-digest syn_i6_vis dyno_sweep dca8195dd6189d045e7e53564e3fe55f74e7566a60edb9d5ef227c1d9da1372e samples=200 channels=112
+digest syn_i6_vis partload 030cfe007f4e4441ac280899ac88424c00a7c0d70e1b5238992365c008b22212 samples=36 channels=112
+digest syn_i6_vis dyno_sweep f0c30d6ad2634b69d2cf9fcad40ed6aa00222043e77f25ebeeaea17dbe42fdb6 samples=200 channels=112
 value syn_i6_vis dyno_sweep phase Finished
 value syn_i6_vis dyno_sweep abort 
 value syn_i6_vis dyno_sweep note Reached the rev limiter at 7000 rpm.
-value syn_i6_vis dyno_sweep peak_power_kw 151.91026959201054
+value syn_i6_vis dyno_sweep peak_power_kw 151.9135051314812
 value syn_i6_vis dyno_sweep peak_power_rpm 6975
-value syn_i6_vis dyno_sweep peak_torque_nm 236.93390554365217
+value syn_i6_vis dyno_sweep peak_torque_nm 236.93390761798454
 value syn_i6_vis dyno_sweep peak_torque_rpm 4300
 case syn_h4_turbo Synthetic family syn_h4_turbo, its calibrated tune on gasoline_98
 digest syn_h4_turbo geometry 909c070f115bdf77a22dc63756c88e37dfb0b3ab7c358466e59652550e883ac4 samples=3 channels=24
@@ -3059,7 +3060,7 @@ value syn_v6_tt geometry displacement_cc 2997.3432853075647
 value syn_v6_tt geometry compression_ratio 9.202382418845458
 value syn_v6_tt geometry mass_kg 197.07999999999998
 value syn_v6_tt geometry issues [Info] compression_ratio: Static compression ratio 9.20:1 (3.00 L, bore 86.0 × stroke 86.0 mm).
-digest syn_v6_tt wot 1f1b4eea85d0bdc61e2cf274aa1a03db24e938630b7ab3f8a3ddeafbc4a4ee28 samples=27 channels=118
+digest syn_v6_tt wot c7dc8d2558c1fb7a4d212330a4f239300060a064267fb570354e61f010c5399e samples=27 channels=118
 value syn_v6_tt wot torque_nm@1000 229.200395559624
 value syn_v6_tt wot power_kw@1000 24.00180929633298
 value syn_v6_tt wot ve@1000 0.7747764459756151
@@ -3080,68 +3081,68 @@ value syn_v6_tt wot power_kw@2500 82.18891503042308
 value syn_v6_tt wot ve@2500 1.0298348682034137
 value syn_v6_tt wot ve_dynamic@2500 1.0185219657522457
 value syn_v6_tt wot lambda@2500 0.8752383822496559
-value syn_v6_tt wot torque_nm@3000 321.7957676803546
-value syn_v6_tt wot power_kw@3000 101.09512197008898
-value syn_v6_tt wot ve@3000 1.0622733301177745
-value syn_v6_tt wot ve_dynamic@3000 1.0149262456070067
-value syn_v6_tt wot lambda@3000 0.8729344954189996
-value syn_v6_tt wot torque_nm@3500 335.9960585584494
-value syn_v6_tt wot power_kw@3500 123.1489874069409
-value syn_v6_tt wot ve@3500 1.1155866319009051
-value syn_v6_tt wot ve_dynamic@3500 1.0173474034623902
-value syn_v6_tt wot lambda@3500 0.8569180532605317
-value syn_v6_tt wot torque_nm@4000 361.01018205983877
-value syn_v6_tt wot power_kw@4000 151.21959144404042
-value syn_v6_tt wot ve@4000 1.2032456392464725
-value syn_v6_tt wot ve_dynamic@4000 1.0188224921740192
-value syn_v6_tt wot lambda@4000 0.8274825229301052
-value syn_v6_tt wot torque_nm@4500 407.9026282451613
-value syn_v6_tt wot power_kw@4500 192.21958504124507
-value syn_v6_tt wot ve@4500 1.3598907927406492
-value syn_v6_tt wot ve_dynamic@4500 1.0192697128175177
-value syn_v6_tt wot lambda@4500 0.7959338262556978
-value syn_v6_tt wot torque_nm@5000 532.6207277113867
-value syn_v6_tt wot power_kw@5000 278.879560887957
-value syn_v6_tt wot ve@5000 1.7518153579446276
-value syn_v6_tt wot ve_dynamic@5000 1.0196404325329227
-value syn_v6_tt wot lambda@5000 0.7959679365330566
-value syn_v6_tt wot torque_nm@5500 513.8042381277648
-value syn_v6_tt wot power_kw@5500 295.9299969790059
-value syn_v6_tt wot ve@5500 1.7124356618580123
+value syn_v6_tt wot torque_nm@3000 321.7850972662341
+value syn_v6_tt wot power_kw@3000 101.09176976062783
+value syn_v6_tt wot ve@3000 1.0622420652145812
+value syn_v6_tt wot ve_dynamic@3000 1.014920310245755
+value syn_v6_tt wot lambda@3000 0.8729354429340395
+value syn_v6_tt wot torque_nm@3500 335.99547948490033
+value syn_v6_tt wot power_kw@3500 123.1487751654
+value syn_v6_tt wot ve@3500 1.1155849535371365
+value syn_v6_tt wot ve_dynamic@3500 1.0173474034568355
+value syn_v6_tt wot lambda@3500 0.8569184557285582
+value syn_v6_tt wot torque_nm@4000 360.8170109571496
+value syn_v6_tt wot power_kw@4000 151.1386761217612
+value syn_v6_tt wot ve@4000 1.2026647002790054
+value syn_v6_tt wot ve_dynamic@4000 1.0185963192077057
+value syn_v6_tt wot lambda@4000 0.8274230271508191
+value syn_v6_tt wot torque_nm@4500 407.8450460390557
+value syn_v6_tt wot power_kw@4500 192.19245006589327
+value syn_v6_tt wot ve@4500 1.3597211066885264
+value syn_v6_tt wot ve_dynamic@4500 1.0192694991142177
+value syn_v6_tt wot lambda@4500 0.7959308761716648
+value syn_v6_tt wot torque_nm@5000 532.6175660093206
+value syn_v6_tt wot power_kw@5000 278.8779054246264
+value syn_v6_tt wot ve@5000 1.7518119892821005
+value syn_v6_tt wot ve_dynamic@5000 1.0196404325327106
+value syn_v6_tt wot lambda@5000 0.7959659928207634
+value syn_v6_tt wot torque_nm@5500 513.80405420417
+value syn_v6_tt wot power_kw@5500 295.92989104661996
+value syn_v6_tt wot ve@5500 1.7124356693797815
 value syn_v6_tt wot ve_dynamic@5500 1.0198426761784818
-value syn_v6_tt wot lambda@5500 0.7959855739979009
-value syn_v6_tt wot torque_nm@6000 494.4209406092867
-value syn_v6_tt wot power_kw@6000 310.65383895981813
-value syn_v6_tt wot ve@6000 1.6728311557042488
-value syn_v6_tt wot ve_dynamic@6000 1.0199465296915677
-value syn_v6_tt wot lambda@6000 0.7955697028037243
-value syn_v6_tt wot torque_nm@6500 469.3449333015332
-value syn_v6_tt wot power_kw@6500 319.47296213293237
-value syn_v6_tt wot ve@6500 1.6190753170941012
-value syn_v6_tt wot ve_dynamic@6500 1.0173071915258929
-value syn_v6_tt wot lambda@6500 0.7948919812783463
-value syn_v6_tt wot torque_nm@7000 -58.18604414482414
-value syn_v6_tt wot power_kw@7000 -42.65259805959388
-value syn_v6_tt wot ve@7000 0.8517128091696946
-value syn_v6_tt wot ve_dynamic@7000 1.0156963422135712
+value syn_v6_tt wot lambda@5500 0.7959855744401031
+value syn_v6_tt wot torque_nm@6000 494.9440860043005
+value syn_v6_tt wot power_kw@6000 310.98254090576506
+value syn_v6_tt wot ve@6000 1.6727568777879
+value syn_v6_tt wot ve_dynamic@6000 1.0199476599422614
+value syn_v6_tt wot lambda@6000 0.7989700928247986
+value syn_v6_tt wot torque_nm@6500 470.1275906448865
+value syn_v6_tt wot power_kw@6500 320.00570008763304
+value syn_v6_tt wot ve@6500 1.6215513194956195
+value syn_v6_tt wot ve_dynamic@6500 1.0199913935386284
+value syn_v6_tt wot lambda@6500 0.7956294472988865
+value syn_v6_tt wot torque_nm@7000 -58.18736433974948
+value syn_v6_tt wot power_kw@7000 -42.65356581301892
+value syn_v6_tt wot ve@7000 0.851772551661825
+value syn_v6_tt wot ve_dynamic@7000 1.0158655896702813
 value syn_v6_tt wot lambda@7000 0
-value syn_v6_tt wot torque_nm@7500 -63.085781264633695
-value syn_v6_tt wot power_kw@7500 -49.547456741736454
-value syn_v6_tt wot ve@7500 0.8117580760001623
-value syn_v6_tt wot ve_dynamic@7500 1.0064173091807846
+value syn_v6_tt wot torque_nm@7500 -63.084818257500494
+value syn_v6_tt wot power_kw@7500 -49.5467003977027
+value syn_v6_tt wot ve@7500 0.8117580774543465
+value syn_v6_tt wot ve_dynamic@7500 1.0064173099519824
 value syn_v6_tt wot lambda@7500 0
-value syn_v6_tt wot peak_power_kw 323.999241463727
+value syn_v6_tt wot peak_power_kw 324.02735987365617
 value syn_v6_tt wot peak_power_rpm 6750
-value syn_v6_tt wot peak_torque_nm 532.6207277113867
+value syn_v6_tt wot peak_torque_nm 532.6175660093206
 value syn_v6_tt wot peak_torque_rpm 5000
-digest syn_v6_tt partload 83511cb9846d200e3d4e760787d96d1441ce9e04c2bfd776b59b102887123f89 samples=36 channels=118
-digest syn_v6_tt dyno_sweep 9b5ed6c67337651274bdaea7c6216bed089d1329b9e8f717311338ade9ab069a samples=200 channels=118
+digest syn_v6_tt partload af7bbc4bd098d7c7a16f2e61d4005dd212ff05ab0afe39793a7fcde6fc0c6611 samples=36 channels=118
+digest syn_v6_tt dyno_sweep 551d139626067d464a9bd9b060636d935630c19746598bef834d7e270cc4f6eb samples=200 channels=118
 value syn_v6_tt dyno_sweep phase Finished
 value syn_v6_tt dyno_sweep abort 
 value syn_v6_tt dyno_sweep note Reached the rev limiter at 7000 rpm.
-value syn_v6_tt dyno_sweep peak_power_kw 325.23599933321196
+value syn_v6_tt dyno_sweep peak_power_kw 324.9958533658811
 value syn_v6_tt dyno_sweep peak_power_rpm 6975
-value syn_v6_tt dyno_sweep peak_torque_nm 526.5313342968935
+value syn_v6_tt dyno_sweep peak_torque_nm 526.5294081636945
 value syn_v6_tt dyno_sweep peak_torque_rpm 5325
 case syn_v8_ohv Synthetic family syn_v8_ohv, its calibrated tune on gasoline_95
 digest syn_v8_ohv geometry 9bf07ef8b37be19d4f2fc506d2b09d2854b1a6ea62b712bd16d287a9ccfd92cd samples=3 channels=24
@@ -3149,7 +3150,7 @@ value syn_v8_ohv geometry displacement_cc 3941.7940015709573
 value syn_v8_ohv geometry compression_ratio 9.401999957263484
 value syn_v8_ohv geometry mass_kg 190.96
 value syn_v8_ohv geometry issues [Info] compression_ratio: Static compression ratio 9.40:1 (3.94 L, bore 94.0 × stroke 71.0 mm).
-digest syn_v8_ohv wot 5930f051305d0cf1b078ae40e7f52620526df5e12302eb748ba68651aebd30fc samples=23 channels=112
+digest syn_v8_ohv wot 938c957e15479060e48c0d79522e50833f45c1e07b0832ff2bf8c437cce54648 samples=23 channels=112
 value syn_v8_ohv wot torque_nm@1000 255.16859768296516
 value syn_v8_ohv wot power_kw@1000 26.72119306358709
 value syn_v8_ohv wot ve@1000 0.6629492510977244
@@ -3160,68 +3161,68 @@ value syn_v8_ohv wot power_kw@1500 45.72038823077826
 value syn_v8_ohv wot ve@1500 0.7278050696853897
 value syn_v8_ohv wot ve_dynamic@1500 0.7386417223586338
 value syn_v8_ohv wot lambda@1500 0.8772918008250051
-value syn_v8_ohv wot torque_nm@2000 315.6590480553778
-value syn_v8_ohv wot power_kw@2000 66.11147642732816
-value syn_v8_ohv wot ve@2000 0.7823901217007765
+value syn_v8_ohv wot torque_nm@2000 315.6770649215013
+value syn_v8_ohv wot power_kw@2000 66.11524987094512
+value syn_v8_ohv wot ve@2000 0.7823901911015626
 value syn_v8_ohv wot ve_dynamic@2000 0.7998558351393438
-value syn_v8_ohv wot lambda@2000 0.8770209085933679
-value syn_v8_ohv wot torque_nm@2500 332.08059224118205
-value syn_v8_ohv wot power_kw@2500 86.93849574872044
-value syn_v8_ohv wot ve@2500 0.82595675325832
+value syn_v8_ohv wot lambda@2000 0.8770209868338675
+value syn_v8_ohv wot torque_nm@2500 332.08059615806275
+value syn_v8_ohv wot power_kw@2500 86.93849677415741
+value syn_v8_ohv wot ve@2500 0.8259567535345077
 value syn_v8_ohv wot ve_dynamic@2500 0.8535700905098721
-value syn_v8_ohv wot lambda@2500 0.8774705877974305
-value syn_v8_ohv wot torque_nm@3000 342.79066275051656
-value syn_v8_ohv wot power_kw@3000 107.69086278161991
-value syn_v8_ohv wot ve@3000 0.8581598820125039
+value syn_v8_ohv wot lambda@2500 0.8774705880937843
+value syn_v8_ohv wot torque_nm@3000 342.7906668018545
+value syn_v8_ohv wot power_kw@3000 107.69086405438529
+value syn_v8_ohv wot ve@3000 0.858159882012524
 value syn_v8_ohv wot ve_dynamic@3000 0.8997845591229394
-value syn_v8_ohv wot lambda@3000 0.877195545225695
-value syn_v8_ohv wot torque_nm@3500 348.24276038179335
-value syn_v8_ohv wot power_kw@3500 127.63763806281513
+value syn_v8_ohv wot lambda@3000 0.8771955452257156
+value syn_v8_ohv wot torque_nm@3500 348.24276473957195
+value syn_v8_ohv wot power_kw@3500 127.6376396600244
 value syn_v8_ohv wot ve@3500 0.8790923060200639
 value syn_v8_ohv wot ve_dynamic@3500 0.9384993910735565
 value syn_v8_ohv wot lambda@3500 0.8762952117032455
-value syn_v8_ohv wot torque_nm@4000 348.7218638834974
-value syn_v8_ohv wot power_kw@4000 146.0722727630047
+value syn_v8_ohv wot torque_nm@4000 348.72186846301594
+value syn_v8_ohv wot power_kw@4000 146.07227468126894
 value syn_v8_ohv wot ve@4000 0.8892833671859964
 value syn_v8_ohv wot ve_dynamic@4000 0.9697148918210237
 value syn_v8_ohv wot lambda@4000 0.8769540256683354
-value syn_v8_ohv wot torque_nm@4500 344.6728649193047
-value syn_v8_ohv wot power_kw@4500 162.4232610483352
+value syn_v8_ohv wot torque_nm@4500 344.672869644474
+value syn_v8_ohv wot power_kw@4500 162.4232632750188
 value syn_v8_ohv wot ve@4500 0.8897081684631577
 value syn_v8_ohv wot ve_dynamic@4500 0.9934316563670627
 value syn_v8_ohv wot lambda@4500 0.8793522770970132
-value syn_v8_ohv wot torque_nm@5000 336.59102337412804
-value syn_v8_ohv wot power_kw@5000 176.23864771607182
+value syn_v8_ohv wot torque_nm@5000 336.59102847553646
+value syn_v8_ohv wot power_kw@5000 176.23865038716303
 value syn_v8_ohv wot ve@5000 0.8816559601184552
 value syn_v8_ohv wot ve_dynamic@5000 1.0096507928907554
 value syn_v8_ohv wot lambda@5000 0.882104977991742
-value syn_v8_ohv wot torque_nm@5500 325.2871498704435
-value syn_v8_ohv wot power_kw@5500 187.35194872902701
+value syn_v8_ohv wot torque_nm@5500 325.2871549861481
+value syn_v8_ohv wot power_kw@5500 187.35195167546135
 value syn_v8_ohv wot ve@5500 0.8665376408083073
 value syn_v8_ohv wot ve_dynamic@5500 1.0183742723311155
 value syn_v8_ohv wot lambda@5500 0.884397039416553
-value syn_v8_ohv wot torque_nm@6000 -55.02831741476206
-value syn_v8_ohv wot power_kw@6000 -34.57531154592475
+value syn_v8_ohv wot torque_nm@6000 -55.02831228750108
+value syn_v8_ohv wot power_kw@6000 -34.57530832437167
 value syn_v8_ohv wot ve@6000 0.8431784070619194
 value syn_v8_ohv wot ve_dynamic@6000 1.0198196774296844
 value syn_v8_ohv wot lambda@6000 0
-value syn_v8_ohv wot torque_nm@6500 -59.36745087983066
-value syn_v8_ohv wot power_kw@6500 -40.41014196839293
+value syn_v8_ohv wot torque_nm@6500 -59.36744573820482
+value syn_v8_ohv wot power_kw@6500 -40.41013846859923
 value syn_v8_ohv wot ve@6500 0.8208828221086408
 value syn_v8_ohv wot ve_dynamic@6500 1.016706487485438
 value syn_v8_ohv wot lambda@6500 0
-value syn_v8_ohv wot peak_power_kw 192.12881493399198
+value syn_v8_ohv wot peak_power_kw 192.1288180061979
 value syn_v8_ohv wot peak_power_rpm 5750
-value syn_v8_ohv wot peak_torque_nm 349.0901305278947
+value syn_v8_ohv wot peak_torque_nm 349.09013500659586
 value syn_v8_ohv wot peak_torque_rpm 3750
-digest syn_v8_ohv partload 91669bd2d1f8a72adb64b47bf71b3e58bbf78d69d0e50a329835442451657a76 samples=30 channels=112
-digest syn_v8_ohv dyno_sweep c4609908547004c3f50a803be967e597898f1d071b4ee2711de28ee3f3333486 samples=152 channels=112
+digest syn_v8_ohv partload 8fed65fd7108a770a8b40791a71bcd69a8c750b01e35cc14d2d6c789d09c4073 samples=30 channels=112
+digest syn_v8_ohv dyno_sweep c59f050ac7f57a566448db8fc5213a310f0d949abcfc780996c8b36c3f7ad74a samples=152 channels=112
 value syn_v8_ohv dyno_sweep phase Finished
 value syn_v8_ohv dyno_sweep abort 
 value syn_v8_ohv dyno_sweep note Reached the rev limiter at 5800 rpm.
-value syn_v8_ohv dyno_sweep peak_power_kw 192.12070025084333
+value syn_v8_ohv dyno_sweep peak_power_kw 192.12070131220196
 value syn_v8_ohv dyno_sweep peak_power_rpm 5775
-value syn_v8_ohv dyno_sweep peak_torque_nm 348.98473560754235
+value syn_v8_ohv dyno_sweep peak_torque_nm 348.98473698738394
 value syn_v8_ohv dyno_sweep peak_torque_rpm 3800
 case syn_v8_dohc_vvt Synthetic family syn_v8_dohc_vvt, its calibrated tune on gasoline_98
 digest syn_v8_dohc_vvt geometry 6ebc657cf5a828ac0fc736b15bcbe239eb92e4f8b36e9db288700f8137e44499 samples=3 channels=24
@@ -3229,7 +3230,7 @@ value syn_v8_dohc_vvt geometry displacement_cc 3988.5660329976013
 value syn_v8_dohc_vvt geometry compression_ratio 10.804865881802666
 value syn_v8_dohc_vvt geometry mass_kg 182.52000000000004
 value syn_v8_dohc_vvt geometry issues [Info] compression_ratio: Static compression ratio 10.80:1 (3.99 L, bore 92.0 × stroke 75.0 mm).
-digest syn_v8_dohc_vvt wot a7ee0ba75fd1aa97c0edd28ed2d5c9a28a91318e7730919ecb3171db9e493320 samples=29 channels=112
+digest syn_v8_dohc_vvt wot 099c60356e7ac282e76d7e3bba65f51c0e86f6ae525894c7c2dae43a094c6d26 samples=29 channels=112
 value syn_v8_dohc_vvt wot torque_nm@1000 306.0544268896434
 value syn_v8_dohc_vvt wot power_kw@1000 32.04994463717127
 value syn_v8_dohc_vvt wot ve@1000 0.7642762682971161
@@ -3245,92 +3246,92 @@ value syn_v8_dohc_vvt wot power_kw@2000 86.96044526802488
 value syn_v8_dohc_vvt wot ve@2000 0.9710362646127009
 value syn_v8_dohc_vvt wot ve_dynamic@2000 0.9895589537109285
 value syn_v8_dohc_vvt wot lambda@2000 0.8745762678215844
-value syn_v8_dohc_vvt wot torque_nm@2500 425.3865453044437
-value syn_v8_dohc_vvt wot power_kw@2500 111.3659371386985
-value syn_v8_dohc_vvt wot ve@2500 0.9936463773486116
+value syn_v8_dohc_vvt wot torque_nm@2500 425.3721716911775
+value syn_v8_dohc_vvt wot power_kw@2500 111.36217413554496
+value syn_v8_dohc_vvt wot ve@2500 0.9936462799733691
 value syn_v8_dohc_vvt wot ve_dynamic@2500 1.0198470190861266
-value syn_v8_dohc_vvt wot lambda@2500 0.8747351019693571
-value syn_v8_dohc_vvt wot torque_nm@3000 418.3664569045983
-value syn_v8_dohc_vvt wot power_kw@3000 131.4336987519877
-value syn_v8_dohc_vvt wot ve@3000 0.9852788301141615
+value syn_v8_dohc_vvt wot lambda@2500 0.8747350155234183
+value syn_v8_dohc_vvt wot torque_nm@3000 418.36644993828224
+value syn_v8_dohc_vvt wot power_kw@3000 131.43369656345496
+value syn_v8_dohc_vvt wot ve@3000 0.9852788297592773
 value syn_v8_dohc_vvt wot ve_dynamic@3000 1.0191359249606178
-value syn_v8_dohc_vvt wot lambda@3000 0.8742209877931334
-value syn_v8_dohc_vvt wot torque_nm@3500 410.46898628398566
-value syn_v8_dohc_vvt wot power_kw@3500 150.44474104755886
-value syn_v8_dohc_vvt wot ve@3500 0.9757428859124035
+value syn_v8_dohc_vvt wot lambda@3000 0.8742209874745076
+value syn_v8_dohc_vvt wot torque_nm@3500 410.46897917192973
+value syn_v8_dohc_vvt wot power_kw@3500 150.44473844085422
+value syn_v8_dohc_vvt wot ve@3500 0.9757428859123821
 value syn_v8_dohc_vvt wot ve_dynamic@3500 1.0184377426694928
-value syn_v8_dohc_vvt wot lambda@3500 0.8745493313582174
-value syn_v8_dohc_vvt wot torque_nm@4000 402.2591192251727
-value syn_v8_dohc_vvt wot power_kw@4000 168.49790583964042
+value syn_v8_dohc_vvt wot lambda@3500 0.8745493313581982
+value syn_v8_dohc_vvt wot torque_nm@4000 402.25911176082207
+value syn_v8_dohc_vvt wot power_kw@4000 168.49790271298053
 value syn_v8_dohc_vvt wot ve@4000 0.9660915773911013
 value syn_v8_dohc_vvt wot ve_dynamic@4000 1.018809934006388
 value syn_v8_dohc_vvt wot lambda@4000 0.8740675162980188
-value syn_v8_dohc_vvt wot torque_nm@4500 393.9056779124932
-value syn_v8_dohc_vvt wot power_kw@4500 185.62367759057938
+value syn_v8_dohc_vvt wot torque_nm@4500 393.9056702203659
+value syn_v8_dohc_vvt wot power_kw@4500 185.62367396574976
 value syn_v8_dohc_vvt wot ve@4500 0.9566660317399973
 value syn_v8_dohc_vvt wot ve_dynamic@4500 1.0206752889512005
 value syn_v8_dohc_vvt wot lambda@4500 0.8739604617079918
-value syn_v8_dohc_vvt wot torque_nm@5000 385.0661176736231
-value syn_v8_dohc_vvt wot power_kw@5000 201.62014773829952
-value syn_v8_dohc_vvt wot ve@5000 0.9465230994595649
-value syn_v8_dohc_vvt wot ve_dynamic@5000 1.0229413154652547
-value syn_v8_dohc_vvt wot lambda@5000 0.875611612078896
-value syn_v8_dohc_vvt wot torque_nm@5500 376.05454555485386
-value syn_v8_dohc_vvt wot power_kw@5500 216.59186957176578
-value syn_v8_dohc_vvt wot ve@5500 0.9362568785508658
-value syn_v8_dohc_vvt wot ve_dynamic@5500 1.0262582319948492
-value syn_v8_dohc_vvt wot lambda@5500 0.8776434990013997
-value syn_v8_dohc_vvt wot torque_nm@6000 366.6896363523394
-value syn_v8_dohc_vvt wot power_kw@6000 230.39789354240443
+value syn_v8_dohc_vvt wot torque_nm@5000 385.0661091689366
+value syn_v8_dohc_vvt wot power_kw@5000 201.6201432852561
+value syn_v8_dohc_vvt wot ve@5000 0.9465230991511158
+value syn_v8_dohc_vvt wot ve_dynamic@5000 1.0229413150119435
+value syn_v8_dohc_vvt wot lambda@5000 0.8756116117781195
+value syn_v8_dohc_vvt wot torque_nm@5500 376.05453716017996
+value syn_v8_dohc_vvt wot power_kw@5500 216.59186473678074
+value syn_v8_dohc_vvt wot ve@5500 0.936256878550868
+value syn_v8_dohc_vvt wot ve_dynamic@5500 1.0262582319948488
+value syn_v8_dohc_vvt wot lambda@5500 0.8776434990014028
+value syn_v8_dohc_vvt wot torque_nm@6000 366.6896280406963
+value syn_v8_dohc_vvt wot power_kw@6000 230.39788832004504
 value syn_v8_dohc_vvt wot ve@6000 0.925786782891497
 value syn_v8_dohc_vvt wot ve_dynamic@6000 1.031028825555972
 value syn_v8_dohc_vvt wot lambda@6000 0.8786750345477656
-value syn_v8_dohc_vvt wot torque_nm@6500 356.9079717218501
-value syn_v8_dohc_vvt wot power_kw@6500 242.93955009328286
+value syn_v8_dohc_vvt wot torque_nm@6500 356.9079635718504
+value syn_v8_dohc_vvt wot power_kw@6500 242.93954454575405
 value syn_v8_dohc_vvt wot ve@6500 0.9148605062058279
 value syn_v8_dohc_vvt wot ve_dynamic@6500 1.0369377679049787
 value syn_v8_dohc_vvt wot lambda@6500 0.8809654664341192
-value syn_v8_dohc_vvt wot torque_nm@7000 347.4002602712182
-value syn_v8_dohc_vvt wot power_kw@7000 254.65769128875627
+value syn_v8_dohc_vvt wot torque_nm@7000 347.40025234877396
+value syn_v8_dohc_vvt wot power_kw@7000 254.65768548130131
 value syn_v8_dohc_vvt wot ve@7000 0.9050688054537522
 value syn_v8_dohc_vvt wot ve_dynamic@7000 1.043114330823483
 value syn_v8_dohc_vvt wot lambda@7000 0.881949162875755
-value syn_v8_dohc_vvt wot torque_nm@7500 -70.78303891072814
-value syn_v8_dohc_vvt wot power_kw@7500 -55.592868760175996
+value syn_v8_dohc_vvt wot torque_nm@7500 -70.78304665402436
+value syn_v8_dohc_vvt wot power_kw@7500 -55.59287484174663
 value syn_v8_dohc_vvt wot ve@7500 0.8889433515960163
 value syn_v8_dohc_vvt wot ve_dynamic@7500 1.0476028921810951
 value syn_v8_dohc_vvt wot lambda@7500 0
-value syn_v8_dohc_vvt wot torque_nm@8000 -75.76685177011669
-value syn_v8_dohc_vvt wot power_kw@8000 -63.474289308433434
+value syn_v8_dohc_vvt wot torque_nm@8000 -75.76685938115403
+value syn_v8_dohc_vvt wot power_kw@8000 -63.47429568464118
 value syn_v8_dohc_vvt wot ve@8000 0.8734016639774638
 value syn_v8_dohc_vvt wot ve_dynamic@8000 1.0464784475377487
 value syn_v8_dohc_vvt wot lambda@8000 0
-value syn_v8_dohc_vvt wot peak_power_kw 259.53676797191866
+value syn_v8_dohc_vvt wot peak_power_kw 259.5367620593077
 value syn_v8_dohc_vvt wot peak_power_rpm 7250
-value syn_v8_dohc_vvt wot peak_torque_nm 425.3865453044437
+value syn_v8_dohc_vvt wot peak_torque_nm 425.3721716911775
 value syn_v8_dohc_vvt wot peak_torque_rpm 2500
 digest syn_v8_dohc_vvt partload 2259be5474e0bde6413f8cdcb90d95a0b224da58ac47baba2bf496c8ff36acb6 samples=42 channels=112
-digest syn_v8_dohc_vvt dyno_sweep 0915b2418f56ef7ed374dd1d26942145ed9cb05a68683f11cb0ba4965d722526 samples=220 channels=112
+digest syn_v8_dohc_vvt dyno_sweep 635b5463d79c9df73425d1751d394b69b61870cdc02cab4b0ef33f2568e61fa1 samples=220 channels=112
 value syn_v8_dohc_vvt dyno_sweep phase Finished
 value syn_v8_dohc_vvt dyno_sweep abort 
 value syn_v8_dohc_vvt dyno_sweep note Reached the rev limiter at 7500 rpm.
-value syn_v8_dohc_vvt dyno_sweep peak_power_kw 262.01703961433816
+value syn_v8_dohc_vvt dyno_sweep peak_power_kw 262.017034798428
 value syn_v8_dohc_vvt dyno_sweep peak_power_rpm 7475
-value syn_v8_dohc_vvt dyno_sweep peak_torque_nm 425.6287348913213
+value syn_v8_dohc_vvt dyno_sweep peak_torque_nm 425.6103078886833
 value syn_v8_dohc_vvt dyno_sweep peak_torque_rpm 2425
 case drive_syn_v6_tt_swap Twin-turbo V6 swapped into the Isar C30, RON 98: out lap + 1 lap
-digest drive_syn_v6_tt_swap drive 8b9ee71e2c94ca4e74710e58b5191c6590ba8789fa135f43fce700657a3dade9 samples=1047 channels=159
-value drive_syn_v6_tt_swap drive lap1_s 50.953999999917905
+digest drive_syn_v6_tt_swap drive ee9dd8de978b3e73330f7180c3ec69485e34fa963f7df18e0d9c1cea898fd75c samples=1047 channels=159
+value drive_syn_v6_tt_swap drive lap1_s 50.9539999999179
 value drive_syn_v6_tt_swap drive laps 1
 value drive_syn_v6_tt_swap drive autopilot_recoveries 0
-digest drive_syn_v6_tt_swap wear 80eead1bbf1a13a50dc31181f61dbb1a06692ec92ad414f395264f9bea8dd876 samples=0 channels=0
-value drive_syn_v6_tt_swap wear brakes.wear 0.007181899446848894
-value drive_syn_v6_tt_swap wear clutch.wear 0.010862289453990731
+digest drive_syn_v6_tt_swap wear 553cb4a82589219356f8531556c2b5884da5ca2d15f4bb2d0419a0754a4edab5 samples=0 channels=0
+value drive_syn_v6_tt_swap wear brakes.wear 0.0071797100619944345
+value drive_syn_v6_tt_swap wear clutch.wear 0.010853790981983271
 value drive_syn_v6_tt_swap wear differential.wear 0
 value drive_syn_v6_tt_swap wear gearbox.wear 0
 value drive_syn_v6_tt_swap wear suspension.wear 0
-value drive_syn_v6_tt_swap wear tires_front.wear 0.004786312683504433
-value drive_syn_v6_tt_swap wear tires_rear.wear 0.007820801168136899
+value drive_syn_v6_tt_swap wear tires_front.wear 0.004786347998812444
+value drive_syn_v6_tt_swap wear tires_rear.wear 0.00782430872771247
 value drive_syn_v6_tt_swap wear seized false
 value drive_syn_v6_tt_swap wear warnings 
 value drive_syn_v6_tt_swap wear exhaust.sport_63mm.wear 0
@@ -3403,7 +3404,7 @@ value drive_syn_v6_tt_swap wear syn.v6tt.oil_pump.wear 0
 value drive_syn_v6_tt_swap wear syn.v6tt.oil_pump.fatigue 0
 value drive_syn_v6_tt_swap wear syn.v6tt.oil_pump.inspection Good:Within specification.
 value drive_syn_v6_tt_swap wear syn.v6tt.pistons.wear 2.09395999999974E-05
-value drive_syn_v6_tt_swap wear syn.v6tt.pistons.fatigue 3.063557759879368E-05
+value drive_syn_v6_tt_swap wear syn.v6tt.pistons.fatigue 3.061037304196118E-05
 value drive_syn_v6_tt_swap wear syn.v6tt.pistons.inspection Good:Within specification.
 value drive_syn_v6_tt_swap wear syn.v6tt.rod_bearings.wear 2.09395999999974E-05
 value drive_syn_v6_tt_swap wear syn.v6tt.rod_bearings.fatigue 0
@@ -3417,9 +3418,9 @@ value drive_syn_v6_tt_swap wear syn.v6tt.valve_springs.inspection Good:Within sp
 value drive_syn_v6_tt_swap wear syn.v6tt.valve_springs.wear 0
 value drive_syn_v6_tt_swap wear syn.v6tt.valve_springs.fatigue 0
 value drive_syn_v6_tt_swap wear syn.v6tt.valve_springs.inspection Good:Within specification.
-value drive_syn_v6_tt_swap wear turbo.t25_small.wear 0.005580914429192606
-value drive_syn_v6_tt_swap wear turbo.t25_small.fatigue 2.366777268602685E-05
+value drive_syn_v6_tt_swap wear turbo.t25_small.wear 0.0055663197144640904
+value drive_syn_v6_tt_swap wear turbo.t25_small.fatigue 2.4445456537753864E-05
 value drive_syn_v6_tt_swap wear turbo.t25_small.inspection Good:Within specification.
-value drive_syn_v6_tt_swap wear turbo.t25_small.wear 0.005580914429192606
-value drive_syn_v6_tt_swap wear turbo.t25_small.fatigue 2.366777268602685E-05
+value drive_syn_v6_tt_swap wear turbo.t25_small.wear 0.0055663197144640904
+value drive_syn_v6_tt_swap wear turbo.t25_small.fatigue 2.4445456537753864E-05
 value drive_syn_v6_tt_swap wear turbo.t25_small.inspection Good:Within specification.
