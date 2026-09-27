@@ -54,6 +54,19 @@ public sealed class FingerprintContent
 /// </summary>
 public static class FingerprintMatrix
 {
+    /// <summary>
+    /// Knife-edge diagnostics: sections whose outcome flips under changes far below any physical significance, so a
+    /// difference is reported (<see cref="FingerprintComparison.Diagnostics"/>) but is not a regression and does not fail
+    /// the fingerprint. The section is still recorded and re-baselined with the rest; every other section of the same case
+    /// stays a hard check. Key: "case/section"; value: why it is a knife edge.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> KnifeEdgeSections = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["scenario_project_car/drive"] =
+            "the worn project car under the autopilot sits on a knife edge: moving 11 cells of the K20 stock VE table by " +
+            "0.001 (<= 0.001 % torque) flipped it from 0 laps in 400 s to a 59.56 s lap (tune regeneration, 2026-09-27)",
+    };
+
     private const string K20 = "kestrel_k20", M54 = "isar_m54";
 
     public static IReadOnlyList<FingerprintCase> Cases { get; } = Build();

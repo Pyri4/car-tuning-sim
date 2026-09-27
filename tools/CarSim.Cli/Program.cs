@@ -450,6 +450,7 @@ public static class Program
         Console.WriteLine($"Fingerprint: {cases.Count} cases, {sections} sections against {path} ({watch.Elapsed.TotalSeconds:F1} s).");
         foreach (var line in comparison.Changed) Console.WriteLine("  CHANGED " + line);
         foreach (var line in comparison.Missing) Console.WriteLine("  MISSING " + line);
+        foreach (var line in comparison.Diagnostics) Console.WriteLine("  DIAGNOSTIC (knife edge, reported, not a regression) " + line);
         if (comparison.NewChannels.Count > 0)
             Console.WriteLine($"  new channels (not in the baseline's schema, not compared): {string.Join(", ", comparison.NewChannels)}");
         Console.WriteLine(comparison.Identical ? "  IDENTICAL: every digested value is bit-for-bit the baseline's."

@@ -173,6 +173,46 @@
       "find": "table[r][c] = Math.Round(Interpolate(samples, loadAxis[r]), 3);",
       "replace": "table[r][c] = Math.Round(Interpolate(samples, loadAxis[r]), 2);",
       "tests": "FullyQualifiedName~FingerprintK20Tests"
+    },
+    {
+      "id": "k20-anchor-physics",
+      "guards": "The K20 anchor (U7): a change of the stock K20's full-load filling beyond the 3 % physics tolerance fails the anchor, independently of the fingerprint's re-baselining.",
+      "file": "src/CarSim.Core/Simulation/AirPath.cs",
+      "find": "public const double VeCeiling = 1.02;",
+      "replace": "public const double VeCeiling = 1.07;",
+      "tests": "FullyQualifiedName~K20AnchorGuardTests.TheStockK20FillsWithinThePhysicsTolerance"
+    },
+    {
+      "id": "recipe-switch-speed-last",
+      "guards": "Tune recipes set the hardware schedule (switch speeds) before the fuel and spark maps measured on it.",
+      "file": "tools/CarSim.Verification/tune-manifest.json",
+      "find": "\"steps\": [ { \"calibrator\": \"runner_switch\" }, { \"calibrator\": \"ve\" }, { \"calibrator\": \"spark\" }, { \"calibrator\": \"ve\" } ]",
+      "replace": "\"steps\": [ { \"calibrator\": \"ve\" }, { \"calibrator\": \"spark\" }, { \"calibrator\": \"ve\" }, { \"calibrator\": \"runner_switch\" } ]",
+      "tests": "FullyQualifiedName~RecipesSetTheHardwareScheduleBeforeTheMapsMeasuredOnIt"
+    },
+    {
+      "id": "regeneration-writes-two-cycles",
+      "guards": "A tune regeneration writes only values that settle: rounding 2-cycles keep their checked-in value.",
+      "file": "tools/CarSim.Verification/Calibration/TuneRegenerator.cs",
+      "find": "if (second[r][c].Equals(checkedIn[r][c])) { osc++; return checkedIn[r][c]; }",
+      "replace": "if (second[r][c].Equals(checkedIn[r][c])) { osc++; return v; }",
+      "tests": "FullyQualifiedName~RoundingTwoCyclesKeepTheirCheckedInValue"
+    },
+    {
+      "id": "knife-edge-never",
+      "guards": "A knife-edge diagnostic section (the worn project car's lap) is reported, not failed.",
+      "file": "tools/CarSim.Verification/Fingerprint/FingerprintBaseline.cs",
+      "find": "bool knifeEdge = FingerprintMatrix.KnifeEdgeSections.TryGetValue($\"{caseId}/{name}\", out var why);",
+      "replace": "string? why = null; bool knifeEdge = false;",
+      "tests": "FullyQualifiedName~AKnifeEdgeSectionIsReportedButIsNotARegression"
+    },
+    {
+      "id": "knife-edge-everywhere",
+      "guards": "Only the listed knife-edge sections are exempt; every other section of the same case stays a hard fingerprint check.",
+      "file": "tools/CarSim.Verification/Fingerprint/FingerprintBaseline.cs",
+      "find": "bool knifeEdge = FingerprintMatrix.KnifeEdgeSections.TryGetValue($\"{caseId}/{name}\", out var why);",
+      "replace": "bool knifeEdge = FingerprintMatrix.KnifeEdgeSections.TryGetValue($\"{caseId}/{name}\", out var why) || true;",
+      "tests": "FullyQualifiedName~AKnifeEdgeSectionIsReportedButIsNotARegression"
     }
   ]
 }

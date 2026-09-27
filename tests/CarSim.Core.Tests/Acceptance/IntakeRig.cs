@@ -120,6 +120,38 @@ internal static class IntakeRig
         return crossing;
     }
 
+    /// <summary>
+    /// Two intake stages held over the same sweep act through filling: wherever their dynamic VE differs by at least
+    /// 0.5 %, full-load torque differs in the same direction (same tune, cams and fuel, so fuelling and spark cannot
+    /// reverse a filling advantage).
+    /// </summary>
+    public static void AssertStagesActThroughFilling(IReadOnlyList<EngineTelemetry> first, IReadOnlyList<EngineTelemetry> second)
+    {
+        foreach (var (a, b) in first.Zip(second))
+        {
+            double ve = b.VeDynamic / a.VeDynamic - 1;
+            if (Math.Abs(ve) < 0.005) continue;
+            Assert.True(Math.Sign(b.Torque - a.Torque) == Math.Sign(ve),
+                $"{a.Rpm:F0} rpm: VE_dyn differs by {ve:P2} but torque by {b.Torque / a.Torque - 1:P2}");
+        }
+    }
+
+    /// <summary>
+    /// With the switch speed at the stages' crossover, the switched curve is the upper envelope of the two stages held,
+    /// within 0.5 %, away from the switch (± the ECU's 150 rpm hysteresis).
+    /// </summary>
+    public static void AssertSwitchFollowsTheUpperEnvelope(IReadOnlyList<EngineTelemetry> stageA, IReadOnlyList<EngineTelemetry> stageB,
+        IReadOnlyList<EngineTelemetry> switched, double switchRpm)
+    {
+        for (int i = 0; i < switched.Count; i++)
+        {
+            if (Math.Abs(switched[i].Rpm - switchRpm) <= EcuController.SwitchHysteresisRpm) continue;
+            double best = Math.Max(stageA[i].Torque, stageB[i].Torque);
+            Assert.True(switched[i].Torque >= best * (1 - 0.005),
+                $"{switched[i].Rpm:F0} rpm: switched {switched[i].Torque:F1} N·m below the better stage's {best:F1} N·m (switch {switchRpm:F0} rpm)");
+        }
+    }
+
     /// <summary>Mean of a channel over the points within ±<paramref name="band"/> rpm of <paramref name="rpm"/>.</summary>
     public static double Near(IReadOnlyList<EngineTelemetry> points, double rpm, Func<EngineTelemetry, double> channel, double band = 300) =>
         points.Where(p => Math.Abs(p.Rpm - rpm) <= band).Average(channel);

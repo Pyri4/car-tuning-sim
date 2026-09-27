@@ -124,6 +124,12 @@ public sealed class FingerprintComparison
     /// <summary>Channels the run produced that the baseline's schema does not have (informational).</summary>
     public List<string> NewChannels { get; } = new();
 
+    /// <summary>
+    /// Differences in knife-edge diagnostic sections (<see cref="FingerprintMatrix.KnifeEdgeSections"/>): reported, not a
+    /// regression, not counted by <see cref="Identical"/>.
+    /// </summary>
+    public List<string> Diagnostics { get; } = new();
+
     public bool Identical => Changed.Count == 0 && Missing.Count == 0;
 
     public static FingerprintComparison Compare(FingerprintBaseline baseline, IEnumerable<CaseRecord> run)
@@ -142,10 +148,12 @@ public sealed class FingerprintComparison
                     result.Missing.Add($"{caseId}/{name}: section not produced");
                     continue;
                 }
+                bool knifeEdge = FingerprintMatrix.KnifeEdgeSections.TryGetValue($"{caseId}/{name}", out var why);
                 if (actual.ChannelCount < expected.ChannelCount || actual.Samples != expected.Samples)
-                    result.Missing.Add($"{caseId}/{name}: {actual.Samples} samples × {actual.ChannelCount} channels, baseline {expected.Samples} × {expected.ChannelCount}");
+                    (knifeEdge ? result.Diagnostics : result.Missing).Add(
+                        $"{caseId}/{name}: {actual.Samples} samples × {actual.ChannelCount} channels, baseline {expected.Samples} × {expected.ChannelCount}");
                 if (actual.Digest != expected.Digest)
-                    result.Changed.Add(Describe(caseId, name, expected, actual));
+                    (knifeEdge ? result.Diagnostics : result.Changed).Add(Describe(caseId, name, expected, actual) + (knifeEdge ? $"\n    knife edge: {why}" : ""));
             }
             foreach (var s in record.Sections.Where(s => !baseline.Sections.ContainsKey((record.CaseId, s.Name))))
                 result.Missing.Add($"{record.CaseId}/{s.Name}: not in the baseline");

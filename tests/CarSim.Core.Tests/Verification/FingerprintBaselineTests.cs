@@ -105,6 +105,39 @@ public class FingerprintMatrixTests
         }
     }
 
+    /// <summary>
+    /// A knife-edge diagnostic section (the worn project car's autopilot lap) is reported when it differs but does not fail
+    /// the fingerprint; any other section of the same case still does.
+    /// </summary>
+    [Fact]
+    public void AKnifeEdgeSectionIsReportedButIsNotARegression()
+    {
+        Assert.True(FingerprintMatrix.KnifeEdgeSections.ContainsKey("scenario_project_car/drive"));
+        Assert.All(FingerprintMatrix.KnifeEdgeSections.Keys, k => Assert.Contains(FingerprintMatrix.Cases, c => c.Id == k.Split('/')[0]));
+        string Digest(char c) => new(c, 64);
+        var baseline = FingerprintFile.Parse(
+            "case scenario_project_car worn K20\n" +
+            $"digest scenario_project_car dyno_sweep {Digest('a')} samples=10 channels=3\n" +
+            $"digest scenario_project_car drive {Digest('b')} samples=4001 channels=3\n");
+        CaseRecord Run(char dynoDigest, char driveDigest, int driveSamples)
+        {
+            var record = new CaseRecord("scenario_project_car");
+            record.Sections.Add(new SectionRecord("dyno_sweep") { Digest = Digest(dynoDigest), Samples = 10, ChannelCount = 3 });
+            record.Sections.Add(new SectionRecord("drive") { Digest = Digest(driveDigest), Samples = driveSamples, ChannelCount = 3 });
+            return record;
+        }
+
+        var lapFlipped = FingerprintComparison.Compare(baseline, new[] { Run('a', 'c', 3513) });
+        Assert.True(lapFlipped.Identical);
+        Assert.Equal(2, lapFlipped.Diagnostics.Count); // the digest and the sample count
+        Assert.Contains("knife edge", lapFlipped.Diagnostics.Single(d => d.Contains("digest")));
+
+        var dynoMoved = FingerprintComparison.Compare(baseline, new[] { Run('d', 'b', 4001) });
+        Assert.False(dynoMoved.Identical);
+        Assert.Single(dynoMoved.Changed);
+        Assert.Empty(dynoMoved.Diagnostics);
+    }
+
     [Fact]
     public void TheBaselineRoundTripsThroughItsTextForm()
     {

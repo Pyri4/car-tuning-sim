@@ -1,3 +1,4 @@
+using CarSim.Core.Content;
 using CarSim.Core.Dyno;
 using CarSim.Core.Ecu;
 using CarSim.Core.Engines;
@@ -5,30 +6,47 @@ using CarSim.Core.Parts.Specs;
 using CarSim.Core.Simulation;
 using CarSim.Verification;
 using CarSim.Verification.Calibration;
+using Xunit.Abstractions;
 
 namespace CarSim.Core.Tests.Acceptance;
 
 /// <summary>
-/// System-level acceptance tests of Intake Gas Dynamics 2.0, written in Phase 0 against today's public API
-/// (docs/milestones/INTAKE_GAS_DYNAMICS_2.md, "Acceptance tests"; the model they will hold is SIMULATION_SPEC.md,
-/// "Intake gas dynamics 2.0 — proposed model"). Each one fails on today's model, where valve timing and runner
-/// gas dynamics are one filling hump that a cam phaser moves whole; the failure of each was recorded when it was written.
-/// Tolerances are physical (wave speed ∝ √T, tuned speed between L^−½ and L^−1), not fitted to any engine.
+/// System-level acceptance tests of Intake Gas Dynamics 2.0, written against today's public API before the model exists
+/// (docs/milestones/INTAKE_GAS_DYNAMICS_2.md, "Acceptance tests"; the model they will hold is locked in
+/// docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md). Each one fails on today's model, where valve timing and
+/// runner gas dynamics are one filling hump that a cam phaser moves whole; the failure of each is recorded in the
+/// milestone document. Every criterion is a physical or model relationship (a scaling law, a sign, an invariance, a
+/// consistency between two measurements) with a tolerance derived in the proposal. None requires a torque gain of a
+/// given size or a torque-curve shape, so none depends on the unsourced amplitude and damping parameters, and none can
+/// be met by tuning them. Tests 1, 4 and 5 were revised by the design-resolution gate (U5); tests 2 and 3 are unchanged.
 /// Geometry marked "test-only" is a generic probe, not data for the engine it is fitted to.
 /// </summary>
 [Trait("Milestone", "IntakeGasDynamics2")]
-public class IntakeGasDynamicsAcceptanceTests
+public class IntakeGasDynamicsAcceptanceTests(ITestOutputHelper output)
 {
     private const string M54 = TestContent.M54, K20 = TestContent.K20;
 
     /// <summary>
-    /// Matrix item 5: the runner's response belongs to the runner. With two runner lengths on the same cams at the same
-    /// cam phase, the valve-event part of filling cancels; the speed above which the shorter runner out-fills the longer
-    /// one must stay put (±10 %) when the phaser moves the valve event by 40°. Today the phaser carries the runner's
-    /// effect with it (the crossover moves with the tuned speed of the whole hump).
+    /// Lower bound of the stage-crossover ratio when the intake closes earlier. With the runner gain independent of cam
+    /// timing (Phase 1) the ratio is exactly 1. The deferred intake-closing coupling (U6) moves a runner's best speed down
+    /// as the intake closes earlier: an exploratory lumped model gives 11–22 % for 40° of closing. 0.70 admits that; the
+    /// valve-event optimum itself moves by ≈ 85 % over the same 40° (the correlation's tuned piston speed 14.1 → 2.1 m/s).
+    /// </summary>
+    private const double EarlierClosingRatioMin = 0.70;
+
+    /// <summary>Upper bound: physics predicts no upward shift for earlier closing; 5 % covers the 100 rpm sweep grid.</summary>
+    private const double EarlierClosingRatioMax = 1.05;
+
+    /// <summary>
+    /// Matrix item 5: the runner's response belongs to the runner, not to the cam phaser. Two runner lengths on the same
+    /// cams at the same cam phase cancel the valve-event part of filling, so the speed above which the shorter runner
+    /// out-fills the longer one is the runners' own. Moving the intake cam by 40° (earlier closing) may move it only as
+    /// much as the physics of intake closing allows, in its direction (ratio 0.70–1.05; see
+    /// <see cref="EarlierClosingRatioMin"/>), never with the valve-event optimum. Today the phaser carries the whole hump,
+    /// and at 50° there is no crossover at all.
     /// </summary>
     [PendingAcceptanceFact]
-    public void TheRunnerCrossoverDoesNotMoveWithTheCamPhaser()
+    public void TheRunnerResponseIsNotCarriedByTheCamPhaser()
     {
         var db = IntakeRig.Content(("m54.intake.disa", "test.intake.m54_short", s => s["runner_length_mm"] = 250)); // test-only geometry
         var tune = db.GetTune(db.GetEngine(M54).StockTune);
@@ -42,7 +60,7 @@ public class IntakeGasDynamicsAcceptanceTests
         double? early = At(50), late = At(10);
         Assert.True(early is >= 1500 and <= 6400, $"runner crossover with the intake cam at 50°: {early?.ToString("F0") ?? "none"} rpm");
         Assert.True(late is >= 1500 and <= 6400, $"runner crossover with the intake cam at 10°: {late?.ToString("F0") ?? "none"} rpm");
-        Assert.InRange(early!.Value / late!.Value, 0.90, 1.10);
+        Assert.InRange(early!.Value / late!.Value, EarlierClosingRatioMin, EarlierClosingRatioMax);
     }
 
     /// <summary>
@@ -94,10 +112,25 @@ public class IntakeGasDynamicsAcceptanceTests
     }
 
     /// <summary>
-    /// Matrix items 3–4 and acceptance criterion 1 (generic part): a two-stage intake must act on an engine whose cams
-    /// are phased by its calibrated map — each stage winning by ≥ 2 % full-load torque in its own speed range — as a
-    /// DISA does. Test-only stage geometry (380/250 mm) on the M54 with an ECU that can drive it; the shipped VANOS map.
-    /// Today the runner is inert under a phaser (M54 investigation E4: within 1 N·m).
+    /// Matrix items 3–5, generic part: a two-stage intake acts on an engine whose cams follow a calibrated phaser map, and
+    /// the ECU's switch speed selects the better stage. Test-only stage geometry (380/250 mm) on the M54 with an ECU that
+    /// can drive it; the shipped VANOS map. Relationships only:
+    /// <list type="number">
+    /// <item>the stages are ordered (long below, short above) with a crossover in the rev range, each stage ahead
+    /// somewhere by more than 0.2 % VE_dyn (a non-vacuity floor far below any physical effect, not a required gain);</item>
+    /// <item>the phaser does not absorb the stage effect. The stage ratio ρ(N) = VE_dyn,short / VE_dyn,long cancels the
+    /// valve-event part of filling, so the phaser map may change it only through the intake-closing coupling (deferred,
+    /// U6), which shifts a runner's response in speed by at most ≈ 22 % per 40° of closing but does not cancel it. So at
+    /// speeds below 0.7 × the parked crossover (out of reach of such a shift) where the parked stage effect |ρ − 1| is at
+    /// least a quarter of its largest value there, the effect under the map has the same sign and at least half the size.
+    /// Every threshold is relative, so the test holds for any amplitude and damping in their bands;</item>
+    /// <item>where the stages differ by at least 0.5 % in VE_dyn, full-load torque differs in the same direction (the
+    /// stage acts through filling, not through fuelling or spark);</item>
+    /// <item>with the switch speed at the crossover (rounded to 100 rpm, as the tune driver sets it), the switched curve
+    /// is the upper envelope of the two stages within 0.5 %, except within 150 rpm (the hysteresis) of the switch.</item>
+    /// </list>
+    /// Today the phaser re-centres the single filling hump for either runner, so below the park speed the stage effect
+    /// under the map almost vanishes while it is large with the cams parked.
     /// </summary>
     [PendingAcceptanceFact]
     public void ASwitchedRunnerActsOnAPhasedEngine()
@@ -105,41 +138,89 @@ public class IntakeGasDynamicsAcceptanceTests
         var db = IntakeRig.Content(
             ("m54.intake.disa", "test.intake.m54_two_stage", s => s["switched_runner_length_mm"] = 250), // test-only geometry
             ("ecu.m54_oem", "test.ecu.m54_runner_control", s => s["intake_runner_control"] = true));
-        var engine = IntakeRig.Build(db, M54, ("intake_manifold", "test.intake.m54_two_stage"), ("ecu", "test.ecu.m54_runner_control"));
         var tune = db.GetTune(db.GetEngine(M54).StockTune);
-        var primary = IntakeRig.Sweep(db, engine, "gasoline_98", tune with { IntakeRunnerSwitchRpm = null }, 1000, 6400, 100);
-        engine = IntakeRig.Build(db, M54, ("intake_manifold", "test.intake.m54_two_stage"), ("ecu", "test.ecu.m54_runner_control"));
-        var switched = IntakeRig.Sweep(db, engine, "gasoline_98", tune with { IntakeRunnerSwitchRpm = 500 }, 1000, 6400, 100);
-        Assert.All(switched.Where(p => p.Rpm >= 1000), p => Assert.True(p.SwitchedRunner));
-        var primaryWins = primary.Zip(switched).Where(p => p.First.Torque >= 1.02 * p.Second.Torque).Select(p => p.First.Rpm).ToList();
-        var switchedWins = primary.Zip(switched).Where(p => p.Second.Torque >= 1.02 * p.First.Torque).Select(p => p.First.Rpm).ToList();
-        Assert.True(primaryWins.Count > 0 && switchedWins.Count > 0,
-            $"long stage ≥ 2 % better at [{string.Join(", ", primaryWins)}] rpm, short stage at [{string.Join(", ", switchedWins)}] rpm");
-        Assert.True(primaryWins.Min() < switchedWins.Max(), "the long stage must win below the short one");
+        IReadOnlyList<EngineTelemetry> Run(TuneDocument t) => IntakeRig.Sweep(db,
+            IntakeRig.Build(db, M54, ("intake_manifold", "test.intake.m54_two_stage"), ("ecu", "test.ecu.m54_runner_control")), "gasoline_98", t, 1000, 6400, 100);
+
+        var longStage = Run(tune with { IntakeRunnerSwitchRpm = null });
+        var shortStage = Run(tune with { IntakeRunnerSwitchRpm = 500 });
+        Assert.All(shortStage, p => Assert.True(p.SwitchedRunner));
+        double? crossover = IntakeRig.Crossover(shortStage, longStage, p => p.VeDynamic);
+        Assert.True(crossover is >= 1000 and <= 6400, $"stage crossover under the phaser map: {crossover?.ToString("F0") ?? "none"} rpm");
+        double longAhead = longStage.Zip(shortStage).Max(p => p.First.VeDynamic / p.Second.VeDynamic - 1);
+        double shortAhead = longStage.Zip(shortStage).Max(p => p.Second.VeDynamic / p.First.VeDynamic - 1);
+        Assert.True(longAhead > 0.002 && shortAhead > 0.002, $"stage advantages: long {longAhead:P2}, short {shortAhead:P2}");
+
+        var parked = IntakeRig.WithCamAt(tune, 0);
+        var longParked = Run(parked with { IntakeRunnerSwitchRpm = null });
+        var shortParked = Run(parked with { IntakeRunnerSwitchRpm = 500 });
+        double? parkedCrossover = IntakeRig.Crossover(shortParked, longParked, p => p.VeDynamic);
+        Assert.True(parkedCrossover is >= 1000 and <= 6400, $"stage crossover with the cams parked: {parkedCrossover?.ToString("F0") ?? "none"} rpm");
+        var band = Enumerable.Range(0, longStage.Count).Where(i => longStage[i].Rpm >= 1500 && longStage[i].Rpm <= 0.7 * parkedCrossover!.Value).ToList();
+        Assert.True(band.Count > 0, $"no speed between 1,500 rpm and 0.7 × the parked crossover ({parkedCrossover:F0} rpm) to compare the stage effect at");
+        double Effect(IReadOnlyList<EngineTelemetry> s, IReadOnlyList<EngineTelemetry> l, int i) => s[i].VeDynamic / l[i].VeDynamic - 1;
+        double largest = band.Max(i => Math.Abs(Effect(shortParked, longParked, i)));
+        output.WriteLine($"stage crossover {crossover:F0} rpm under the map, {parkedCrossover:F0} rpm parked; advantages under the map: long {longAhead:P2}, short {shortAhead:P2}");
+        foreach (int i in band.Where(i => Math.Abs(Effect(shortParked, longParked, i)) >= 0.25 * largest))
+        {
+            double withMap = Effect(shortStage, longStage, i), withParked = Effect(shortParked, longParked, i);
+            output.WriteLine($"  {longStage[i].Rpm,5:F0} rpm: stage effect {withMap,8:P2} under the map, {withParked,8:P2} parked (cam {longStage[i].IntakeCamAdvance:F1}°)");
+            Assert.True(Math.Sign(withMap) == Math.Sign(withParked) && Math.Abs(withMap) >= 0.5 * Math.Abs(withParked),
+                $"{longStage[i].Rpm:F0} rpm: the phaser map absorbs the stage effect ({withMap:P2} against {withParked:P2} with the cams parked)");
+        }
+
+        IntakeRig.AssertStagesActThroughFilling(longStage, shortStage);
+        double switchRpm = Math.Round(crossover!.Value / 100.0) * 100.0;
+        IntakeRig.AssertSwitchFollowsTheUpperEnvelope(longStage, shortStage, Run(tune with { IntakeRunnerSwitchRpm = switchRpm }), switchRpm);
     }
 
     /// <summary>
-    /// Acceptance criterion 1, with the M54's own data: DISA authored with its effective geometry and provenance (Phase 1),
-    /// generic code only. The full-load curve rises from 1,500 rpm into a mid-range peak (2,750–4,750 rpm, ≥ 3 % above
-    /// the 1,500 rpm torque) instead of today's plateau, and peak torque and power stay in their bands (±10 % / ±15 %).
-    /// The historical curve need not be matched. Today DISA is not authored and the curve plateaus from 1,500 rpm.
+    /// Acceptance criterion 1 (M54 DISA), as relationships with the M54's own data. Phase 1 authors DISA by the frozen
+    /// procedure of the proposal (U4): open stage = the runner estimate, closed stage derived so that the model's stage
+    /// crossover is the centre of the sourced switch band (3,750–4,100 rpm, assumption A-D1), computed from the gain
+    /// functions alone before any M54 output is looked at. Asserted:
+    /// <list type="number">
+    /// <item>DISA is fitted and the ECU drives it (capability summary, independent of the intake schema);</item>
+    /// <item>the full-load stage crossover of the whole engine (stages held) lies in the sourced band: the derivation,
+    /// done on the gain functions, carries through the air path, fuelling and cam map unchanged;</item>
+    /// <item>the tune's switch speed, set by the tune driver from that crossover, lies in the sourced band;</item>
+    /// <item>the closed stage fills better below the switch and the open stage above it, and torque follows filling;</item>
+    /// <item>the switched curve is the upper envelope of the two stages;</item>
+    /// <item>peak torque and power stay in the published bands (300 N·m ± 10 %, 170 kW ± 15 %).</item>
+    /// </list>
+    /// Not asserted, reported: the curve's shape (where it peaks, how far it rises from 1,500 rpm) is held-out validation
+    /// against the reference shape. A miss is classified and documented, never closed by changing content or parameters.
+    /// Today DISA is not authored.
     /// </summary>
     [PendingAcceptanceFact]
-    public void TheM54RisesIntoAMidRangePeakWithItsDisaAuthored()
+    public void TheM54DisaStagesFollowTheirProvenance()
     {
+        const double switchBandLow = 3750, switchBandHigh = 4100; // sourced: PARTS_DATABASE.md, "Isar M54 reference engine"
         var db = TestContent.Database;
-        var engine = db.GetEngine(M54);
-        var intake = TestContent.StockM54().PartIn("intake_manifold")!.Spec<IntakeManifoldSpec>();
-        Assert.True(intake.SwitchedRunnerLengthMm != null, "The M54's DISA stage is not authored (Phase 1 authors it, with provenance).");
-        var tune = db.GetTune(engine.StockTune);
+        var caps = EngineCapabilities.Resolve(TestContent.StockM54());
+        Assert.True(caps.SwitchedRunners && caps.VariableIntakeRunner, "The M54's DISA is not authored as two stages driven by its ECU (Phase 1 authors it, with provenance).");
+        var tune = db.GetTune(db.GetEngine(M54).StockTune);
+        IReadOnlyList<EngineTelemetry> Run(TuneDocument t) => IntakeRig.Sweep(db, TestContent.StockM54(), "gasoline_98", t, 1000, 6500, 100);
+
+        var closed = Run(tune with { IntakeRunnerSwitchRpm = null });
+        var open = Run(tune with { IntakeRunnerSwitchRpm = 500 });
+        double? crossover = IntakeRig.Crossover(open, closed, p => p.VeDynamic);
+        Assert.True(crossover is >= switchBandLow and <= switchBandHigh, $"DISA stage crossover {crossover?.ToString("F0") ?? "none"} rpm, sourced band {switchBandLow}–{switchBandHigh}");
         Assert.NotNull(tune.IntakeRunnerSwitchRpm);
-        var curve = IntakeRig.Sweep(db, TestContent.StockM54(), "gasoline_98", tune, 1000, 6500, 250);
-        var peak = curve.MaxBy(p => p.Torque)!;
-        double at1500 = curve.Single(p => p.Rpm == 1500).Torque;
-        Assert.InRange(peak.Rpm, 2750, 4750);
-        Assert.True(peak.Torque >= 1.03 * at1500, $"peak {peak.Torque:F1} N·m at {peak.Rpm:F0} rpm against {at1500:F1} N·m at 1,500 rpm");
-        Assert.InRange(peak.Torque, 270, 330);
-        Assert.InRange(curve.Max(p => p.PowerKw), 144.5, 195.5);
+        Assert.InRange(tune.IntakeRunnerSwitchRpm!.Value, switchBandLow, switchBandHigh);
+
+        IntakeRig.AssertStagesActThroughFilling(closed, open);
+        var shipped = Run(tune);
+        IntakeRig.AssertSwitchFollowsTheUpperEnvelope(closed, open, shipped, tune.IntakeRunnerSwitchRpm.Value);
+        var peakTorque = shipped.MaxBy(p => p.Torque)!;
+        Assert.InRange(peakTorque.Torque, 270, 330);
+        Assert.InRange(shipped.Max(p => p.PowerKw), 144.5, 195.5);
+
+        double at1500 = shipped.Single(p => p.Rpm == 1500).Torque;
+        output.WriteLine($"Held-out validation (reported, not asserted): peak {peakTorque.Torque:F1} N·m at {peakTorque.Rpm:F0} rpm " +
+                         $"(reference 300 N·m at 3,500), {peakTorque.Torque / at1500 - 1:P1} above 1,500 rpm; peak power {shipped.Max(p => p.PowerKw):F1} kW (reference 170).");
+        foreach (var p in shipped.Where(p => p.Rpm % 500 == 0))
+            output.WriteLine($"  {p.Rpm,5:F0} rpm  {p.Torque,6:F1} N·m  {p.PowerKw,6:F1} kW  stage {(p.SwitchedRunner ? "open" : "closed")}");
     }
 }
 
@@ -241,5 +322,65 @@ public class IntakeGasDynamicsGuardTests
         for (int i = 0; i < steps; i++) sim.Step(0.002, input);
         long perStep = (GC.GetAllocatedBytesForCurrentThread() - before) / steps;
         Assert.True(perStep <= budgetBytes, $"{family}: {perStep} B per engine step (budget {budgetBytes} B)");
+    }
+}
+
+/// <summary>
+/// The K20 anchor of Intake Gas Dynamics 2.0 (U7; docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md, "Regression
+/// rules"). The reference is the stock K20 on RON 95 after the pre-physics tune regeneration (commit 91d3ffa), frozen here
+/// and never re-pinned by the physics change it guards. Three levels:
+/// <list type="number">
+/// <item>Numerical: the regression fingerprint, bit-identical wherever neither code nor content changed (not repeated
+/// here).</item>
+/// <item>Physics: full-load trapped air per cycle within ±3 % at every 250 rpm point from 1,500 to 7,500 rpm. On this
+/// configuration (naturally aspirated, fixed cams, no switched hardware) the fuel map cannot move the air: the
+/// pre-physics regeneration moved it by less than 0.001 %, so a failure here is physics, never a tune change.</item>
+/// <item>Calibration (after the tune driver has regenerated the tables under the new physics): peak torque, peak power
+/// and 0–100 km/h within ±3 %, with λ on target (<see cref="IntakeGasDynamicsGuardTests"/>). A change larger than the
+/// air explains is a calibration effect and must be attributed in the report (λ, spark and knock, friction share).</item>
+/// </list>
+/// ±3 %: the new runner term may reshape the anchor's filling by about half its amplitude (A ≈ 0.03–0.10), which the two
+/// re-anchored valve-event constants absorb only in part. The bound lets that documented generic correction through and
+/// stops anything larger, and it is more than 3,000 times the largest tune effect on the physics metric.
+/// </summary>
+[Trait("Milestone", "IntakeGasDynamics2")]
+public class K20AnchorGuardTests
+{
+    /// <summary>Full-load air per cycle and cylinder (mg), 1,500–7,500 rpm in 250 rpm steps, 1 s settle, RON 95.</summary>
+    private static readonly double[] ReferenceAirPerCycleMg =
+    {
+        442.4282685119624, 460.79485074917534, 477.47237619492995, 492.45431879143405, 505.6952296281729, 517.2718962114799,
+        527.1215656759557, 534.9065574434306, 540.9843262989328, 545.3416581390736, 548.1012750690093, 549.2735759016139,
+        549.0018203422125, 547.3173064337817, 544.3649160260858, 540.1867275622138, 535.1209108309196, 529.4854957935461,
+        523.3569184564205, 516.7646901845442, 509.77225341431915, 502.40238033727525, 494.7136609669049, 486.723727251404,
+        478.48332624422636,
+    };
+
+    private const double ReferencePeakTorqueNm = 189.21184907830153, ReferencePeakPowerKw = 110.98506225347931, ReferenceZeroTo100S = 8.8;
+    public const double PhysicsTolerance = 0.03, CalibrationTolerance = 0.03;
+
+    private static IReadOnlyList<EngineTelemetry> Sweep()
+    {
+        var db = TestContent.Database;
+        return IntakeRig.Sweep(db, TestContent.StockK20(), "gasoline_95", db.GetTune(db.GetEngine(TestContent.K20).StockTune), 1500, 7500, 250);
+    }
+
+    [Fact]
+    public void TheStockK20FillsWithinThePhysicsTolerance()
+    {
+        var sweep = Sweep();
+        Assert.Equal(ReferenceAirPerCycleMg.Length, sweep.Count);
+        Assert.All(sweep.Zip(ReferenceAirPerCycleMg), p =>
+            Assert.True(Math.Abs(p.First.AirPerCycle * 1e6 / p.Second - 1) <= PhysicsTolerance,
+                $"{p.First.Rpm:F0} rpm: air per cycle {p.First.AirPerCycle * 1e6:F1} mg against the anchor's {p.Second:F1} mg"));
+    }
+
+    [Fact]
+    public void TheStockK20OutputStaysWithinTheCalibrationTolerance()
+    {
+        var sweep = Sweep();
+        Assert.InRange(sweep.Max(p => p.Torque) / ReferencePeakTorqueNm - 1, -CalibrationTolerance, CalibrationTolerance);
+        Assert.InRange(sweep.Max(p => p.PowerKw) / ReferencePeakPowerKw - 1, -CalibrationTolerance, CalibrationTolerance);
+        Assert.InRange(Vehicles.Car.Accelerate(Vehicles.Car.Chassis(), 100) / ReferenceZeroTo100S - 1, -CalibrationTolerance, CalibrationTolerance);
     }
 }

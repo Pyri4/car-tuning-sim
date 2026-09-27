@@ -47,6 +47,13 @@ while any change to an existing value does. Size ≈ 0.2 MB.
   how the engine-architecture milestone proved the K20 and M54 bit-identical (1.6 million values, then outside the repo).
 - A deliberate change: `carsim fingerprint --write tests/baselines/fingerprint.txt` (always the whole matrix), and the
   PR reports the diff and why. The K20 and M54 must not move unless the change is a documented generic correction.
+- **Knife-edge diagnostics** (`FingerprintMatrix.KnifeEdgeSections`): a section whose outcome flips under changes far
+  below any physical significance is still recorded and re-baselined, but a difference in it is printed as `DIAGNOSTIC`
+  with its reason and does not fail the fingerprint.
+  - Today there is one: `scenario_project_car/drive`, the worn project car's autopilot lap. Moving 11 cells of the K20
+    stock VE table by 0.001 (≤ 0.001 % torque) flipped it from 0 laps in 400 s to a 59.56 s lap.
+  - The case's dyno section, and every other drive case, stay hard checks. Both directions (never exempt, everything
+    exempt) are mutation-checked.
 - Platform: the baseline assumes linux-x64 and .NET 8 (IEEE-754 doubles; `Math.Exp`/`Pow` from the OS libm, identical
   on Ubuntu 24.04 locally and in CI). A different libm could change last bits; the diff tool then shows where.
 
@@ -113,11 +120,13 @@ The Phase 0 table overstated some differences, for two reasons:
 
 ## Mutation harness
 `tools/CarSim.MutationCheck/mutations.json` lists known bugs as exact text replacements and the tests that must fail
-on each (21 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
+on each (26 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
 floor, identity and cylinder-count branches, the dropped cam table, a phaser without effect, the engine-architecture
 hacks — first bank's air or geometry for all, unshared shared elements, four hard-coded cylinders, interfaces from any
 bank, one turbo state — and, for Intake Gas Dynamics 2.0, an inert runner, a runner that never switches, no switch
-hysteresis, a 1e-10 relative change of one filling constant, and a change in the VE calibrator's rounding).
+hysteresis, a 1e-10 relative change of one filling constant, and a change in the VE calibrator's rounding; from the
+design-resolution gate: a K20 filling change beyond the anchor's physics tolerance, a switch speed set after the fuel map,
+a regeneration that writes rounding 2-cycles, and knife-edge routing that exempts nothing or everything).
 
 For each entry the harness checks the `find` text still occurs exactly once (a stale entry is an error), proves the
 guarding tests pass unmutated, injects the mutant, rebuilds, requires at least one failure, and restores the file with
@@ -130,3 +139,16 @@ In CI it is a manual job (`workflow_dispatch`).
 `CARSIM_RUN_PENDING_ACCEPTANCE=1` and each is recorded failing on today's model when written; the milestone turns them
 into plain facts. Guards that must hold before and after are ordinary tests (`IntakeGasDynamicsGuardTests`). The list,
 tolerances and today's failures are in docs/milestones/INTAKE_GAS_DYNAMICS_2.md.
+
+Each pending test asserts a physical or model relationship (a scaling law, an invariance, a sign, a consistency between two
+measurements), never a gain of a given size or a torque-curve shape. None can therefore be met by tuning an unsourced
+parameter. Reference comparisons (the M54's shape) are printed as held-out validation, not asserted.
+
+**The K20 anchor** (`K20AnchorGuardTests`, active) freezes the stock K20's pre-physics reference (commit 91d3ffa) at two
+levels:
+- **Physics:** full-load air per cycle within ±3 % at every 250 rpm point from 1,500 to 7,500 rpm. On this configuration
+  the fuel map cannot move the air (the tune regeneration moved it by < 0.001 %), so a failure is physics.
+- **Calibration:** peak torque, peak power and 0–100 km/h within ±3 %.
+
+The rules, and how tune changes are kept apart from physics changes, are in
+docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md, section 6.
