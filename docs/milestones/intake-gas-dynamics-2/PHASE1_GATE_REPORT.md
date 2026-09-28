@@ -276,9 +276,9 @@ functions, with that one residual kept out of line, and is bit-identical.
 | `dotnet test CarTuningSim.sln -c Release` | **683 passed, 0 failed, 0 skipped** (base: 649 + 5 skipped) |
 | `carsim validate` / `--mods content/test` | OK, no errors (2 and 11 engines, 3 and 12 tunes) |
 | CLI sweeps (CI's list: K20, M54 RON 98, `inspect syn_v8_ohv`, `sweep syn_v6_tt`, fingerprint subset, regenerate `k20.stock,syn.r6.stock`) | all ran; fingerprint IDENTICAL; both tunes reproduced |
-| Mutation harness (`tools/CarSim.MutationCheck`, full) | before: **26 of 26**; after (`816c511`): **31 of 31** caught |
-| Godot 4.7.2 headless smoke tests (dyno and drive: K20, M54, `syn_v8_swap`, `syn_v6_tt_swap`) | 8 of 8 passed, 0 ERROR lines; dyno peaks K20 137.2 → 134.1 hp, M54 205.0 → 203.2 hp, V8 257.6 → 263.0 hp, V6-TT 435.8 → 441.5 hp |
-| CI on the pushed commits | `4247af0`, `fad3958`, `816c511` success; `e88d871` and the docs commit: see the PR/branch |
+| Mutation harness (`tools/CarSim.MutationCheck`, full) | before: **26 of 26**; after: **31 of 31** caught on `816c511` and again on the final code (`88c4ad3`, after the performance commit) |
+| Godot 4.7.2 headless smoke tests (dyno and drive: K20, M54, `syn_v8_swap`, `syn_v6_tt_swap`) | 8 of 8 passed, 0 ERROR lines, on `816c511` and on the final code (identical results); dyno peaks K20 137.2 → 134.1 hp, M54 205.0 → 203.2 hp, V8 257.6 → 263.0 hp, V6-TT 435.8 → 441.5 hp |
+| CI on the pushed commits | success on every one: `4247af0`, `fad3958`, `816c511`, `e88d871`, `88c4ad3` (core build and tests, CLI steps, skills check, Godot smoke tests) |
 
 New mutation entries: `wave-gain-cam-input`, `tuned-speed-without-sqrt-t`, `unnormalised-response`,
 `wave-gain-dropped`, `runner-gas-temperature-ignored`. Updated to the new code: `family-id-branch`,
