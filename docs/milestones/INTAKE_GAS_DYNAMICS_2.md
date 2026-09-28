@@ -5,6 +5,9 @@ defined nor authorized. The owner authorized Phase 1 on 2026-09-27 with the prop
 results, deviations and open risks are in
 [intake-gas-dynamics-2/PHASE1_GATE_REPORT.md](intake-gas-dynamics-2/PHASE1_GATE_REPORT.md), and the frozen M54 DISA
 derivation in [intake-gas-dynamics-2/M54_DISA_DERIVATION.md](intake-gas-dynamics-2/M54_DISA_DERIVATION.md).
+The owner's Phase 1 review (2026-09-28) asked for the root cause of three issues without changing the model; the
+answers, none requiring an implementation change, are in
+[intake-gas-dynamics-2/PHASE1_REVIEW.md](intake-gas-dynamics-2/PHASE1_REVIEW.md).
 
 History: defined by the project gate of 2026-09-27 (after the engine-architecture milestone). The owner
 authorized Phase 0 (verification tooling, the pre-physics baseline, the model specification, sources and acceptance
