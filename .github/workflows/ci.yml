@@ -39,6 +39,11 @@ jobs:
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- validate --mods content/test
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- inspect syn_v8_ohv --mods content/test
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- sweep syn_v6_tt --mods content/test --fuel gasoline_98 --from 2000 --to 7000 --step 1000
+      - name: Engine authoring check (check-engine; exit 0 = no errors, 3 = warnings under --strict)
+        run: |
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- check-engine kestrel_k20 --strict 1
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- check-engine isar_m54
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- check-engine syn_v6_tt --mods content/test
       - name: Verification tools (fingerprint from the CLI, tune-regeneration driver) — docs/VERIFICATION.md
         run: |
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- fingerprint --case k20_stock_95,m54_stock_98

@@ -35,7 +35,9 @@ A small model never re-baselines, skips, loosens or deletes a check to get green
    - `dotnet run --project tools/CarSim.Cli -c Release -- validate`
    - `dotnet run --project tools/CarSim.Cli -c Release -- validate --mods content/test`
 4. **CLI smoke** (what CI runs): sweeps of `kestrel_k20`, `isar_m54 --fuel gasoline_98`, and with `--mods content/test`
-   an `inspect syn_v8_ohv` and a `sweep syn_v6_tt --fuel gasoline_98` (see `.github/workflows/ci.yml`).
+   an `inspect syn_v8_ohv` and a `sweep syn_v6_tt --fuel gasoline_98`, and `check-engine` on `kestrel_k20 --strict 1`,
+   `isar_m54` and `syn_v6_tt --mods content/test` (see `.github/workflows/ci.yml`). For content changes, run
+   `check-engine` on every engine touched.
 5. **Godot headless smoke tests** for engine, gameplay or UI changes (Godot 4.7.2 .NET; if `godot` is not installed,
    download the official build from the URL in `.github/workflows/ci.yml`, then `dotnet build game/CarTuningSim.csproj`
    and `godot --headless --path game --import` once):

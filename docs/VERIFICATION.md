@@ -129,7 +129,7 @@ The Phase 0 table overstated some differences, for two reasons:
 
 ## Mutation harness
 `tools/CarSim.MutationCheck/mutations.json` lists known bugs as exact text replacements and the tests that must fail
-on each (35 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
+on each (43 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
 floor, identity and cylinder-count branches, the dropped cam table, a phaser without effect, the engine-architecture
 hacks — first bank's air or geometry for all, unshared shared elements, four hard-coded cylinders, interfaces from any
 bank, one turbo state — and, for Intake Gas Dynamics 2.0, an inert runner, a runner that never switches, no switch
@@ -139,8 +139,10 @@ a regeneration that writes rounding 2-cycles, and knife-edge routing that exempt
 cam input to the wave gain, a tuned speed without √T, an unnormalised response, the wave gain dropped, the runner gas
 temperature ignored; from Engine Authoring Factory 1.0 Phase 1: any provenance type accepted, a part variant
 inheriting provenance for a value it changes, an engine variant replacing its family's stock parts, an unmodelled
-feature without its approximation). Before Intake Gas Dynamics Phase 1: 26 of 26 caught; after: 31 of 31 (≈ 15 minutes);
-the four authoring-schema mutants: 4 of 4.
+feature without its approximation; from Phase 2, check-engine: a required stock part, the interfaces, unrecorded
+provenance, an abstract base, a modelled feature without hardware and a tune/build displacement mismatch each ignored, an
+unknown feature accepted, a slot on a nonexistent bank accepted). Before Intake Gas Dynamics Phase 1: 26 of 26 caught; after: 31 of 31 (≈ 15 minutes);
+the four authoring-schema mutants: 4 of 4; the eight check-engine mutants: 8 of 8.
 
 For each entry the harness checks the `find` text still occurs exactly once (a stale entry is an error), proves the
 guarding tests pass unmutated, injects the mutant, rebuilds, requires at least one failure, and restores the file with

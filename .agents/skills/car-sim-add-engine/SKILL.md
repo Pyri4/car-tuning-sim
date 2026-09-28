@@ -11,7 +11,20 @@ checklist, not a replacement. Content scale is a first-class goal (GAME_VISION.m
 little unique work the engine needed — ideally zero code. Engine Authoring Factory 1.0
 (docs/milestones/ENGINE_AUTHORING_FACTORY_1.md) is turning these steps into commands, phase by phase. Available now:
 `provenance` and `sources`, `identity` with declared features, and `extends` for engine and part variants
-(PARTS_DATABASE.md). Not yet: `slot_layout`, `check-engine` and `generate-tune`. The loader rejects unknown fields.
+(PARTS_DATABASE.md), and `carsim check-engine` (guide §6a). Not yet: `slot_layout` and `generate-tune` (calibrate by
+hand with the calibrators, step 6). The loader rejects unknown fields.
+
+The workflow:
+
+    create content (steps 1–4)
+      ↓
+    carsim check-engine <id> --verbose 1   (step 5)
+      ↓
+    fix every error; read every warning; repeat
+      ↓
+    PASS (exit 0)
+      ↓
+    calibrate the tune (step 6; tune generation is a later phase)
 
 ## Model tiers (AGENTS.md, "Model routing")
 Each step names the lowest tier that can do it reliably: **T1** small, **T2** medium, **T3** strongest. A small model
@@ -46,11 +59,16 @@ wish to change a constant, tolerance, test or regression baseline. Never invent 
 4. **Family** (T1, copying the matrix's slot pattern): slots (`banks`, `install_after`), `stock_parts`, `stock_tune`,
    `identity`. A variant of an existing family is an `extends` entry with only what differs, and a part variant is an
    `extends` part with only the changed fields (**T2** decides whether something is a variant or a new family).
-5. **Validate** (T1 runs and fixes typos and structural errors; T2 interprets warnings; T3 for physical warnings you
-   cannot explain): `dotnet run --project tools/CarSim.Cli -c Release -- validate [--mods <dir>]` and
-   `inspect <engine-id>` — `validate` only loads; `inspect` runs the physical assembly rules. Fix every error, read every
-   warning (valve float, coil bind, quench, compression, interfaces), and check by hand that the stock tune's
-   `displacement_cc`, injector flow and dead time match the stock parts (not checked automatically yet).
+5. **Check** (T1 runs it and fixes typos, missing stock parts and structural errors; T2 interprets warnings and
+   interface or topology errors; **T3** for a physical warning you cannot explain, a feature declared as not modelled,
+   or any doubt whether a failure is content or architecture):
+   `dotnet run --project tools/CarSim.Cli -c Release -- check-engine <engine-id> [--mods <dir>] --verbose 1`.
+   - It loads the content, builds the stock assembly and reports by section: identity, architecture, parts, topology,
+     interfaces, geometry, limits, features, provenance, completeness (guide §6a).
+   - Exit 0 means no errors. Fix every error and read every warning, including unmodelled features, provenance gaps,
+     and a stock tune that disagrees with the build.
+   - Record the number of check iterations in the cost report.
+   - `inspect <engine-id>` gives the detailed geometry and runner-stage view.
 6. **Calibrate the base tune with the dev calibrators** (T1 runs them in the guide's order) — never hand-fit a curve:
    hardware schedule first (`calibrate-cams` with a phaser; switch speeds for switched hardware), then `calibrate-ve` →
    `calibrate-spark` → `calibrate-ve`, each with `--fuel <fuel>`; paste the printed tables; say in the tune's

@@ -220,9 +220,11 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
 4. **Family.** Slots (categories, bank scopes, `install_after`), `stock_parts`, `stock_tune`, `identity`. A variant of an
    existing family is an `extends` entry with only what differs; a part variant likewise (`extends` + changed spec
    fields).
-5. **Validate.** `carsim validate --mods <dir>` (or put the files under `content/base`) and `carsim inspect <id>`:
-   fix every error and read every warning (valve float below the rev limit, coil bind, quench, compression, missing
-   interfaces). The messages name the bank and slot.
+5. **Validate: `carsim check-engine <id> [--mods <dir>] [--verbose 1]`** (§6a). It loads the content (the same
+   file validation as `carsim validate`), builds the stock assembly slot by slot and reports every error, warning and
+   note by section. Fix every error; read every warning (valve float, coil bind, quench, compression, interfaces,
+   unmodelled features, missing provenance). Continue to the tune only when it passes (exit 0). `carsim inspect <id>`
+   remains the detailed view (runner stages, geometry).
 6. **Calibrate the base tune with the dev tools** — never by hand-fitting a curve:
    - start from a tune with sensible limits (rev limit, idle, λ targets, injector flow, displacement, fuel density)
      and any table axes you want;
@@ -250,6 +252,43 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
    green. A real engine joins the fingerprint matrix (`FingerprintMatrix`) and the baseline is re-written.
 10. **Game.** `godot --headless --path game -- --smoke-test --scenario=<scenario>` (and `--drive --smoke-test`); look at
     the Workshop, Tuning and Dyno tabs.
+
+### 6a. `carsim check-engine`
+Content loading answers "can this JSON be loaded?" and stays per item: an isolated part still loads on its own.
+`check-engine` answers "can these parts form this engine?". It is tooling, not physics or a dyno match: it runs no
+simulation, and it reuses the generic rules (`EngineTopology`, `AssemblyValidator`, `EngineGeometry`,
+`EngineCapabilities`, `FeatureReport`) rather than restating them. Code: `EngineCheck`
+(`src/CarSim.Core/Engines/EngineCheck.cs`).
+
+| Section | What it checks |
+|---|---|
+| CONTENT | Load errors of the engine, its family chain, its stock parts and stock tune (errors elsewhere are a note) |
+| IDENTITY | The engine exists and is not an abstract base; kind; a real engine's family and reference; the variant chain |
+| ARCHITECTURE | Layout, cylinders, banks, valvetrain, valves, capabilities, air paths, turbos, firing order |
+| PARTS | Every required slot has a stock part; every part installs in assembly order; counts |
+| TOPOLOGY | Bank partition, slot scopes (one part per bank and category), slots on real banks, an acyclic assembly order |
+| INTERFACES | Mounting interfaces bank by bank, valvetrain types, ECU outputs for controllable hardware, which cars take the engine |
+| GEOMETRY | Journal, pin, bore and gasket fits; clearances; compression; derived displacement; plausibility heuristics (bore/stroke 0.6–1.5, rod/stroke 1.4–2.3, mean piston speed ≤ 25 m/s at the limit: warnings) |
+| LIMITS | Valve float, crank and flywheel ratings against the rev limit; MAP sensor and boost |
+| FEATURES | Each declared feature: supported, not modelled (warning), missing data (error), undeclared (warning for a real engine) |
+| PROVENANCE | Authored values of the stock parts by type, unrecorded and defaulted counts; fitted values; missing records (warning for a real engine, note otherwise) |
+| COMPLETENESS | Defaults the model assumed; the stock tune against the stock build (displacement, injector flow and dead time, the ECU's rev ceiling, tables and switch speeds for controllable hardware, the load axis against the boost target); no stock tune yet is a note |
+
+Output is deterministic. Notes and the list of unrecorded and defaulted fields appear with `--verbose 1`.
+
+Exit codes:
+
+| Code | Meaning |
+|---|---|
+| 0 | No errors; warnings allowed |
+| 2 | Errors: not an authorable engine yet |
+| 3 | `--strict 1` and at least one warning |
+| 1 | Usage error (no engine id) |
+
+An unmodelled feature declared with its approximation is a warning. Without an approximation it is a load error, and
+so blocking. `--strict` is for content that must be fully modelled and fully sourced.
+
+What stays manual: slot lists (no slot layouts yet), the tune (generation is the next phase), reference comparisons.
 
 ## 7. Adding a capability (when an engine needs code)
 

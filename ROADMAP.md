@@ -19,7 +19,7 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 728 automated tests, all run (683 before Engine Authoring Factory 1.0 Phase 1; 654 before Intake Gas Dynamics 2.0 Phase 1, of which 5 were its pending acceptance tests; 651 before its
+- 766 automated tests, all run (728 before Engine Authoring Factory 1.0 Phase 2, 683 before its Phase 1; 654 before Intake Gas Dynamics 2.0 Phase 1, of which 5 were its pending acceptance tests; 651 before its
   authorization gate, 649 before its design resolution, 586 before its Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
   before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
   physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
@@ -279,6 +279,18 @@ verification or its honesty about sources? ([docs/ENGINE_AUTHORING_FACTORY_AUDIT
   - the K20 is fictional and the matrix synthetic;
   - one matrix part is a variant.
 - [x] 45 new tests, 4 new mutants (caught); regression fingerprint identical; no simulation change.
+- [x] The gate review (owner): passed.
+
+### Engine Authoring Factory 1.0 — Phase 2: assembly-aware validation (2026-09-28; at its gate)
+([report](docs/milestones/engine-authoring-factory-1/PHASE2_GATE_REPORT.md))
+- [x] `carsim check-engine <id> [--verbose 1] [--strict 1]` on `EngineCheck` (core). It builds the stock assembly slot
+      by slot and reuses the topology, assembly, geometry, capability and feature rules. It adds identity, provenance
+      coverage, defaults, stock tune ↔ build agreement, plausibility heuristics and vehicle fit. The report is
+      deterministic; exit 0 / 2 / 3.
+- [x] Every shipped and synthetic engine passes. The M54 passes with 6 warnings: 5 unmodelled features and 45
+      unrecorded values. The B58 fixture reports DI, Valvetronic, exhaust VVT and twin scroll as not modelled; an
+      LS3-style fixture passes.
+- [x] 38 new tests; 8 new mutants, all caught (43 of 43); fingerprint identical; CI runs `check-engine`.
 - [ ] The gate review (owner).
 
 ### Phase 6 (early) — Modding ✅
@@ -289,8 +301,11 @@ Chosen by long-term value, not ease: prefer work that improves every engine or u
 milestone starts only when the owner authorizes it, and ends with a project gate (verify, review, merge order, define
 the next milestone).
 
-1. **Engine Authoring Factory 1.0 (authorized phase by phase; Phase 1 — content schema and provenance — implemented and at
-   its gate, [report](docs/milestones/engine-authoring-factory-1/PHASE1_GATE_REPORT.md); later phases not started).**
+1. **Engine Authoring Factory 1.0 (authorized phase by phase).**
+   - Phase 1 (content schema and provenance) passed its gate.
+   - Phase 2 (`check-engine`) is implemented and at its gate:
+     [report](docs/milestones/engine-authoring-factory-1/PHASE2_GATE_REPORT.md).
+   - Later phases (tune generation, data-driven verification, the pilot) are not started.
    Definition: [docs/milestones/ENGINE_AUTHORING_FACTORY_1.md](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md); evidence:
    [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md). The goal is to make a new engine, or a
    variant of one, a data-entry and validation task with zero code. The milestone:

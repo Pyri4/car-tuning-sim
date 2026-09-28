@@ -170,7 +170,7 @@ map keyed by field name:
   - override of one stock part (and the physics follows it);
   - an empty variant is the same engine;
   - abstract families;
-  - 4 impossible variants;
+  - 5 impossible variants;
   - a mod redefining a family reaches its variants, and load order is kept;
 - **part variants:**
   - the matrix variant equals its parent under its own id and name;

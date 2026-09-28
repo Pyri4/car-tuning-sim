@@ -19,6 +19,12 @@ public static class Program
         Usage:
           carsim validate [--content <dir>] [--mods <dir>]
                                                         Load and validate the base content and every mod.
+          carsim check-engine <engine-id> [--verbose 1] [--strict 1]
+                                                        Assembly-aware validation of one engine (Engine Authoring Factory):
+                                                        content, identity, architecture, stock build, topology, interfaces,
+                                                        geometry, limits, features, provenance coverage, completeness.
+                                                        Exit 0 = no errors (warnings allowed); 2 = errors; 3 = warnings under
+                                                        --strict. --verbose also prints notes and unrecorded/defaulted fields.
           carsim inspect <engine-id> [--content <dir>]
                                                         Show the stock build, derived geometry and compatibility report.
           carsim sweep <engine-id> [--swap slot=part,...] [--fuel <id>] [--tune <id>] [--from 1000] [--to 8000] [--step 500]
@@ -83,6 +89,7 @@ public static class Program
             {
                 "validate" => Validate(options),
                 "inspect" => Inspect(options),
+                "check-engine" => CheckEngine(options),
                 "sweep" => Sweep(options),
                 "hold" => Hold(options),
                 "drive" => Drive(options),
@@ -573,6 +580,18 @@ public static class Program
         var ir = a.Install(slot, factory.Create(part));
         if (!ir.Ok) throw new ArgumentException(ir.Message);
         while (removed.Count > 0) { var (s, p) = removed.Pop(); a.Install(s, p); }
+    }
+
+    /// <summary>Loads the content with its errors (a check reports them) and checks one engine.</summary>
+    private static int CheckEngine(CliOptions o)
+    {
+        if (o.Positional.FirstOrDefault() is not { } engineId)
+            return Fail("check-engine needs an engine id (carsim check-engine <engine-id>).");
+        var load = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o));
+        var report = EngineCheck.Run(load, engineId);
+        bool strict = o.Named.GetValueOrDefault("strict") is "1" or "true";
+        Console.Write(report.ToText(verbose: o.Named.GetValueOrDefault("verbose") is "1" or "true", strict: strict));
+        return report.ExitCode(strict);
     }
 
     private static string FeatureStatusLabel(FeatureStatus s) => s switch

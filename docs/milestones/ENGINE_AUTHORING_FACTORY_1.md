@@ -1,10 +1,13 @@
 # Milestone: Engine Authoring Factory 1.0
 
-**Status: AUTHORIZED phase by phase. Phase 1 (content schema + provenance foundation) is implemented and at its gate
-([engine-authoring-factory-1/PHASE1_GATE_REPORT.md](engine-authoring-factory-1/PHASE1_GATE_REPORT.md)); nothing after it
-is started.** The owner authorized Phase 1 only. It covers the B1 schema below except slot layouts, which were not
-needed for this phase. The rest waits for authorization: `check-engine`, tune generation, data-driven verification, the
-pilot and the gate.
+**Status: AUTHORIZED phase by phase.**
+- **Phase 1** (content schema + provenance foundation) passed its gate
+  ([PHASE1_GATE_REPORT.md](engine-authoring-factory-1/PHASE1_GATE_REPORT.md)). It covers the B1 schema below except
+  slot layouts.
+- **Phase 2** (assembly-aware validation, `carsim check-engine`: the B2 check and part of B3) is implemented and at its
+  gate ([PHASE2_GATE_REPORT.md](engine-authoring-factory-1/PHASE2_GATE_REPORT.md)).
+- **Not started:** tune generation (C1), data-driven verification (C2), the rest of B3 (`list`, `schema`), the pilot (D)
+  and the milestone gate (E).
 
 It was defined by the strategy reset of 2026-09-28 from the audit
 [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](../ENGINE_AUTHORING_FACTORY_AUDIT.md), which is its evidence base. Section
