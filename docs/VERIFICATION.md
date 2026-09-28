@@ -9,7 +9,8 @@ None of them is used by the game.
 | Regression fingerprint | Did any output of the K20, the M54 or a synthetic engine move, anywhere? | `dotnet test` (always); `carsim fingerprint` |
 | Tune regeneration driver | Are the shipped tables what their recipes produce? Regenerate them after a physics change. | `carsim regenerate-tunes` |
 | Mutation harness | Does each guarding test fail on the bug it guards? | `dotnet run --project tools/CarSim.MutationCheck -c Release` |
-| Acceptance tests (pending) | The behaviour the next physics change must deliver, written before the code. | `CARSIM_RUN_PENDING_ACCEPTANCE=1 dotnet test --filter Milestone=IntakeGasDynamics2` |
+| Acceptance tests defined before the physics | The behaviour a physics change must deliver, written before the code (pending until it lands; none pending now — Intake Gas Dynamics 2.0's five are facts since Phase 1). | `dotnet test --filter Milestone=IntakeGasDynamics2`; pending ones with `CARSIM_RUN_PENDING_ACCEPTANCE=1` |
+| Stage derivation (A-D1) | The effective lower stage of a two-stage intake whose switch speed is sourced, from the gain functions alone | `carsim derive-stage <engine> --switch <rpm>` |
 
 Code: `tools/CarSim.Verification/` (fingerprint, driver; used by the CLI and the tests), `tools/CarSim.MutationCheck/`,
 `tests/CarSim.Core.Tests/Verification/`, `tests/CarSim.Core.Tests/Acceptance/`.
@@ -60,10 +61,11 @@ while any change to an existing value does. Size ≈ 0.2 MB.
 ## Tune regeneration driver
 `tools/CarSim.Verification/tune-manifest.json` holds one **recipe** per shipped and test tune (12; a test fails if a
 tune has none): engine, build, fuel, and the calibrator steps in order, e.g. the M54's
-`cams (2.5° step) → ve → spark → ve` on RON 98. Each step runs on a fresh engine with the tables the earlier steps left,
-passed through the tune file's number format exactly as pasting `carsim calibrate-*` output does. Switch speeds of
-variable-lift and variable-intake stages are a step too: the full-load torque crossover of the two stages held (100 rpm
-grid, rounded to 100 rpm).
+`cams (2.5° step) → runner_switch → ve → spark → ve` on RON 98. Each step runs on a fresh engine with the tables the
+earlier steps left, passed through the tune file's number format exactly as pasting `carsim calibrate-*` output does.
+Switch speeds of variable-lift and variable-intake stages are a step too: the full-load torque crossover of two stages
+held (100 rpm grid, rounded to 100 rpm); an intake with N stages gets N − 1 switch speeds, each at the crossover of the
+stages below and above it (`intake_runner_upper_switch_rpm` from stage 2; the tune file needs a placeholder list).
 
 Two rules make a regenerated table legitimate (added by the 2026-09-27 design-resolution pass):
 - **Hardware schedule first.** Cam phase and switch speeds come before the fuel and spark maps measured on them
@@ -84,9 +86,16 @@ the tune's comment and the manifest.
 the checked-in values are reproduced; `--write 1` rewrites only the calibrated tables in place, keeping the file's
 layout and number style (a test proves every tune file round-trips byte-identically through the writer).
 
-**Current state (2026-09-27, after the pre-physics regeneration): every tune is a fixed point of its recipe.**
-`carsim regenerate-tunes` reports 12 of 12 reproduced. 39 spark cells in 10 tunes are rounding 2-cycles and keep their
-values. The hand-authored spark audit is unchanged: 74 (K20 stock) and 80 (turbo base) cells above the ceiling.
+**Current state (2026-09-28, after Intake Gas Dynamics 2.0 Phase 1): every tune is a fixed point of its recipe.**
+Phase 1 regenerated all 12 under the new physics (and the M54 again with its DISA switch step). Eight settled in one
+pass. Four had cells the driver reported as unsettled (turbo and phased cam maps with flat optima, one K20 turbo VE
+cell); a regeneration writes the first pass's value for those, so it was run again on them until `carsim
+regenerate-tunes` reproduced every table (two more passes). **Procedure after a physics change: `--write 1`, then check;
+repeat on the tunes that do not reproduce.** The hand-authored spark audit: 78 (K20 stock) and 80 (turbo base) cells
+above the ceiling. Details: docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md, §12.
+
+State after the pre-physics regeneration (2026-09-27): 12 of 12 reproduced, 39 spark cells in 10 tunes rounding
+2-cycles, 74 and 80 hand-authored cells above the ceiling.
 
 The regeneration ran under the existing physics, with the two rules above, in its own commit, and re-baselined the
 fingerprint. Every changed cell and its effect on outputs are listed in
@@ -120,13 +129,15 @@ The Phase 0 table overstated some differences, for two reasons:
 
 ## Mutation harness
 `tools/CarSim.MutationCheck/mutations.json` lists known bugs as exact text replacements and the tests that must fail
-on each (26 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
+on each (31 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
 floor, identity and cylinder-count branches, the dropped cam table, a phaser without effect, the engine-architecture
 hacks — first bank's air or geometry for all, unshared shared elements, four hard-coded cylinders, interfaces from any
 bank, one turbo state — and, for Intake Gas Dynamics 2.0, an inert runner, a runner that never switches, no switch
 hysteresis, a 1e-10 relative change of one filling constant, and a change in the VE calibrator's rounding; from the
 design-resolution gate: a K20 filling change beyond the anchor's physics tolerance, a switch speed set after the fuel map,
-a regeneration that writes rounding 2-cycles, and knife-edge routing that exempts nothing or everything).
+a regeneration that writes rounding 2-cycles, and knife-edge routing that exempts nothing or everything; from Phase 1: a
+cam input to the wave gain, a tuned speed without √T, an unnormalised response, the wave gain dropped, the runner gas
+temperature ignored). Before Phase 1: 26 of 26 caught; after: 31 of 31 (≈ 15 minutes).
 
 For each entry the harness checks the `find` text still occurs exactly once (a stale entry is an error), proves the
 guarding tests pass unmutated, injects the mutant, rebuilds, requires at least one failure, and restores the file with
@@ -134,10 +145,11 @@ a fresh timestamp (MSBuild would otherwise keep the mutant's binaries); it rebui
 Ctrl-C. `--only id,id`, `--list`, `--full` (the whole suite per mutant, counting failures). ≈ 20 minutes for all.
 In CI it is a manual job (`workflow_dispatch`).
 
-## Acceptance tests defined before the physics (pending)
+## Acceptance tests defined before the physics
 `PendingAcceptanceFact` tests are the executable acceptance criteria of the next physics change. They are skipped unless
 `CARSIM_RUN_PENDING_ACCEPTANCE=1` and each is recorded failing on today's model when written; the milestone turns them
-into plain facts. Guards that must hold before and after are ordinary tests (`IntakeGasDynamicsGuardTests`). The list,
+into plain facts. Intake Gas Dynamics 2.0's five did so in Phase 1 (`[Fact]` now; results in its gate report, §10); none
+is pending. Guards that must hold before and after are ordinary tests (`IntakeGasDynamicsGuardTests`). The list,
 tolerances and today's failures are in docs/milestones/INTAKE_GAS_DYNAMICS_2.md.
 
 Each pending test asserts a physical or model relationship (a scaling law, an invariance, a sign, a consistency between two
@@ -147,7 +159,9 @@ parameter. Reference comparisons (the M54's shape) are printed as held-out valid
 **The K20 anchor** (`K20AnchorGuardTests`, active) freezes the stock K20's pre-physics reference (commit 91d3ffa) at two
 levels:
 - **Physics:** full-load air per cycle within ±3 % at every 250 rpm point from 1,500 to 7,500 rpm. On this configuration
-  the fuel map cannot move the air (the tune regeneration moved it by < 0.001 %), so a failure is physics.
+  the fuel map barely moves the air: the pre-physics regeneration moved it by < 0.001 %, and Phase 1's full regeneration
+  (VE cells up to 0.028) by ≈ 0.06 percentage points through charge cooling, ≈ 50 times under the tolerance, so a failure
+  is physics. After Phase 1: max 2.87 % (at 4,750 rpm).
 - **Calibration:** peak torque, peak power and 0–100 km/h within ±3 %.
 
 The rules, and how tune changes are kept apart from physics changes, are in

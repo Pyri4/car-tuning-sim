@@ -1,7 +1,12 @@
 # Milestone: Intake Gas Dynamics 2.0
 
-**Status: PHASE 0 COMPLETE, DESIGN RESOLVED, AT THE FINAL AUTHORIZATION GATE — Phase 1 (the physics) awaits the
-owner's explicit authorization.** Defined by the project gate of 2026-09-27 (after the engine-architecture milestone). The owner
+**Status: PHASE 1 IMPLEMENTED — AT THE PHASE 1 GATE, AWAITING THE OWNER'S REVIEW.** Not merged; Phase 2 is neither
+defined nor authorized. The owner authorized Phase 1 on 2026-09-27 with the proposal below as the design contract; the
+results, deviations and open risks are in
+[intake-gas-dynamics-2/PHASE1_GATE_REPORT.md](intake-gas-dynamics-2/PHASE1_GATE_REPORT.md), and the frozen M54 DISA
+derivation in [intake-gas-dynamics-2/M54_DISA_DERIVATION.md](intake-gas-dynamics-2/M54_DISA_DERIVATION.md).
+
+History: defined by the project gate of 2026-09-27 (after the engine-architecture milestone). The owner
 authorized Phase 0 (verification tooling, the pre-physics baseline, the model specification, sources and acceptance
 tests), accepted it, and asked for a design-resolution pass before Phase 1.
 
@@ -21,8 +26,8 @@ authorization proposal. It holds:
 
 Where it differs from earlier documents, it governs.
 
-No intake gas-dynamics physics is implemented. Do not start Phase 1 until the owner authorizes it; the owner may change
-the scope below.
+Phase 1 implemented the proposal's section 2 model (SIMULATION_SPEC.md, "Intake gas dynamics"). What follows is the
+milestone's definition as written before it; the Phase 1 results section is at the end.
 
 ## Goal
 Separate the two things the current volumetric-efficiency model fuses into one filling hump:
@@ -219,3 +224,23 @@ limitation and are expected to fail in Phase 1: they are retired or inverted the
 CFD or wave-action solvers; exhaust wave tuning beyond the existing scavenging term (a candidate follow-up, together
 with an exhaust-opening term for exhaust cam phasing); per-cylinder pulses; intake sound; new real engines; matching
 any engine's dyno curve exactly.
+
+## Phase 1 results (2026-09-28)
+Full report: [intake-gas-dynamics-2/PHASE1_GATE_REPORT.md](intake-gas-dynamics-2/PHASE1_GATE_REPORT.md). In short:
+- The locked model is implemented generically: every bank, any number of stages, NA and boost, no identity branch. The
+  runner factor is removed; v₀ 13.64 m/s and the ceiling 0.973 are the only fitted constants (the K20 anchor).
+- The five acceptance tests pass and are facts: crossover ratio 1.000; length exponent 0.609; +10.8 % for +9.4 %
+  predicted; the stage effect under the phaser equal to parked; the M54's DISA crossover 3,924 rpm, switch 3,900.
+- K20 anchor: air per cycle within 2.87 % (±3 %); peak torque +2.2 %, peak power −2.5 %, 0–100 km/h +0.4 %.
+- M54 (held-out): a mid-range peak of 297.8 N·m at 3,100 rpm replaces the plateau; no second hump; 153.9 kW (−9.5 %).
+  Classified B/D, nothing fitted.
+- Acceptance criteria:
+  1 (M54): met in direction, within bands, with the shape miss documented;
+  2 (multiple architectures): §9 and the test matrix;
+  3 (K20): a documented correction, re-measured;
+  4 (tunes): all 12 regenerated, fixed points;
+  5 (no engine-specific code): source audit green;
+  6 (performance): −5 % / −5 % / +2.4 %, allocation halved;
+  7 (tests, CLI, Godot, CI): green;
+  8 (docs): updated.
+

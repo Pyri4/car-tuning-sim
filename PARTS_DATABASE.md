@@ -412,7 +412,7 @@ variable intake without control stays on its stage 0, here the closed (long) one
 
 Simplifications (the part descriptions say so where a player would notice): the **exhaust VANOS** is held at its park
 position (in this model an exhaust phase would only add overlap, which it treats purely as a filling cost — there is
-no exhaust-opening/blowdown term); **DISA** is two effective runner stages of one runner–cylinder mode each (below); the
+no exhaust-opening/blowdown term); **DISA** is two effective runner stages of one runner–cylinder mode each (above); the
 real manifold's group plenums, resonance tubes and flap are not modelled (the plenum mode is deferred);
 **MS43 meters air with a hot-film mass-air-flow meter**, represented here by the model's speed-density ECU with a
 calibrated VE table; the E46's **returnless 3.5 bar fuel system** is represented as the model's manifold-referenced
