@@ -223,8 +223,7 @@ public sealed class AirPath
         // Upper bound: the bank's demand at the highest pressure the intake could reach, with generous VE.
         double hi = 1.3 * prBound * k.AmbientPressure / (PhysicalConstants.AirGasConstant * k.AmbientTemperature)
                     * _b.SweptVolume * cyclesPerSecond;
-        double flow = RootFinder.Brent(static (m, s) => s.Path.Evaluate(m, s.VeDyn, in s.Conditions).MassFlow - m,
-            (Path: this, VeDyn: veDyn, Conditions: k), 0.0, hi, 1e-9 * hi);
+        double flow = RootFinder.Brent(new FlowBalance(this, veDyn, k), 0.0, hi, 1e-9 * hi);
         return Evaluate(flow, veDyn, in k) with { WaveGain = waveGain, RunnerTunedRpm = tunedRpm };
     }
 
@@ -306,5 +305,11 @@ public sealed class AirPath
         return new AirPathResult(demand, pMan, tMan, pPort, tCharge, pExhPort, pExhManifold, veDyn, residual, airPerCycle,
             p1, turbo != null ? p1 * comp.PressureRatio : p1, turbo != null ? comp.OutletTemperature : tIn, comp,
             pTurbineIn, pSystemIn, exhaustFlow, turbineFlow);
+    }
+
+    /// <summary>demand(ṁ) − ṁ, whose root is the bank's through-flow.</summary>
+    private readonly struct FlowBalance(AirPath path, double veDyn, AirPathConditions conditions) : IRootFunction
+    {
+        public double Evaluate(double massFlow) => path.Evaluate(massFlow, veDyn, in conditions).MassFlow - massFlow;
     }
 }
