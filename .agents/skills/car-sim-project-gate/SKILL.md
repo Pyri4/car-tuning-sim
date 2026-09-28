@@ -9,12 +9,22 @@ Defined in AGENTS.md, "Choosing and running milestones". The gate decides whethe
 to move on — not whether the latest tests happen to pass. Make no feature changes during a gate; fix only clear
 blockers (and doc contradictions, and missing tests for claims already made).
 
+## Model tiers (AGENTS.md, "Model routing")
+The gate's judgements are **T3 (strongest model)**: PR verdicts, the architecture review, debt classification, merge
+order, the next milestone. Evidence gathering can go to cheaper tiers, and their output is read critically, not
+trusted:
+- **T1:** repository state (step 1), running the verification commands (step 3), stale-count and pointer greps (step 7);
+- **T2:** diff review for ordinary correctness (step 4).
+
+The gate report says which tier did what, and whether any step used a more expensive model than it needed (model
+efficiency is a project metric), or a cheaper one than it should have.
+
 ## Steps
 1. **State of the repository**: `git status`, branches and their relationships (`git merge-base --is-ancestor`),
    commits since `main`, open PRs and their CI. Note stacked branches explicitly.
 2. **Read the docs first**: GAME_VISION.md, AGENTS.md, README.md, GAME_DESIGN.md, ARCHITECTURE.md, ROADMAP.md,
    SIMULATION_SPEC.md, PARTS_DATABASE.md, ENGINE_AUTHORING_GUIDE.md, docs/ENGINE_ARCHITECTURE_AUDIT.md,
-   docs/milestones/.
+   docs/ENGINE_AUTHORING_FACTORY_AUDIT.md, docs/milestones/.
 3. **Re-verify from scratch** (the `car-sim-verify` skill) on every branch under review — a clean build, tests,
    content validation, CLI, Godot smoke tests, CI — plus the regression-identity comparison where behaviour must not
    have moved (the fingerprint; `carsim fingerprint --dump` + `fingerprint-diff` against the base for every value) and
@@ -23,9 +33,13 @@ blockers (and doc contradictions, and missing tests for claims already made).
 4. **Review each PR**: the full diff, leftovers (prototype code, TODOs), identity branches
    (`git diff main... -- src | grep -E '\.Id ==|== "[a-z0-9_.]+"'`), stale docs, whether it met its stated purpose.
    Do not modify a PR just to make it easier to merge.
-5. **Architecture review**: could a substantially different engine be added tomorrow as data? Test mentally against
-   the synthetic matrix and real engines (e.g. RB26, 2JZ, LS3, B58, F20C, 4G63, EA888, K24, VR6, V10, V12,
-   supercharged, direct-injection, dry-sump) — which are data today, which need a capability, which are out of scope.
+5. **Architecture and authoring review**: could a substantially different engine be added tomorrow as data? Test
+   mentally against the synthetic matrix and real engines (e.g. RB26, 2JZ, LS3, B58, F20C, 4G63, EA888, K24, VR6, V10,
+   V12, supercharged, direct-injection, dry-sump) — which are data today, which need a capability, which are out of
+   scope. Content scale is a first-class goal: for every engine added since the last gate, check the recorded
+   authoring cost (docs/milestones/ENGINE_AUTHORING_FACTORY_1.md, "Authoring-cost benchmark"). Any code it needed must
+   be justified as a capability or recorded as a pipeline gap. Provenance must be honest: no estimated or fitted value
+   presented as published or measured.
 6. **Debt scan** for hidden assumptions (ids, cylinder/bank/turbo/head counts, one air or exhaust path, DOHC,
    intake-only cams, port injection, wet sump, one ECU/fuel/cooling system, fixed arrays, single-engine-fitted
    constants). Classify each: **A** generic · **B** documented temporary limitation · **C** fix before the next

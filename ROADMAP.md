@@ -7,8 +7,9 @@ should be almost as easy as adding the 2nd*. Architecture first, content scale s
 **The first playable prototype is complete, a second engine family validates that families are data, and the engine
 architecture is generic: banks, per-bank air paths and geometry, any number of turbos, valvetrain types, variable valve
 lift and variable intakes, engine ↔ car fit by interfaces — proven by a nine-engine synthetic matrix. Intake Gas
-Dynamics 2.0 Phase 1 (the runner's wave gain split from valve-event filling) is implemented and at its gate, awaiting
-review.** Two
+Dynamics 2.0 Phase 1 (the runner's wave gain split from valve-event filling) is merged (PR #7). The project's next
+bottleneck is content authoring: the Engine Authoring Factory audit (2026-09-28) measured it and proposes the next
+milestone (awaiting authorization).** Two
 cars (Kestrel S2 coupe, Isar C30 coupé), two engine families (the fictional Kestrel K20 four and the Isar M54 straight
 six, a real-engine reference: the BMW M54B30), one garage, one engine dyno and one test track, and the whole required
 loop works in the game for both:
@@ -196,7 +197,7 @@ Audit first (`docs/ENGINE_ARCHITECTURE_AUDIT.md`, two passes), then:
 - Answer: **engines are data** for every architecture in the matrix; what still needs code is listed as B/D in the
   audit's second pass and in ENGINE_AUTHORING_GUIDE.md §9.
 
-### Intake Gas Dynamics 2.0 — Phase 0 ✅ (2026-09-27), Phase 1 implemented (2026-09-28; at its gate, awaiting review)
+### Intake Gas Dynamics 2.0 — Phase 0 ✅ (2026-09-27), Phase 1 ✅ (2026-09-28, merged in PR #7)
 Make the next physics change measurable, reproducible and reviewable before it is made (docs/milestones/INTAKE_GAS_DYNAMICS_2.md):
 - [x] **Regression fingerprint** in the repo (`carsim fingerprint`, `tests/baselines/fingerprint.txt`): K20, M54 and every
       synthetic family, full precision, in every build, sweep, dyno mode, cold start, failure hold, scenario and lap
@@ -236,7 +237,32 @@ Make the next physics change measurable, reproducible and reviewable before it i
   - [x] `TorqueCurveDiagnosisTests` inverted or retired;
   - [x] 31 of 31 mutants caught;
   - [x] engine step −5 % (K20, M54), +2.4 % (`syn_v6_tt`), and allocation halved or better;
-  - [ ] the gate review (owner).
+  - [x] the review gate ([PHASE1_REVIEW.md](docs/milestones/intake-gas-dynamics-2/PHASE1_REVIEW.md): three issues
+        root-caused, no implementation change required) and the merge (PR #7). The owner's decisions on the review's
+        §5.1–5.3 (anchor margin, T35, M54 flow data) are not recorded in the repository and stay open.
+
+### Engine Authoring Factory — audit ✅ (2026-09-28; strategy reset: content scale)
+Question: what makes adding engine #20 nearly as easy as engine #2 without weakening the generic architecture, its
+verification or its honesty about sources? ([docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md))
+- [x] Audit before code:
+  - what exists and is reusable;
+  - what is data-driven, hard-coded or C# per engine;
+  - validation coverage;
+  - the authoring cost measured from git history (the M54: 2,568 lines, 380 of them engine content; synthetic engines
+    280–467 lines, of which 104–138 are slot boilerplate on multi-bank engines).
+- [x] Findings:
+  - no engine needs simulation code;
+  - the per-engine cost is boilerplate (slots, tune skeletons, recipes, scenarios);
+  - provenance lives in prose;
+  - validation runs late (`validate` does not assemble stock builds or check the stock tune against them);
+  - per-engine C# sits in the verification layer (fingerprint cases, reference tests, family lists).
+- [x] Proposed milestone
+  [Engine Authoring Factory 1.0](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md): schema (identity, provenance, slot
+  layouts, variants), `check-engine`, `generate-tune`, verification from data, the anti-hack extension, pilot LS3-type
+  V8.
+- [x] Philosophy documented: content scale is a first-class goal (GAME_VISION.md); physics vs content
+  (ENGINE_AUTHORING_GUIDE.md); model routing for agents (AGENTS.md and the skills).
+- No simulation, content, tune, tolerance or fingerprint change.
 
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
@@ -246,7 +272,21 @@ Chosen by long-term value, not ease: prefer work that improves every engine or u
 milestone starts only when the owner authorizes it, and ends with a project gate (verify, review, merge order, define
 the next milestone).
 
-1. **Intake Gas Dynamics 2.0 (current milestone — Phase 1 implemented, at its gate; Phase 2 not defined or authorized).**
+1. **Engine Authoring Factory 1.0 (proposed — awaiting authorization).**
+   Definition: [docs/milestones/ENGINE_AUTHORING_FACTORY_1.md](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md); evidence:
+   [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md). The goal is to make a new engine, or a
+   variant of one, a data-entry and validation task with zero code. The milestone:
+   - moves provenance, family/variant structure and slot layouts into the content schema;
+   - adds an authoring check (`check-engine`: stock build, tune ↔ build, declared vs modelled features, plausibility,
+     provenance coverage) and tune generation on the existing calibrators and driver;
+   - derives fingerprint cases, conformance and reference tests from per-engine data instead of C#;
+   - measures the cost on a pilot (a pushrod V8 of the LS3 type), with the B58 as a negative test of unmodelled
+     features.
+
+   No physics change; K20, M54 and matrix bit-identical. Why now: the architecture is proven generic, so authoring is
+   the bottleneck. It is also the prerequisite for multi-family calibration and Intake Gas Dynamics Phase 2, which need
+   several real references with machine-readable provenance.
+2. **Intake Gas Dynamics 2.0 (Phase 1 merged in PR #7; Phase 2 not defined or authorized).**
    Definition, phases, test matrix, acceptance criteria and Phase 0 results:
    [docs/milestones/INTAKE_GAS_DYNAMICS_2.md](docs/milestones/INTAKE_GAS_DYNAMICS_2.md). Separates
    valve-event filling from runner/plenum gas dynamics, so a cam phaser no longer carries the runner response, variable
@@ -263,34 +303,34 @@ the next milestone).
    and a second real reference with published intake geometry (U8, to turn the amplitude κ from an estimate into a fit).
    Background:
    the M54 torque-curve investigation (SIMULATION_SPEC.md; its E10 prototype is an input, not the design).
-2. **Cylinder groups on inline engines.** Banks are the unit of per-bank parts and air paths, and an inline engine may
+3. **Cylinder groups on inline engines.** Banks are the unit of per-bank parts and air paths, and an inline engine may
    declare only one. That blocks an inline twin turbo (a turbo per three cylinders on one head: RB26-, N54-, 2JZ-type
    parallel twins) and split manifolds. Small: let an inline engine declare several cylinder groups that share its head
    slot (a topology rule and its tests; the per-bank model already supports shared heads), plus a synthetic I6 twin
    turbo in the matrix. See docs/ENGINE_ARCHITECTURE_AUDIT.md, gate review.
-3. **Engine capabilities still missing** (ENGINE_AUTHORING_GUIDE.md §7 procedure): a supercharger category (crank-driven
+4. **Engine capabilities still missing** (ENGINE_AUTHORING_GUIDE.md §7 procedure): a supercharger category (crank-driven
    compressor with drive power), direct injection (charge cooling after the inlet valve closes), exhaust cam phasing
    (with an exhaust-opening term), per-bank fuel trim and knock control as ECU capabilities, a dry sump.
-4. **Swap interfaces beyond the bellhousing:** engine mounts, clearances, cooling capacity, exhaust routing, wiring/ECU,
+5. **Swap interfaces beyond the bellhousing:** engine mounts, clearances, cooling capacity, exhaust routing, wiring/ECU,
    driveshaft and differential; adapter parts; a swap flow in the garage.
-5. **Multi-family calibration.** Re-fit the remaining level-setting constants (Otto realisation, FMEP) on several
+6. **Multi-family calibration.** Re-fit the remaining level-setting constants (Otto realisation, FMEP) on several
    families at once, never per engine.
-6. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
+7. **Chassis dyno.** Run the whole car on rollers (wheel power, driveline loss, clutch slip under
    boost) using `VehicleSimulation`.
-7. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
+8. **Repairs, not just replacement.** Machining operations (bore oversize, crank regrind, head
    skim), per-cylinder state for the key failure modes.
-8. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
+9. **Progression (Phase 5).** Customer jobs with faults to diagnose, repair labour/time, a used-parts
    market with seeded random condition, reputation and money loop.
-9. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
-   spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are a data change: an adjustable
-   `intake_centerline_deg`; wastegate spring preload).
-10. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
+10. **Toe and more set-up physics.** Toe (turn-in vs stability, scrub), bump/rebound damping,
+    spring-rate swaps, aero parts; engine-side adjustments (adjustable cam gears are a data change: an adjustable
+    `intake_centerline_deg`; wastegate spring preload).
+11. **Tracks as content and lap analysis.** Move the circuit definition to JSON; add a second layout;
     record lap telemetry (speed/throttle/brake vs distance) and compare laps.
-11. **Audio.** Engine sound from rpm/load/boost (presentation only).
-12. **Exported builds.** Godot export templates in CI and downloadable artifacts.
+12. **Audio.** Engine sound from rpm/load/boost (presentation only).
+13. **Exported builds.** Godot export templates in CI and downloadable artifacts.
 
-Not yet: more real engines (the architecture is proven, and the intake model is now generic; a second real engine is
-best chosen for its published intake geometry, see item 1), bulk part catalogues, an open world, multiplayer, UI work beyond what a capability needs, matching any
+Not yet: more real engines beyond the factory's pilot (the pipeline must be measured first; for Intake Gas Dynamics a
+further real engine is best chosen for its published intake geometry, see item 2), bulk part catalogues, an open world, multiplayer, UI work beyond what a capability needs, matching any
 single engine's dyno curve.
 
 ## Known issues
@@ -375,6 +415,13 @@ single engine's dyno curve.
 - `VehicleSimulation.Step` is long (driveline, wheels and body in one loop) and should be split.
 - `TrackLayout.TestFacility()` is code, not content.
 - The CLI `Program.cs` has grown; split commands into classes.
+- Content authoring (docs/ENGINE_AUTHORING_FACTORY_AUDIT.md):
+  - provenance lives in prose, which no tool can check;
+  - slot lists and tune skeletons are written by hand;
+  - `carsim validate` does not assemble stock builds or check the stock tune against them;
+  - real engines need C# in the verification layer (fingerprint cases, reference tests, family lists).
+
+  The proposed Engine Authoring Factory 1.0 addresses them.
 - UI views rebuild their subtrees on every change event (fine at this scale; revisit with more data).
 - The full test suite takes ≈ 45–65 s depending on the container (lap, wear, VE-calibration, fuzz and big-turbo gearbox
   tests); tag the slow ones if it grows.

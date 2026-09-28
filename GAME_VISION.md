@@ -51,6 +51,31 @@ That is the technical objective behind every architecture decision. It means:
   V6, V8, flat-four, twin turbo, pushrod, VVL, variable intake…) proves that architectures the code was never written
   for run through the whole pipeline as data.
 
+## Content scale is a first-class goal (2026-09-28)
+Whether the simulator *can* represent different engines is answered: it can, as data, for every architecture in the
+synthetic matrix. The question now is how cheaply and how honestly it can represent **many** of them. The project
+optimizes for
+
+**correctness + genericity + authoring speed + provenance + verifiability**,
+
+not for raw simulation complexity or for one engine's accuracy. Concretely:
+- **Physics is code, engines are content.** The physics answers "what does a runner do?"; the content answers "how long
+  is this engine's runner?" An engine that needs code is missing a capability. The capability is added generically,
+  once, for every engine (ENGINE_AUTHORING_GUIDE.md).
+- **Adding an engine is a pipeline:** specify, source, author parts, validate, derive, generate the base tune, verify,
+  dyno, load in the game. It is not a software project. The number that matters is how much unique code the next real
+  engine needed, and the answer should be none.
+- **Every number has a known origin** (published, measured, secondary, derived, estimated, fitted), recorded so
+  that it can be checked. Today this is written in prose; a machine-readable form the tools can check is proposed.
+- **Reference data is evidence, not a target.** When the model disagrees with a published curve, the disagreement is
+  classified (content, missing capability, shared simplification), never patched.
+- **Physics and content advance in parallel.** An engine whose real hardware the model lacks (direct injection, say)
+  is authored with that feature declared as not modelled, not faked. Today it is declared as a documented
+  simplification, as the M54's exhaust VANOS is.
+
+The plan and its measurements: [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md) and the
+proposed [Engine Authoring Factory 1.0](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md) milestone.
+
 ## Principles that do not change
 1. **Mechanical changes have simulation consequences.** No "Stage 1/2/3" upgrades; a part changes the engine only
    through its specifications.
@@ -63,8 +88,10 @@ That is the technical objective behind every architecture decision. It means:
 5. **The player can always answer:** what changed, why, what measurement proves it, what failed and why.
 6. **Simulation-critical code has automated tests**, and new invariants are mutation-checked (shown to fail on the
    bug they guard).
-7. **Architecture first, content scale second.** Do not add hundreds of parts, an open world or multiplayer before
-   the systems underneath can carry them.
+7. **Architecture first, then content scale through tools.** Do not add hundreds of parts, an open world or
+   multiplayer before the systems underneath — and, for content, the authoring pipeline — can carry them.
+8. **Know where every number comes from.** A value is published, measured, derived, estimated or fitted, and it says
+   which. A fitted or estimated value never passes for a published or measured one.
 
 ## Not goals (for now)
 A massive open world, multiplayer, procedural traffic, an NPC economy, photorealistic graphics, perfect accuracy for

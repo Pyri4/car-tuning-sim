@@ -16,6 +16,13 @@ Scale goal: hundreds of engine families, thousands of parts, many cars, engine s
 Mechanical depth and tuning are more important than arcade racing. You do not need the user to re-explain any of
 this; the repository holds it.
 
+**Current direction (2026-09-28): content scale is a first-class goal.** The simulator is proven to represent engines
+as data. The goal now is to make engine #20 nearly as cheap as engine #2 without weakening the physics, the
+verification or the provenance. Optimize for correctness + genericity + authoring speed + provenance + verifiability,
+not for raw simulation complexity or one engine's dyno curve. Plan and evidence:
+[docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md); milestone (proposed):
+[docs/milestones/ENGINE_AUTHORING_FACTORY_1.md](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md).
+
 ## Development principles
 - Prefer modular, data-driven systems over hardcoded vehicle-specific logic.
 - Avoid fake "Stage 1/2/3" upgrades as the primary progression mechanic.
@@ -37,6 +44,14 @@ Full reference: [ENGINE_AUTHORING_GUIDE.md](ENGINE_AUTHORING_GUIDE.md).
 - The model is **generic physics + generic capabilities + part data + calibration**. A missing physical feature becomes a
   reusable capability (guide §7), driven by part data, tested, and bit-identical for engines without the hardware.
 - **Do not re-fit shared model constants to make one engine match its reference.** Document the miss and classify it.
+  Reference curves are evidence, never targets: no per-engine correction curves, dyno lookup tables or tune magic.
+- **Physics is code, engines are content.** Physics answers "what does a runner do?"; content answers "how long is this
+  engine's runner?". If an engine needs code, the model is missing a capability; if it needs code outside `src/` (tests,
+  fingerprint cases, CI), the authoring pipeline is missing a feature. Either way, document why.
+- **Record provenance for every real-engine value** (published, measured, secondary, converted, derived, estimated,
+  fitted, calibrated — PARTS_DATABASE.md's M54 tables are the model). Never present a fitted or estimated value as
+  published or measured. Use facts with citations only; never copy code, assets, data files or text from other games or
+  mods, and use third-party data only under a licence that explicitly permits it.
 - Parts fit through **interfaces** (`provides`/`requires`, bank-aware); cars and engines fit through interfaces too
   (bellhousing today). Never tie a car to an engine family or a part to a list of engines.
 - Bank-scoped categories (head, gasket, springs, cams, intake, throttle, exhaust manifold, exhaust, turbo, intercooler)
@@ -71,7 +86,8 @@ trigger mechanical failure through bad parts/build/tuning). See ROADMAP.md for w
 ## Agent workflow
 When starting a task:
 1. Read GAME_VISION.md, README.md, GAME_DESIGN.md, ARCHITECTURE.md, ROADMAP.md, and the relevant system docs
-   (ENGINE_AUTHORING_GUIDE.md for anything touching engines or parts; SIMULATION_SPEC.md; PARTS_DATABASE.md).
+   (ENGINE_AUTHORING_GUIDE.md for anything touching engines or parts; SIMULATION_SPEC.md; PARTS_DATABASE.md;
+   docs/ENGINE_AUTHORING_FACTORY_AUDIT.md for content-authoring tooling).
 2. Identify affected systems and dependencies.
 3. Make the smallest coherent implementation.
 4. Add/update tests.
@@ -89,8 +105,9 @@ When starting a task:
 The project's agent skills (below) package steps 5–6 (`car-sim-verify`), engine work (`car-sim-add-engine`) and the
 end-of-milestone gate (`car-sim-project-gate`); use them when they apply.
 
-Architecture work comes before content scale: do not add hundreds of parts, an open world, multiplayer or unrelated UI
-before the systems underneath can carry them.
+Architecture work comes before content scale, and content scale comes through tools: do not add hundreds of parts,
+dozens of engines, an open world, multiplayer or unrelated UI before the systems underneath (and, for content, the
+authoring pipeline) can carry them. Do not build a GUI editor ahead of the data format, validation and CLI.
 
 ## Choosing and running milestones
 - Choose work by long-term value, not by ease: prefer what improves every engine or unlocks many future systems (a
@@ -103,6 +120,31 @@ before the systems underneath can carry them.
 - Do not chase an isolated dyno number, add engines ahead of the capabilities they need, or put UI ahead of the
   simulation architecture. Validation (tests, CLI, Godot smoke tests, CI) is part of the work, never optional.
 - Branches may be stacked on unmerged PRs; say so in the PR, and merge in dependency order.
+
+## Model routing
+This project uses several AI models and agents. Use the **least capable model that can reliably do the task**. Quality
+always wins over cost: correctness, physical validity, architectural integrity and the anti-hack guarantees come first.
+Before a task, classify its complexity (low, medium or high) and its risk (low, medium or high), then pick the lowest
+tier that covers both. Fable is not in the small-model pool and is not assigned routine low-complexity work under this
+policy.
+
+| Tier | Use for | Examples |
+|---|---|---|
+| **1 — small** | Low complexity, low risk, a pattern already exists | Exploring the repo, locating symbols, reading and summarizing docs or code; formatting, spelling and straightforward doc edits; running existing CLI commands and reading obvious output; entering sourced specs and provenance into the established schema; repetitive part, engine or fixture content; tests that copy an existing pattern; updating generated manifests; reports from measurements already made |
+| **2 — medium** | Contained implementation where the invariants are known | Non-trivial C#, a new CLI command, extending validation or an existing abstraction, content tooling, debugging a localized issue, ordinary PR review, tests for known invariants, a new generic interface |
+| **3 — strongest** | Decisions and anything high-risk | Architecture and simulation-model design, new physics, cross-system changes, hard debugging, conflicting requirements, security, IP and licensing, major refactors, milestone planning and final gates. Also: judging whether an abstraction is generic or a proposal is an engine-specific hack, interpreting ambiguous physical evidence, disputes between tests and reference data, accepting a regression, changing a tolerance or a parameter |
+
+Rules:
+- **A small model gathers evidence; it never makes a hard decision.** It must not decide whether a new abstraction is
+  needed, whether a parameter, tolerance or regression is acceptable, whether a physical model is valid, or whether an
+  engine-specific exception is allowed.
+- **Escalate, never guess.** A small model that meets missing or conflicting data, unknown compatibility, an unsupported
+  architecture, ambiguous terminology, physics the model does not represent, or a validation failure that needs
+  interpretation stops and escalates. It must not invent values.
+- **Content authoring is designed for small models:** source documents → small model fills the schema → validator and
+  tests → a stronger model only when something fails or conflicts.
+- Model efficiency is a project metric: say which tier each step of a milestone or engine used and where it escalated
+  (the authoring-cost benchmark records it). The project skills name a tier for each step.
 
 ## Agent skills
 Skills are managed with the open-source skills CLI (`npx skills`, https://github.com/vercel-labs/skills; needs Node.js).

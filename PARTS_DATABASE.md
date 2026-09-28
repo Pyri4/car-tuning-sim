@@ -440,3 +440,14 @@ dev calibrators.
 Two engine families: the Kestrel K20 (fictional four, the prototype's engine) and the Isar M54 (a real engine used to
 validate that families are data, above). A new family should follow the M54's route: published geometry, estimated
 flows and ratings stated as estimates, base maps from the calibration tools, and no simulation code.
+
+Content scale is a first-class goal (GAME_VISION.md). Provenance follows the kinds in ENGINE_AUTHORING_GUIDE.md §6:
+measured, published, secondary, converted, derived, estimated, fitted and calibrated. A fitted or estimated value is
+never presented as published or measured. Real games and mods are inspiration only: no code, assets, data files or
+text are copied, and third-party data is used only under a licence that explicitly permits it. In-game names follow the
+fictional-marque convention; real names appear only in provenance.
+
+Today provenance is recorded in this document and in JSON comments. The loader **rejects** unknown fields, so do not
+add `provenance`, `identity`, `sources`, `extends` or `slot_layout` fields to content yet. They are proposed in
+docs/milestones/ENGINE_AUTHORING_FACTORY_1.md (design: docs/ENGINE_AUTHORING_FACTORY_AUDIT.md §9) and await
+authorization.

@@ -8,6 +8,16 @@ description: Validate a change to the car-tuning-sim repository before committin
 Validation is part of the work, never optional (AGENTS.md). Report the numbers you actually saw — test counts,
 failures, script errors, CI conclusion — never "tests pass" from memory or from an earlier run.
 
+## Model tiers (AGENTS.md, "Model routing")
+Running the checks and reading clear results is **T1 (small model)** work: build, tests, CLI, Godot, CI status. Stop
+and escalate instead of deciding when a result needs interpretation:
+- a failing test whose cause is not obvious from its message → **T2**;
+- any fingerprint difference, a surviving mutant, a physics or reference-band failure, or any idea of changing a
+  tolerance, a test, a constant or the baseline → **T3** decides (fix, classify, or re-baseline as a documented generic
+  correction).
+
+A small model never re-baselines, skips, loosens or deletes a check to get green.
+
 ## When to use
 - Before every commit or push that touches `src/`, `content/`, `game/`, `tools/`, `tests/` or `.github/`.
 - Before writing a completion report, a PR description or a project-gate verdict.

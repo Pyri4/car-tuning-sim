@@ -11,6 +11,9 @@ When the code changes, this file changes in the same commit.
 - Deterministic. No random numbers anywhere in the model.
 - Constants are named, documented, and tested for direction of effect; a handful of reference points
   are pinned by tests so calibration drift is visible.
+- The model is the physics; engines are content. Nothing here depends on which engine runs: this document states what
+  a runner, a compressor or a compression ratio *does*, and content states what an engine *has*
+  (ENGINE_AUTHORING_GUIDE.md, "Physics vs content"). Reference curves are held-out evidence, never fitting targets.
 
 ## Engine model overview (`Simulation/EngineSimulation.cs`)
 Each `Step(dt, inputs)`:
@@ -722,7 +725,9 @@ Every `Clamp`/`Min`/`Max` in the simulation was reviewed in the validation pass.
   | Knock mixture term λ ∈ [0.6, 1.3]; coolant wall heating only above 90 °C | outside the correlation's range / a cold engine (a colder wall does not *reduce* knock — known asymmetry) | — |
   | Tuned piston speed ≥ 2 m/s (cam timing) | the M54's intake fully advanced at high speed; never on either shipped calibration | `CamTuningFloorActive` |
 
-**Calibration constants.** Classes: (A) physical constants (gas constants, c_p, γ, Stefan–Boltzmann, heating
+**Calibration constants.** (These classes are for *model constants*. Authored content values have their own
+provenance kinds, such as published, measured, derived, estimated or fitted: ENGINE_AUTHORING_GUIDE.md §6. The two
+scales are distinct.) Classes: (A) physical constants (gas constants, c_p, γ, Stefan–Boltzmann, heating
 values, Thornton's 406 kJ/mol O₂, Douaud–Eyzat); (B) numerical (tolerances, step sizes); (C) empirical
 correlations with a physical form, scaled by geometry where the physics says so; (D) gameplay tuning. Class C
 constants that set overall levels and were fitted to the stock K20's published output: the Otto realisation
