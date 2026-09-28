@@ -174,8 +174,8 @@ Full harness on the final tree: **43 of 43 caught** (31 from before the factory,
 | `carsim validate` / `--mods content/test` | OK / OK |
 | CI's CLI steps (validate, sweeps, inspect, check-engine ×3, fingerprint subset, `regenerate-tunes --tune k20.stock,syn.r6.stock`) | all OK; both tunes reproduced exactly |
 | Skills consistency (CI check) | OK (`car-sim-add-engine`, `car-sim-verify` updated and reinstalled) |
-| Godot headless smoke tests | **not run**: Godot is not installed in this container. No game, UI or simulation code changed; the game project compiles |
-| CI on GitHub | not observed from this session; results appear on the branch after push |
+| Godot headless smoke tests | Not run locally (Godot is not installed in this container). **GitHub CI ran them** on the official 4.7.2 .NET build: K20, M54, and the pushrod V8 and twin-turbo V6 swapped into the Isar; dyno and drive, all passed |
+| CI on GitHub ([run 76](https://github.com/Pyri4/car-tuning-sim/actions/runs/36441617002), head `b9f4d12`) | **success**: core build and tests, CLI smoke, skills check, the new check-engine step, verification tools, Godot smoke; the mutation job is manual-only (skipped) |
 
 ## 7. B58 negative test
 The fixture (test-only) declares, on the synthetic turbo four as stand-in hardware, a B58-style identity: turbocharger,
@@ -239,7 +239,7 @@ identity with the cross-plane firing order 1-8-7-2-6-5-4-3. The report reads "V8
    generate them.
 7. **Generic architecture work surfaced:** a cam-in-block (pushrod) phaser type; cylinder groups on inline engines
    (known); cylinder deactivation (physics). None is needed for the LS3 itself.
-8. **Godot and GitHub CI** were not run or observed from this container.
+8. **Godot** was not run in this container; CI ran the smoke tests and they passed.
 
 ## Model routing (as practised)
 This session ran on one model and spawned no subagents.
