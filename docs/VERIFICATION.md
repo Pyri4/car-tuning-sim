@@ -129,7 +129,7 @@ The Phase 0 table overstated some differences, for two reasons:
 
 ## Mutation harness
 `tools/CarSim.MutationCheck/mutations.json` lists known bugs as exact text replacements and the tests that must fail
-on each (31 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
+on each (35 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
 floor, identity and cylinder-count branches, the dropped cam table, a phaser without effect, the engine-architecture
 hacks — first bank's air or geometry for all, unshared shared elements, four hard-coded cylinders, interfaces from any
 bank, one turbo state — and, for Intake Gas Dynamics 2.0, an inert runner, a runner that never switches, no switch
@@ -137,7 +137,10 @@ hysteresis, a 1e-10 relative change of one filling constant, and a change in the
 design-resolution gate: a K20 filling change beyond the anchor's physics tolerance, a switch speed set after the fuel map,
 a regeneration that writes rounding 2-cycles, and knife-edge routing that exempts nothing or everything; from Phase 1: a
 cam input to the wave gain, a tuned speed without √T, an unnormalised response, the wave gain dropped, the runner gas
-temperature ignored). Before Phase 1: 26 of 26 caught; after: 31 of 31 (≈ 15 minutes).
+temperature ignored; from Engine Authoring Factory 1.0 Phase 1: any provenance type accepted, a part variant
+inheriting provenance for a value it changes, an engine variant replacing its family's stock parts, an unmodelled
+feature without its approximation). Before Intake Gas Dynamics Phase 1: 26 of 26 caught; after: 31 of 31 (≈ 15 minutes);
+the four authoring-schema mutants: 4 of 4.
 
 For each entry the harness checks the `find` text still occurs exactly once (a stale entry is an error), proves the
 guarding tests pass unmutated, injects the mutant, rebuilds, requires at least one failure, and restores the file with

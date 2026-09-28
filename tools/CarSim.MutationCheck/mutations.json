@@ -253,6 +253,11 @@
       "find": "bool knifeEdge = FingerprintMatrix.KnifeEdgeSections.TryGetValue($\"{caseId}/{name}\", out var why);",
       "replace": "bool knifeEdge = FingerprintMatrix.KnifeEdgeSections.TryGetValue($\"{caseId}/{name}\", out var why) || true;",
       "tests": "FullyQualifiedName~AKnifeEdgeSectionIsReportedButIsNotARegression"
-    }
+    },
+    // Engine Authoring Factory 1.0, Phase 1: the authoring schema.
+    {"id": "provenance-any-type", "guards": "A provenance record's type must be one of the known kinds (published, measured, secondary, converted, derived, estimated, fitted).", "file": "src/CarSim.Core/Content/Provenance.cs", "find": "if (!ProvenanceTypes.All.Contains(Type))", "replace": "if (!ProvenanceTypes.All.Contains(Type) && Type.Length == 0)", "tests": "FullyQualifiedName~AuthoringSchemaTests"},
+    {"id": "part-variant-inherits-changed-provenance", "guards": "A part variant never inherits its parent's provenance for a value it changes.", "file": "src/CarSim.Core/Content/ContentLoader.cs", "find": "foreach (var (field, record) in parent.Provenance.Where(kv => !ownFields.Contains(kv.Key))) merged[field] = record;", "replace": "foreach (var (field, record) in parent.Provenance) merged[field] = record;", "tests": "FullyQualifiedName~AuthoringSchemaTests"},
+    {"id": "engine-variant-replaces-stock-parts", "guards": "An engine variant merges stock_parts and identity entry by entry instead of replacing them.", "file": "src/CarSim.Core/Content/ContentLoader.cs", "find": "if (key is \"stock_parts\" or \"identity\" && value is JsonObject ownMap && merged[key] is JsonObject parentMap)", "replace": "if (key is \"none\" && value is JsonObject ownMap && merged[key] is JsonObject parentMap)", "tests": "FullyQualifiedName~AuthoringSchemaTests"},
+    {"id": "unmodelled-feature-without-approximation", "guards": "A declared feature the simulator does not model must say what stands in for it.", "file": "src/CarSim.Core/Engines/EngineFeatures.cs", "find": "if (!feature.Modelled && string.IsNullOrWhiteSpace(d.Approximation))", "replace": "if (!feature.Modelled && string.IsNullOrWhiteSpace(d.Approximation) && d.Feature.Length == 0)", "tests": "FullyQualifiedName~AuthoringSchemaTests"}
   ]
 }

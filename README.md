@@ -46,7 +46,7 @@ DOHC V8s, a flat-four, VVL, variable intake) proves that other architectures run
 - docs/ENGINE_ARCHITECTURE_AUDIT.md — structural engine assumptions found in the code and what was done about each
 - docs/VERIFICATION.md — the regression fingerprint, the tune-regeneration driver and the mutation harness
 - docs/ENGINE_AUTHORING_FACTORY_AUDIT.md — what adding an engine costs today, what should become data or tooling, and the
-  proposed Engine Authoring Factory milestone
+  Engine Authoring Factory milestone
 - docs/milestones/ — milestone definitions (the next one is proposed until the owner authorizes it)
 
 Coding agents also get this project's procedures as agent skills (`.agents/skills/`, `.claude/skills/`, managed with

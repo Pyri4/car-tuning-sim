@@ -31,7 +31,10 @@ docs/milestones/ENGINE_AUTHORING_FACTORY_1.md (proposed; not yet in the code).
 
 | Term | Meaning | Where it lives |
 |---|---|---|
-| **Engine family** | A named engine: its architecture, slots, stock parts and stock tune ("Isar M54", "Synth V8 3.9 pushrod") | `engines` in content JSON → `EngineDefinition` |
+| **Engine family** | A named engine: its architecture, slots, stock parts and stock tune ("Isar M54", "Synth V8 3.9 pushrod"). A family may be an `abstract` base that only exists to be extended | `engines` in content JSON → `EngineDefinition` (abstract bases: `ContentDatabase.AbstractEngines`) |
+| **Variant** | An engine definition that `extends` a family (or another variant) and states only what differs: other stock parts, another tune, its identity | `engines` entry with `extends` |
+| **Identity** | Who and what an engine is — kind (`real`, `fictional`, `synthetic`), maker, family, variant code, reference source — and its **declared features**, including hardware the simulator does not model. Metadata only; the physics never reads it | `identity` → `EngineIdentity` |
+| **Provenance** | Where an authored value comes from (published, measured, secondary, converted, derived, estimated, fitted) | `provenance` on parts and engines, `sources` documents (PARTS_DATABASE.md, "Provenance") |
 | **Architecture** | The structural facts of a family: layout (`inline`/`v`/`flat`), cylinder count, **banks** (which cylinders each holds), bank angle, firing order, and which slot serves which bank | the family's `banks`, `bank_angle_deg`, `firing_order`, slot `banks` |
 | **Slot** | A place a part goes, with a category, an assembly order (`install_after`) and, for bank-scoped categories, the banks it serves | the family's `slots` |
 | **Part** | A buyable, wearable component with a typed spec (geometry, flow, strength, limits) and interfaces | `parts` → `PartDefinition` + a `*Spec` |
@@ -41,7 +44,8 @@ docs/milestones/ENGINE_AUTHORING_FACTORY_1.md (proposed; not yet in the code).
 | **Model constant** | A generic physics or correlation constant shared by every engine | code (`SIMULATION_SPEC.md` lists them) — never per engine |
 
 Family ≠ architecture: two families can share an architecture (every inline-4), and one family's variants differ
-only in parts. Capabilities are not flags you set on an engine — they exist exactly when a part provides them
+only in parts — so a variant is an `extends` entry, not a copy. A definition without `extends` is its own family (the
+K20 and the M54 are). Capabilities are not flags you set on an engine — they exist exactly when a part provides them
 (`EngineCapabilities.Resolve` derives the summary from the installed parts, and the physics reads the same part data).
 
 ## 2. The engine model in one page
@@ -179,8 +183,9 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
 
 1. **Reference data.** Collect geometry (bore, stroke, rod length, deck height, compression height, chamber, gasket),
    cams (durations, lifts, centrelines), flows (ports, manifolds, throttle, exhaust), strengths and limits, masses. For a
-   real engine, record every value's provenance, as PARTS_DATABASE.md does for the M54. Today this is written in prose;
-   a machine-readable form is proposed (docs/ENGINE_AUTHORING_FACTORY_AUDIT.md §9.3). The kinds:
+   real engine, record every value's provenance in the part's `provenance` map, citing `sources` entries
+   (PARTS_DATABASE.md, "Provenance"; the M54 is the worked example). The kinds (`calibrated` is recorded by the tune
+   manifest, not by `provenance`):
 
    | Kind | Meaning |
    |---|---|
@@ -193,11 +198,18 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
    | fitted | Chosen to reproduce a model *output*. Forbidden for content in practice; if ever used, name the target |
    | calibrated | Produced by the dev calibrators (tune tables) |
 
-   Never present a fitted or estimated value as published or measured, and say which fields were left to a schema
-   default. Do not derive compression ratio: author the volumes and let the model compute it.
+   Never present a fitted or estimated value as published or measured. A value whose origin you do not know gets **no**
+   record, never an invented one. A field left to a schema default gets none either: the loader knows which fields were
+   stated (`AuthoredSpecFields`).
 
-   Real hardware the model lacks (direct injection, exhaust cam phasing, a hot-film MAF…) is listed as a simplification,
-   with what stands in for it. It is never faked with an "effective" part.
+   **Authored vs derived:** author the physical inputs; the model derives the rest (displacement, compression ratio,
+   clearance volume, runner tuned speeds), and those are not fields at all. Do not derive compression ratio: author the
+   volumes and let the model compute it. A `derived` record is for an *input* you computed with a named method.
+
+   **Declare the real engine's hardware** in `identity.features`, including what the simulator does not model (direct
+   injection, exhaust cam phasing, a hot-film MAF…). An unmodelled feature needs an `approximation` saying what stands
+   in, or `"omitted"`. It is never faked with an "effective" part. `carsim inspect` reports each feature as supported,
+   not modelled, missing data or undeclared.
 2. **Architecture.** Choose layout, banks (ids and cylinder numbers), bank angle, firing order. Decide which
    bank-scoped parts are per bank and which are shared (one plenum or two? one turbo or a turbo per bank? a Y-pipe or
    dual exhausts?). The air-path topology is exactly this choice.
@@ -205,7 +217,9 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
    manifolds) are separate parts with bank-specific flanges when they cannot swap sides; identical parts (heads on many
    V engines, gaskets) are one part id used in both slots. Give each part the interfaces it physically has. Reuse
    existing universal parts (injectors, ECUs, fuel pumps, turbos) where they fit.
-4. **Family.** Slots (categories, bank scopes, `install_after`), `stock_parts`, `stock_tune`.
+4. **Family.** Slots (categories, bank scopes, `install_after`), `stock_parts`, `stock_tune`, `identity`. A variant of an
+   existing family is an `extends` entry with only what differs; a part variant likewise (`extends` + changed spec
+   fields).
 5. **Validate.** `carsim validate --mods <dir>` (or put the files under `content/base`) and `carsim inspect <id>`:
    fix every error and read every warning (valve float below the rev limit, coil bind, quench, compression, missing
    interfaces). The messages name the bank and slot.

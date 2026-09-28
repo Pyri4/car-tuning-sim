@@ -66,15 +66,17 @@ not for raw simulation complexity or for one engine's accuracy. Concretely:
   dyno, load in the game. It is not a software project. The number that matters is how much unique code the next real
   engine needed, and the answer should be none.
 - **Every number has a known origin** (published, measured, secondary, derived, estimated, fitted), recorded so
-  that it can be checked. Today this is written in prose; a machine-readable form the tools can check is proposed.
+  that it can be checked. Content records it in machine-readable `provenance` beside the values, citing `sources`
+  (PARTS_DATABASE.md, "Provenance").
 - **Reference data is evidence, not a target.** When the model disagrees with a published curve, the disagreement is
   classified (content, missing capability, shared simplification), never patched.
 - **Physics and content advance in parallel.** An engine whose real hardware the model lacks (direct injection, say)
-  is authored with that feature declared as not modelled, not faked. Today it is declared as a documented
-  simplification, as the M54's exhaust VANOS is.
+  is authored with that feature declared as not modelled, not faked: `identity.features` states it and what stands in,
+  as the M54 does for its exhaust VANOS.
 
 The plan and its measurements: [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md) and the
-proposed [Engine Authoring Factory 1.0](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md) milestone.
+[Engine Authoring Factory 1.0](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md) milestone (authorized; Phase 1, the content
+schema and provenance, is done).
 
 ## Principles that do not change
 1. **Mechanical changes have simulation consequences.** No "Stage 1/2/3" upgrades; a part changes the engine only

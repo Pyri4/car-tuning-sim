@@ -242,10 +242,13 @@ Engines are data; the code knows categories, capabilities and topology rules, ne
   *parts* in existing categories require only data, and so do new engine families (ENGINE_AUTHORING_GUIDE.md).
 - `content/test/` holds content layers for tests and development only (the synthetic engine matrix). It is loaded like
   a mods folder (`--mods content/test`, `CARSIM_MODS_DIR`) and never ships.
-- *(proposed, docs/milestones/ENGINE_AUTHORING_FACTORY_1.md)* Authoring conveniences — slot layouts, engine and part
-  variants (`extends`), identity metadata, provenance and sources — expand in the loader into the definitions above, so
-  the simulation, saves and the game see exactly what they see today. There is one content format and no second
-  specification layer.
+- **Authoring schema** (Engine Authoring Factory 1.0, Phase 1):
+  - engine and part variants (`extends`, abstract family bases) resolve in the loader, after every layer, into the same
+    `EngineDefinition` and `PartDefinition` as before, so the simulation, saves and the game see plain definitions;
+  - provenance records, sources and engine identity (with declared, possibly unmodelled features) are metadata beside
+    the values, and nothing in the simulation reads them (`AuthoringSchemaTests` audits `src/` for it);
+  - there is one content format and no second specification layer. Slot layouts are still proposed
+    (docs/milestones/ENGINE_AUTHORING_FACTORY_1.md).
 
 ---
 
@@ -396,3 +399,4 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
 | 2026-09-28 | Correction to the anchor entry above: a full tune regeneration (VE cells up to 0.028) moved the anchor's air per cycle by ≈ 0.06 percentage points, not < 0.001 % | Through the fuel's evaporative charge cooling. Still ≈ 50 times under the ±3 % tolerance, so the anchor stays a physics check, but it is not strictly tune-independent |
 | 2026-09-28 | **Content scale is a first-class goal** (strategy reset): optimize for correctness + genericity + authoring speed + provenance + verifiability. The next milestone is proposed as Engine Authoring Factory 1.0, with an audit before any code (docs/ENGINE_AUTHORING_FACTORY_AUDIT.md). Its design (loader expansion into today's definitions, provenance kinds as words, verification from per-engine data) awaits authorization | The engine architecture is proven generic. The measured cost of a new engine is boilerplate, prose-only provenance, late validation and per-engine C# in the verification layer, not physics. Letters A–D already name debt classes and model-constant classes, so content provenance uses words (published, measured, derived, estimated, fitted…) |
 | 2026-09-28 | Model routing for agents: the least capable model that reliably does a task; small models gather evidence and enter data, stronger models decide; escalate instead of guessing (AGENTS.md, "Model routing"; per-step tiers in the skills) | Content authoring at scale is repetitive, schema-bound work that small models can do under a validator; architecture, physics and acceptance decisions are not |
+| 2026-09-28 | Authoring schema (Engine Authoring Factory 1.0, Phase 1): provenance as a map beside the spec (`provenance`, keyed by field; the value keeps its unit-suffixed field) with sources as their own document kind; `extends` for engines and parts, resolved after all layers into plain definitions (`stock_parts` and `identity` merged by entry, `spec` by field, anything else replaced; `abstract` never inherited); a variant inherits provenance only for values it does not restate; `identity.features` from a fixed vocabulary in code, unmodelled ones requiring an approximation | Nested `{value, provenance}` objects would have changed every spec's schema and every reader for no simulation benefit. Resolving variants in the loader keeps the physics, saves and game unaware of them, which the regression fingerprint confirms (identical). The feature vocabulary lives in code because what the physics models is a fact about the code |

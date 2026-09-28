@@ -7,6 +7,7 @@
       "name": "Synth V8 3.9 pushrod",
       "cylinders": 8,
       "layout": "v",
+      "identity": { "kind": "synthetic" },
       "bank_angle_deg": 90,
       "banks": [{"id": "left", "cylinders": [1, 3, 5, 7]}, {"id": "right", "cylinders": [2, 4, 6, 8]}],
       "firing_order": [1, 8, 4, 3, 6, 5, 7, 2],

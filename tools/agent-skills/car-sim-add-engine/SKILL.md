@@ -8,10 +8,10 @@ description: Add a new engine family or variant (real or fictional) to car-tunin
 The rule: **adding an engine is a content/data task.** Simulation code never learns an engine's name. The canonical
 reference is `ENGINE_AUTHORING_GUIDE.md` — read §1–§6 before authoring and §8 before finishing; this skill is the
 checklist, not a replacement. Content scale is a first-class goal (GAME_VISION.md): the measure of success is how
-little unique work the engine needed — ideally zero code. The proposed Engine Authoring Factory
-(docs/milestones/ENGINE_AUTHORING_FACTORY_1.md) will turn these steps into commands; until it lands, follow them as
-written and do **not** use its proposed fields (`provenance`, `identity`, `extends`, `slot_layout`) — the loader rejects
-unknown fields.
+little unique work the engine needed — ideally zero code. Engine Authoring Factory 1.0
+(docs/milestones/ENGINE_AUTHORING_FACTORY_1.md) is turning these steps into commands, phase by phase. Available now:
+`provenance` and `sources`, `identity` with declared features, and `extends` for engine and part variants
+(PARTS_DATABASE.md). Not yet: `slot_layout`, `check-engine` and `generate-tune`. The loader rejects unknown fields.
 
 ## Model tiers (AGENTS.md, "Model routing")
 Each step names the lowest tier that can do it reliably: **T1** small, **T2** medium, **T3** strongest. A small model
@@ -31,16 +31,21 @@ wish to change a constant, tolerance, test or regression baseline. Never invent 
 
 ## Steps (guide §6)
 1. **Reference data** (T1 enters sourced values; T3 resolves conflicts between sources) with provenance for every value:
-   measured / published / secondary / converted / derived / estimated / fitted / calibrated (guide §6 step 1), recorded
-   as PARTS_DATABASE.md does for the M54. Never present an estimate or a fit as published. Author volumes; never author
-   compression ratio. Real names stay in provenance; the game uses a fictional marque.
+   measured / published / secondary / converted / derived / estimated / fitted (guide §6 step 1), in the parts'
+   `provenance` maps citing `sources` entries, as the M54 does. Never present an estimate or a fit as published; a value
+   of unknown origin gets no record, never an invented source. Author volumes; never author compression ratio. Real
+   names stay in `identity` and provenance; the game uses a fictional marque. Declare the real engine's hardware in
+   `identity.features`; an unmodelled feature states its `approximation` (**T3** decides whether an approximation is
+   acceptable).
 2. **Architecture** (T2; T3 if no synthetic matrix engine has this topology): layout, banks (ids + cylinder numbers),
    bank angle, firing order; which bank-scoped parts are per bank and which are shared (plenum, turbo, exhaust) — that
    choice *is* the air-path topology.
 3. **Parts** (T1 fills specs following an existing part of the same category; T2 chooses interfaces) with specs and
    **interfaces** (`provides`/`requires`: deck, flanges, bellhousing, cam tunnel…). Reuse universal parts (injectors,
    ECUs, fuel pumps, turbos) where they physically fit.
-4. **Family** (T1, copying the matrix's slot pattern): slots (`banks`, `install_after`), `stock_parts`, `stock_tune`.
+4. **Family** (T1, copying the matrix's slot pattern): slots (`banks`, `install_after`), `stock_parts`, `stock_tune`,
+   `identity`. A variant of an existing family is an `extends` entry with only what differs, and a part variant is an
+   `extends` part with only the changed fields (**T2** decides whether something is a variant or a new family).
 5. **Validate** (T1 runs and fixes typos and structural errors; T2 interprets warnings; T3 for physical warnings you
    cannot explain): `dotnet run --project tools/CarSim.Cli -c Release -- validate [--mods <dir>]` and
    `inspect <engine-id>` — `validate` only loads; `inspect` runs the physical assembly rules. Fix every error, read every

@@ -87,6 +87,19 @@ public sealed class EngineDefinition
     public string Description { get; init; } = "";
     public string Source { get; init; } = "";
 
+    /// <summary>Who and what this engine is (metadata only; nothing in the simulation reads it). Null when not authored.</summary>
+    public EngineIdentity? Identity { get; init; }
+
+    /// <summary>The family definition this variant extends (<c>extends</c>), or null. Resolved at load; informational.</summary>
+    public string? Extends { get; init; }
+
+    /// <summary>
+    /// Provenance of the authored architecture fields (<c>cylinders</c>, <c>bank_angle_deg</c>, <c>firing_order</c>, …),
+    /// keyed by field name, expanded over the fields actually authored.
+    /// </summary>
+    public IReadOnlyDictionary<string, Content.ValueProvenance> Provenance { get; init; } =
+        new Dictionary<string, Content.ValueProvenance>();
+
     private Dictionary<string, EngineSlotDefinition>? _byId;
 
     public EngineSlotDefinition? FindSlot(string slotId)

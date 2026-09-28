@@ -7,6 +7,7 @@
       "name": "Synth R6 2.5 variable intake",
       "cylinders": 6,
       "layout": "inline",
+      "identity": { "kind": "synthetic" },
       "firing_order": [1, 5, 3, 6, 2, 4],
       "description": "2.5-litre straight six with a two-stage variable intake manifold (synthetic test content).",
       "slots": [

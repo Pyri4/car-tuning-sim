@@ -19,7 +19,7 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 683 automated tests, all run (654 before Intake Gas Dynamics 2.0 Phase 1, of which 5 were its pending acceptance tests; 651 before its
+- 728 automated tests, all run (683 before Engine Authoring Factory 1.0 Phase 1; 654 before Intake Gas Dynamics 2.0 Phase 1, of which 5 were its pending acceptance tests; 651 before its
   authorization gate, 649 before its design resolution, 586 before its Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
   before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
   physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
@@ -264,6 +264,23 @@ verification or its honesty about sources? ([docs/ENGINE_AUTHORING_FACTORY_AUDIT
   (ENGINE_AUTHORING_GUIDE.md); model routing for agents (AGENTS.md and the skills).
 - No simulation, content, tune, tolerance or fingerprint change.
 
+### Engine Authoring Factory 1.0 — Phase 1: content schema and provenance (2026-09-28; at its gate)
+([report](docs/milestones/engine-authoring-factory-1/PHASE1_GATE_REPORT.md))
+- [x] Machine-readable provenance beside the values:
+  - a `provenance` map on parts and engines (published, measured, secondary, converted, derived, estimated, fitted);
+  - a `sources` document kind;
+  - authored vs defaulted fields recorded.
+- [x] Engine families and variants (`extends`, abstract bases) and part variants (`extends`), resolved after every layer
+      into plain definitions.
+- [x] Engine `identity` with declared features from a fixed vocabulary. Unmodelled ones state their approximation, and
+      `FeatureReport` gives supported / not modelled / missing data / undeclared.
+- [x] Content:
+  - the M54 carries identity and provenance only where PARTS_DATABASE.md records an origin;
+  - the K20 is fictional and the matrix synthetic;
+  - one matrix part is a variant.
+- [x] 45 new tests, 4 new mutants (caught); regression fingerprint identical; no simulation change.
+- [ ] The gate review (owner).
+
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
@@ -272,7 +289,8 @@ Chosen by long-term value, not ease: prefer work that improves every engine or u
 milestone starts only when the owner authorizes it, and ends with a project gate (verify, review, merge order, define
 the next milestone).
 
-1. **Engine Authoring Factory 1.0 (proposed — awaiting authorization).**
+1. **Engine Authoring Factory 1.0 (authorized phase by phase; Phase 1 — content schema and provenance — implemented and at
+   its gate, [report](docs/milestones/engine-authoring-factory-1/PHASE1_GATE_REPORT.md); later phases not started).**
    Definition: [docs/milestones/ENGINE_AUTHORING_FACTORY_1.md](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md); evidence:
    [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md). The goal is to make a new engine, or a
    variant of one, a data-entry and validation task with zero code. The milestone:
@@ -421,7 +439,7 @@ single engine's dyno curve.
   - `carsim validate` does not assemble stock builds or check the stock tune against them;
   - real engines need C# in the verification layer (fingerprint cases, reference tests, family lists).
 
-  The proposed Engine Authoring Factory 1.0 addresses them.
+  Engine Authoring Factory 1.0 addresses them; Phase 1 made provenance machine-readable.
 - UI views rebuild their subtrees on every change event (fine at this scale; revisit with more data).
 - The full test suite takes ≈ 45–65 s depending on the container (lap, wear, VE-calibration, fuzz and big-turbo gearbox
   tests); tag the slow ones if it grows.

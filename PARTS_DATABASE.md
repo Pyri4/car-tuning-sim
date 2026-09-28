@@ -9,7 +9,7 @@ the code is right and this file must be fixed.
 - Content lives under `content/<root>/` (base game: `content/base/`). Every `*.json` file below the
   root is loaded, in ordinal path order.
 - A file is an object with any of these arrays: `parts`, `engines`, `fuels`, `tunes`, `scenarios`,
-  `vehicles`.
+  `vehicles`, `sources`.
 - JSON is **snake_case**. `//` and `/* */` comments and trailing commas are allowed.
 - **Unknown fields are errors** (catches typos such as `bore_m`). Missing required fields are errors.
 - The loader collects *all* errors (file, item id, message) instead of stopping at the first.
@@ -64,6 +64,62 @@ Field names carry their unit. The simulation converts to SI once, at load time.
 | `requires` | string[] | no | Interface keys another installed part must provide |
 | `tags` | string[] | no | Search/filter tags, not used for compatibility |
 | `spec` | object | yes | Category-specific specification (below) |
+| `extends` | string | no | Id of the part this one is a variant of (below, "Part variants") |
+| `provenance` | object | no | Where the values come from (below, "Provenance") |
+
+### Part variants (`extends`)
+A part may extend another part: it starts from the parent's document (itself resolved) and states only what differs.
+- `spec` merges field by field; every other field the variant gives replaces the parent's (`provides`, `requires` and
+  `tags` whole).
+- The variant needs its own `id` and `name`, and keeps the parent's category (an error otherwise).
+- Variants resolve after every layer has loaded, so a mod that redefines a parent reaches its variants. A missing parent
+  or a cycle is an error.
+- Provenance: the variant inherits its parent's record for each value it does **not** restate. A value it changes has
+  no record unless the variant gives one (a changed value never carries its parent's source).
+
+Example (test content): `syn.v6tt.exhaust_manifold.right` extends `.left` and states only its name.
+
+## Provenance (`provenance`) and sources (`sources`)
+Where an authored value comes from, machine-readable. The value stays in the spec, with its unit in the field name; the
+record sits beside it in the part's (or engine's) `provenance` map, keyed by the field name:
+
+```jsonc
+"provenance": {
+  "*":              { "type": "estimated", "notes": "applies to every authored field without its own record" },
+  "bore_mm":        { "type": "published", "source": "bmw_m54_published_figures" },
+  "dish_volume_cc": { "type": "derived", "method": "solved so the volumes give the published 10.2:1" }
+}
+```
+
+| `type` | Meaning | Also required |
+|---|---|---|
+| `published` | The maker's specification | `source` |
+| `measured` | Measured on the real part, or primary documentation (repair or service data, a drawing) | `source` |
+| `secondary` | A reputable secondary source (trade press, enthusiast measurements, parts listings) | `source` |
+| `converted` | A definitional conversion of a sourced value (advertised → 1 mm duration) | `source`, `method` |
+| `derived` | Computed from other values by a named formula or tool | `method` |
+| `estimated` | An engineering estimate with no source (give a band in `notes`) | — |
+| `fitted` | Chosen so that the model reproduces a reference *output*. The guide forbids this for content; it exists so that a rare, justified case is visible | `target` |
+
+Optional fields: `notes`, `confidence` (`high`, `medium`, `low`). The loader rejects an unknown type, a missing required
+field, a `target` on anything but `fitted`, an unknown `source`, and a key that is not one of the category's spec fields
+(or `mass_kg`, or `*`). Engines may key their architecture fields: `cylinders`, `layout`, `banks`, `bank_angle_deg`,
+`firing_order`.
+
+- `*` applies only to fields the content actually states. A field left to its schema default has **no** record: a
+  default is nobody's claim about the part (`PartDefinition.AuthoredSpecFields` says which fields were stated).
+- A value without a record is *unspecified*, which is honest when the repository does not know its origin. Never invent
+  a source. Tune tables are "calibrated": the tune manifest records how, not `provenance`.
+- `sources` entries: `id`, `title`, `type` (`manufacturer`, `service_documentation`, `reference_work`, `press`,
+  `enthusiast_measurement`, `retailer`, `project_document`), optional `publisher`, `url`, `accessed`, `license_note`,
+  `notes`. Facts are cited; nothing is copied.
+- `carsim inspect <engine>` prints how many of the stock parts' authored values have a record, by type.
+
+**Authored vs derived.** Content states the physical inputs (bore, stroke, chamber and gasket volumes, runner length).
+The model derives the rest deterministically at load or build time (displacement, compression ratio, clearance volume,
+runner tuned speeds), so derived quantities are not fields and cannot be authored. A *derived* provenance record is for
+an input the author computed outside the model (a bowl volume solved from a published CR, an A-D1 stage). Regenerating
+such inputs with tools is later work (docs/milestones/ENGINE_AUTHORING_FACTORY_1.md).
 
 ### Set parts
 Pistons, connecting rods and injectors are sold and installed as a set (`count` must equal the
@@ -270,6 +326,38 @@ gearbox (or, later, an adapter part). Checked when a scenario loads, when the ga
 | `slots[]` | `id`, `category`, `display_name`, `required` (default true), `install_after` (slot ids that must be installed first — also defines removal order), `accessible_in_vehicle`, `banks` (bank-scoped categories only: the bank ids the slot serves; omitted = every bank) |
 | `stock_parts` | slot id → part id (factory build) |
 | `stock_tune` | tune id (factory calibration) |
+| `identity` | optional metadata: `kind` (`real`, `fictional`, `synthetic`), `manufacturer`, `family`, `variant`, `years`, `market`, `reference` (a source id), `features` (below). Nothing in the simulation reads it |
+| `provenance` | optional: records for the architecture fields (above, "Provenance") |
+| `extends` | optional: the engine definition this variant extends (below) |
+| `abstract` | optional, default false: a family base that exists only to be extended (not buildable, not offered to the game) |
+
+**Families and variants.** An engine definition may `extend` another:
+- it inherits everything and states what differs;
+- `stock_parts` and `identity` merge entry by entry, and every other field replaces the parent's (`slots` and `banks`
+  whole);
+- `abstract` is never inherited;
+- variants resolve after every layer has loaded; an unknown parent or a cycle is an error;
+- provenance follows the part rule: a restated architecture field does not inherit its parent's record.
+
+An abstract base needs no slots or stock build and appears in `ContentDatabase.AbstractEngines`, not in `Engines`. A
+definition without `extends` is its own family, as the K20 and M54 are.
+
+**Declared features (`identity.features`).** The real engine's hardware, as `{ "feature": id, "approximation"?,
+"notes"? }`, from a fixed vocabulary (`EngineFeatures`). Some are modelled (`intake_cam_phasing`,
+`variable_valve_lift_two_stage`, `variable_intake`, `turbocharger`, `twin_turbo_parallel`, `intercooler`); others are not
+(`exhaust_cam_phasing`, `variable_valve_lift_continuous`, `direct_injection`, `twin_scroll_turbine`, `supercharger`,
+`dry_sump`, `mass_air_flow_metering`, …). An unmodelled feature **must** state its `approximation` (what stands in, or
+`"omitted"`); an unknown or repeated feature is an error. Declaring a feature changes nothing the physics reads.
+`FeatureReport` (and `carsim inspect`) compares the declaration with the stock build:
+
+| Status | Meaning |
+|---|---|
+| supported | modelled, and the parts provide it |
+| not modelled | the simulator does not model it; the approximation says what stands in |
+| missing data | modelled, but no installed part provides it (the content lacks the hardware's data) |
+| undeclared | the parts provide a modelled feature the identity does not list (information) |
+
+Invalid declarations are load errors.
 
 The `install_after` graph must be acyclic. A slot can be filled only when all of its
 `install_after` slots are filled; it can be emptied only when no filled slot lists it.
@@ -388,6 +476,14 @@ How each authored value was set:
 | Estimated (no source) | port flows (valve curtain area × typical discharge coefficients: 226 CFM at 10 mm intake, 168 CFM exhaust), intake 680 CFM and runner 380 mm (DISA's open stage) with the default 33.6 mm runner diameter, manifolds 700 CFM, exhaust 600 CFM, spring forces (set for float ≈ 7,100 rpm), ratings (rods 32/90 kN, pistons 120 bar, block 150 bar, bearings), oil pump 16 cc/rev at 450 kPa, radiator 1,900 W/K, masses and inertias (dual-mass flywheel 0.13 kg·m²) |
 | Calibrated with the dev tools | stock tune: VANOS schedule (`calibrate-cams`), VE (`calibrate-ve`), spark (`calibrate-spark`, RON 98, 1.5° knock margin) — no table was edited by hand to reach the published output |
 
+The machine-readable records (Phase 1 of Engine Authoring Factory 1.0) are stricter than the "published, used exactly"
+row above. Only bore, stroke, cylinders, layout and valves per cylinder are `published`. Rod length, pins, journals,
+deck height, chamber, gasket thickness, oil capacity and cam lifts come from the enthusiast sources, so they are
+`secondary`. Two masses are marked `estimated` with a note, because the repository does not record how the authored
+values relate to the measured ones (575 g rod vs 602 g with bearing, 390 g piston vs 313 g with rings). The lobe
+separation, the head gasket's fire-ring bore, the compression height and a few ratings have no recorded origin, so they
+have no record.
+
 **DISA as two effective stages** (Intake Gas Dynamics 2.0, Phase 1; the locked procedure is section 4 of
 docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md, the frozen derivation is
 docs/milestones/intake-gas-dynamics-2/M54_DISA_DERIVATION.md). `m54.intake.disa`: `runner_length_mm` 469.1 (flap closed,
@@ -447,7 +543,6 @@ never presented as published or measured. Real games and mods are inspiration on
 text are copied, and third-party data is used only under a licence that explicitly permits it. In-game names follow the
 fictional-marque convention; real names appear only in provenance.
 
-Today provenance is recorded in this document and in JSON comments. The loader **rejects** unknown fields, so do not
-add `provenance`, `identity`, `sources`, `extends` or `slot_layout` fields to content yet. They are proposed in
-docs/milestones/ENGINE_AUTHORING_FACTORY_1.md (design: docs/ENGINE_AUTHORING_FACTORY_AUDIT.md §9) and await
-authorization.
+Provenance is machine-readable since Engine Authoring Factory 1.0 Phase 1 (above). The M54 carries it for the values
+this document gives an origin for (`content/base/sources/bmw_references.json`); the tables above stay as the narrative.
+Slot layouts (`slot_layout`) are not implemented yet, and the loader still rejects unknown fields.

@@ -1,7 +1,12 @@
 # Milestone: Engine Authoring Factory 1.0
 
-**Status: PROPOSED — AWAITING THE OWNER'S AUTHORIZATION.** Nothing in it has been started. It was defined by the
-strategy reset of 2026-09-28 from the audit
+**Status: AUTHORIZED phase by phase. Phase 1 (content schema + provenance foundation) is implemented and at its gate
+([engine-authoring-factory-1/PHASE1_GATE_REPORT.md](engine-authoring-factory-1/PHASE1_GATE_REPORT.md)); nothing after it
+is started.** The owner authorized Phase 1 only. It covers the B1 schema below except slot layouts, which were not
+needed for this phase. The rest waits for authorization: `check-engine`, tune generation, data-driven verification, the
+pilot and the gate.
+
+It was defined by the strategy reset of 2026-09-28 from the audit
 [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](../ENGINE_AUTHORING_FACTORY_AUDIT.md), which is its evidence base. Section
 numbers such as §9.3 refer to that audit.
 

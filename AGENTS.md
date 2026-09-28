@@ -20,7 +20,7 @@ this; the repository holds it.
 as data. The goal now is to make engine #20 nearly as cheap as engine #2 without weakening the physics, the
 verification or the provenance. Optimize for correctness + genericity + authoring speed + provenance + verifiability,
 not for raw simulation complexity or one engine's dyno curve. Plan and evidence:
-[docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md); milestone (proposed):
+[docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md); milestone (authorized, phase by phase):
 [docs/milestones/ENGINE_AUTHORING_FACTORY_1.md](docs/milestones/ENGINE_AUTHORING_FACTORY_1.md).
 
 ## Development principles
@@ -48,9 +48,11 @@ Full reference: [ENGINE_AUTHORING_GUIDE.md](ENGINE_AUTHORING_GUIDE.md).
 - **Physics is code, engines are content.** Physics answers "what does a runner do?"; content answers "how long is this
   engine's runner?". If an engine needs code, the model is missing a capability; if it needs code outside `src/` (tests,
   fingerprint cases, CI), the authoring pipeline is missing a feature. Either way, document why.
-- **Record provenance for every real-engine value** (published, measured, secondary, converted, derived, estimated,
-  fitted, calibrated — PARTS_DATABASE.md's M54 tables are the model). Never present a fitted or estimated value as
-  published or measured. Use facts with citations only; never copy code, assets, data files or text from other games or
+- **Record provenance for every real-engine value** in the content's `provenance` maps, citing `sources` (published,
+  measured, secondary, converted, derived, estimated, fitted; tune tables are "calibrated" in the tune manifest). The
+  M54 is the worked example. Never present a fitted or estimated value as published or measured, and never invent a
+  source: a value of unknown origin has no record. Declare real hardware the simulator lacks in `identity.features`
+  with its approximation. Use facts with citations only; never copy code, assets, data files or text from other games or
   mods, and use third-party data only under a licence that explicitly permits it.
 - Parts fit through **interfaces** (`provides`/`requires`, bank-aware); cars and engines fit through interfaces too
   (bellhousing today). Never tie a car to an engine family or a part to a list of engines.

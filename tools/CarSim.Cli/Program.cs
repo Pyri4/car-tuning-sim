@@ -575,6 +575,14 @@ public static class Program
         while (removed.Count > 0) { var (s, p) = removed.Pop(); a.Install(s, p); }
     }
 
+    private static string FeatureStatusLabel(FeatureStatus s) => s switch
+    {
+        FeatureStatus.Supported => "supported",
+        FeatureStatus.NotModelled => "not modelled",
+        FeatureStatus.MissingData => "missing data",
+        _ => "undeclared",
+    };
+
     private static int Inspect(CliOptions o)
     {
         var db = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o)).GetOrThrow();
@@ -637,6 +645,26 @@ public static class Program
         foreach (var issue in report.Issues) Console.WriteLine($"  {issue}");
         Console.WriteLine();
         Console.WriteLine($"Total engine mass: {assembly.TotalMassKg:F1} kg");
+
+        // Identity, declared features and provenance coverage (metadata; the physics never reads them).
+        Console.WriteLine();
+        var id = engine.Identity;
+        string who = id == null ? "" : string.Join(" ", new[] { id.Manufacturer, id.Variant ?? id.Family }.Where(s => !string.IsNullOrEmpty(s)));
+        Console.WriteLine(id == null ? "Identity: not recorded"
+            : $"Identity: {id.Kind}{(who.Length > 0 ? ", " + who : "")}{(engine.Extends != null ? $", variant of '{engine.Extends}'" : "")}");
+        var features = FeatureReport.For(id, EngineCapabilities.Resolve(assembly));
+        if (features.Count > 0)
+        {
+            Console.WriteLine("Features:");
+            foreach (var f in features)
+                Console.WriteLine($"  {f.Feature,-30} {FeatureStatusLabel(f.Status),-13}{(f.Approximation != null ? $" stands in: {f.Approximation}" : "")}");
+        }
+        var parts = assembly.AllParts.Select(p => p.Definition).DistinctBy(p => p.Id).ToList();
+        int fields = parts.Sum(p => p.AuthoredSpecFields.Count), recorded = parts.Sum(p => p.Provenance.Keys.Count(k => k != "mass_kg"));
+        var byType = parts.SelectMany(p => p.Provenance.Values).GroupBy(v => v.Type).OrderBy(gr => gr.Key, StringComparer.Ordinal)
+            .Select(gr => $"{gr.Key} {gr.Count()}");
+        Console.WriteLine($"Provenance: {recorded} of {fields} authored spec values of the stock parts have a record" +
+                          (recorded > 0 ? $" ({string.Join(", ", byType)}, mass included)" : ""));
         return 0;
     }
 }

@@ -11,13 +11,17 @@
       // docs/milestones/intake-gas-dynamics-2/M54_DISA_DERIVATION.md). Flap open (stage 1): the runner, 380 mm acoustic
       // length, estimated. Flap closed (stage 0): 469.1 mm effective, derived under A-D1 so that the two stages cross at
       // 3,925 rpm, the centre of the sourced switch band. Diameter: the model default (0.40 x bore), estimated.
-      "spec": { "runner_length_mm": 469.1, "switched_runner_length_mm": 380, "flow_cfm": 680 }
+      "spec": { "runner_length_mm": 469.1, "switched_runner_length_mm": 380, "flow_cfm": 680 },
+      "provenance": {"flow_cfm": {"type": "estimated"},
+                      "runner_length_mm": {"type": "derived", "source": "m54_disa_derivation", "method": "A-D1 (carsim derive-stage): the closed stage whose gain crosses the open stage's at 3,925 rpm, the centre of the sourced 3,750-4,100 rpm switch band; frozen before any M54 output."},
+                      "switched_runner_length_mm": {"type": "estimated", "notes": "Open-stage acoustic length; band 300-450 mm."}}
     },
     {
       "id": "m54.exhaust_manifold.oem", "name": "M54 OEM exhaust manifolds (2 × 3-into-1, catalysts)", "category": "exhaust_manifold", "manufacturer": "Isar",
       "price": 950, "mass_kg": 14.0, "requires": ["m54.exhaust_flange"],
       "description": "A pair of short cast 3-into-1 manifolds, each with a close-coupled catalyst: good for emissions, not for scavenging.",
-      "spec": { "flow_cfm": 700, "primary_length_mm": 300, "scavenging_gain": 0.012 }
+      "spec": { "flow_cfm": 700, "primary_length_mm": 300, "scavenging_gain": 0.012 },
+      "provenance": {"flow_cfm": {"type": "estimated"}}
     }
   ]
 }
