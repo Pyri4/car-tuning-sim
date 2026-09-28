@@ -83,7 +83,7 @@ public sealed record EngineCapabilities
         var intakes = a.PartsOf(PartCategory.IntakeManifold).Select(p => p.Part.Spec<IntakeManifoldSpec>()).ToList();
         bool phasers = cams.Any(c => c.IntakePhaserRangeDeg > 0);
         bool lift = cams.Any(c => c.HasVariableLift);
-        bool runners = intakes.Any(i => i.SwitchedRunnerLengthMm != null);
+        bool runners = intakes.Any(i => i.HasSwitchedStages);
 
         string Chain(int bank, params string[] categories) =>
             string.Join("|", categories.Select(c => a.SlotFor(c, bank)?.Id ?? "-"));

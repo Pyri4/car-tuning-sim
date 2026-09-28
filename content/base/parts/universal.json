@@ -79,9 +79,9 @@
     {
       "id": "ecu.m54_oem", "name": "M54 OEM ECU (reflashable)", "category": "ecu", "manufacturer": "Isar",
       "price": 700, "mass_kg": 0.9,
-      "description": "Factory engine management with knock control and VANOS cam-phase control. No boost control, and nothing to measure boost with.",
+      "description": "Factory engine management with knock control, VANOS cam-phase control and the DISA intake flap. No boost control, and nothing to measure boost with.",
       "spec": { "map_sensor_max_kpa": 105, "boost_control": false, "knock_control": true, "max_rev_limit_rpm": 7200, "tables_editable": true,
-                "cam_phase_control": true }
+                "cam_phase_control": true, "intake_runner_control": true }
     },
     {
       "id": "ecu.standalone", "name": "Standalone programmable ECU", "category": "ecu", "manufacturer": "Apex Engine Management",

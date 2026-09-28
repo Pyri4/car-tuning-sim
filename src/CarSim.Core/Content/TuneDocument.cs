@@ -73,6 +73,13 @@ public sealed record TuneDocument
     /// <summary>Engine speed above which the ECU switches a variable intake manifold to its switched runner, rpm. Null = never.</summary>
     public double? IntakeRunnerSwitchRpm { get; set; }
 
+    /// <summary>
+    /// For an intake with more than two runner stages: the speeds above which the ECU switches on to stage 2, 3, …, rpm,
+    /// ascending and above <see cref="IntakeRunnerSwitchRpm"/> (stage 1). Null or shorter than the intake's stages: it
+    /// switches no further.
+    /// </summary>
+    public double[]? IntakeRunnerUpperSwitchRpm { get; set; }
+
     public string Source { get; init; } = "";
 
     public IReadOnlyList<string> Validate()
@@ -96,6 +103,12 @@ public sealed record TuneDocument
         if (!(IdleRpm >= 300 && IdleRpm < RevLimitRpm)) p.Add($"idle_rpm out of range: {IdleRpm}");
         if (ValveLiftSwitchRpm is double vl && !(vl >= 500 && vl <= 25000)) p.Add($"valve_lift_switch_rpm out of range: {vl}");
         if (IntakeRunnerSwitchRpm is double ir && !(ir >= 500 && ir <= 25000)) p.Add($"intake_runner_switch_rpm out of range: {ir}");
+        if (IntakeRunnerUpperSwitchRpm is { Length: > 0 } upper)
+        {
+            if (IntakeRunnerSwitchRpm is not double first) p.Add("intake_runner_upper_switch_rpm needs intake_runner_switch_rpm (the switch to stage 1).");
+            else if (upper.Prepend(first).Zip(upper).Any(v => !(v.Second > v.First))) p.Add("intake_runner_upper_switch_rpm must rise above intake_runner_switch_rpm, stage by stage.");
+            if (upper.Any(v => !(v >= 500 && v <= 25000))) p.Add("intake_runner_upper_switch_rpm values must be within [500, 25000] rpm.");
+        }
         if (!(InjectorFlowCcMin >= 50 && InjectorFlowCcMin <= 5000)) p.Add($"injector_flow_cc_min out of range: {InjectorFlowCcMin}");
         if (!(FuelStoichAfr >= 3 && FuelStoichAfr <= 20)) p.Add($"fuel_stoich_afr out of range: {FuelStoichAfr}");
         if (InjectorDeadTimeMs is not double dead) p.Add("injector_dead_time_ms missing (the injector dead time the ECU adds to each pulse).");

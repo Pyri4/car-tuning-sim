@@ -18,5 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\CarSim.Core\CarSim.Core.csproj" />
     <ProjectReference Include="..\..\src\CarSim.Gameplay\CarSim.Gameplay.csproj" />
+    <ProjectReference Include="..\..\tools\CarSim.Verification\CarSim.Verification.csproj" />
   </ItemGroup>
 </Project>

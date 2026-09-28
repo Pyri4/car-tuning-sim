@@ -83,11 +83,14 @@ public class EngineOutputTests
     }
 
     [Fact]
-    public void ShortRunnersShiftTheVePeakUp()
+    public void ShortRunnersTuneToAHigherSpeedWithoutMovingTheValveEvent()
     {
+        // Intake Gas Dynamics 2.0: the runner is its own wave gain, tuned by its geometry; the valve-event filling peak
+        // belongs to the cams and does not move with the runner.
         var stock = SimFactory.Create();
         var shortRunner = SimFactory.Create(("intake_manifold", "k20.intake.short_runner"));
-        Assert.True(shortRunner.Config.Banks[0].VePeakRpm > stock.Config.Banks[0].VePeakRpm);
+        Assert.True(shortRunner.Config.Banks[0].RunnerStages[0].TunedRpmAtReference > stock.Config.Banks[0].RunnerStages[0].TunedRpmAtReference);
+        Assert.Equal(stock.Config.Banks[0].VePeakRpm, shortRunner.Config.Banks[0].VePeakRpm);
     }
 
     [Fact]

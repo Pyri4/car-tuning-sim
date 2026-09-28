@@ -150,14 +150,19 @@ cylinder → exhaust port → exhaust manifold → exhaust system → ambient.
   the fuel's `charge_cooling_factor`: `h_vap = 350 kJ/kg · factor · AFR_stoich/14.7`.
 
 ### Volumetric efficiency (tuning component)
-- Tuned mean piston speed `v = 15 + 0.15 · (intake_duration − 220°) + 0.30 · Δ_IVC` m/s → `rpm_cam = v·60/(2S)`, where
-  `Δ_IVC` is how many crank degrees later the intake closes than the reference installation (see "Cam timing"; 0 for
-  straight-up cams, so every K20 cam is exactly as before). `v` is guarded at ≥ 2 m/s.
-- Intake runner shifts it: `rpm_peak = rpm_cam · (0.300 m / L_runner)^0.25`.
-- Shape (x = rpm/rpm_peak): below peak `1 − a_lo(1−x)²` with `a_lo = 0.50 + 0.004·overlap°`
-  (overlap costs low-rpm filling); above peak `1 − 0.25(x−1)²`; floor 0.25; scaled by 1.02.
+`VE_dyn = (η_ve · G_wave + scavenging) · float`, per bank. Valve-event filling η_ve is what the cams do; the intake's wave
+gain G_wave is what the runners do (see "Intake gas dynamics" below). A cam phaser acts on η_ve only.
+- **Valve-event filling η_ve.** Tuned mean piston speed `v = 13.64 + 0.15 · (intake_duration − 220°) + 0.30 · Δ_IVC`
+  m/s → `rpm_ve = v·60/(2S)`, where `Δ_IVC` is how many crank degrees later the intake closes than the reference
+  installation (see "Cam timing"; 0 for straight-up cams). `v` is guarded at ≥ 2 m/s. Shape (x = rpm/rpm_ve): below
+  the peak `1 − a_lo(1−x)²` with `a_lo = 0.50 + 0.004·overlap°` (overlap costs low-rpm filling); above it
+  `1 − 0.25(x−1)²`; floor 0.25; scaled by the ceiling 0.973.
+- **v₀ = 13.64 m/s and the ceiling 0.973 are fitted**, jointly and only on the stock K20's full-load air per cycle (least
+  squares over the 25 points of its anchor, Intake Gas Dynamics 2.0 Phase 1). Before Phase 1 they were 15.0 and 1.02, and
+  the runner's effect was folded into the same hump by a factor `(0.300 m / L)^0.25` (tuned speed ∝ L^−0.25), which is
+  removed. The runner no longer moves η_ve.
 - Header scavenging: `+ gain · exp(−((rpm − rpm_tuned)/(0.25·rpm_tuned))²)`,
-  `rpm_tuned = 5.2e6 / primary_length_mm`.
+  `rpm_tuned = 5.2e6 / primary_length_mm` (unchanged; not multiplied by the wave gain).
 - Valve float: above the float speed VE collapses by up to 60 % over the next 8 %.
 
 ### Residuals and reversion
@@ -197,9 +202,9 @@ centrelines — degreed-in cams, or the **park** position of cam phasers — and
 - Not modelled: exhaust phasing (an exhaust phase would only add overlap, which this model counts purely as a filling
   cost — there is no exhaust-opening/blowdown or scavenging term), part-load internal-EGR strategies (no pumping or
   emissions benefit is modelled, so the phaser map is a filling optimum everywhere), the phaser's oil-pressure
-  dependence, and intake gas dynamics that a phaser cannot move — the phaser shifts the whole filling hump, so a phased
-  engine fills at its ceiling at every speed and the runner has no effect under it (see "M54 torque-curve
-  investigation").
+  dependence, and the intake-closing coupling of the runner's wave (the runner's best speed moving with intake closing;
+  deferred, U6 of Intake Gas Dynamics 2.0). Since Phase 1 the phaser moves the valve-event filling only; the runner's
+  wave gain is independent of it (see "Intake gas dynamics").
 
 ## Variable valve lift (two-stage) and variable intake runners
 Generic capabilities added with the engine-architecture milestone. Both are part data plus an ECU output and a tune
@@ -210,14 +215,17 @@ switch speed; without the ECU output the hardware stays in its base state and th
   (`EcuController.SwitchHysteresisRpm`), only while running. On the high profile the bank's port flow (mean flow over
   the lift profile), event lengths, the duration term of the tuned piston speed, overlap and valve-float speed are the
   high profile's; the springs must clear the higher lift (coil bind is checked against the larger lift).
-- **Variable intake runner** (DISA/VIS type): an intake manifold may carry a `switched_runner_length_mm`. The ECU
-  (`intake_runner_control`) switches to it above `intake_runner_switch_rpm` (same hysteresis). The switched stage
-  replaces the runner length in the tuning factor `(0.300 m / L)^0.25`.
-- **Limits.** The runner stage acts through the single filling hump: on a fixed-cam engine it moves the hump as a
-  runner swap would, but under a cam phaser the phaser re-centres the hump and the runner has little effect — the
-  limitation found in the M54 torque-curve investigation. The M54's DISA is therefore not authored; splitting intake gas
-  dynamics from valve timing is the next milestone (ROADMAP).
-- Telemetry `HighValveLift`, `SwitchedRunner` (engine, from the ECU outputs) and per bank.
+- **Variable intake runner** (DISA/VIS type, any number of stages): an intake manifold may carry
+  `switched_runner_length_mm` (two stages) or `switched_stages` (N stages, each with its own length and optionally its
+  own diameter). The ECU (`intake_runner_control`) runs the highest stage whose switch speed it has reached — stage 1
+  from `intake_runner_switch_rpm`, stage 2 onwards from `intake_runner_upper_switch_rpm` — and keeps a stage down to its
+  switch speed less 150 rpm. The stage selects the runner geometry of the wave gain (see "Intake gas dynamics"), so each
+  stage fills best around its own tuned speed, on fixed cams and under a phaser alike. The tune driver sets each switch
+  speed at the full-load torque crossover of the stages below and above it.
+- The M54's DISA is two effective stages (PARTS_DATABASE.md): the open stage is the runner estimate, the closed stage is
+  derived from the sourced switch band (assumption A-D1).
+- Telemetry `HighValveLift`, `SwitchedRunner`, `RunnerStage` (engine, from the ECU outputs) and per bank;
+  `IntakeWaveGain` and `RunnerTunedRpm` (engine).
 
 ## ECU (`Ecu/`)
 The ECU only knows its sensors and its calibration; it never sees the engine's true airflow.
@@ -445,6 +453,8 @@ Flows are corrected: `ṁ_c = ṁ·√(T₁/298.15 K)/(p₁/1 atm)`; `n` = corre
   105 kPa → lean and over-advanced under boost (validator warning `map_sensor_range`).
 
 ### Calibration reference (forged K20, 550 cc, standalone ECU, RON 98, 175 kPa target)
+Measured before Intake Gas Dynamics 2.0; since Phase 1 the T28 build's peak power is 1.4 % lower and the T35 (big)
+build's 7 % lower (docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md, §9).
 Steady-state full boost ≈ 3800 rpm (small), ≈ 4600 rpm (mid), ≈ 7200 rpm (big: ≈ 157 kPa at 6800 rpm);
 peak ≈ 205 hp (small: near choke above 5500 rpm, efficiency falling to ≈ 0.37, drive pressure ≈ 1.38× boost),
 ≈ 238 hp (mid), ≈ 244 hp at 7200 rpm (big, only just at full boost). Asked for 200 kPa, the small turbo over-speeds
@@ -723,17 +733,21 @@ from the K20 OEM cams) joins this class. Made size-aware in the validation pass 
 0.1 %): the valvetrain FMEP (valves, cylinder volume), block/sump/oil↔coolant conductances (∝ (V/2 L)^(2/3)), and
 the exhaust-port conductance (∝ bore² × cylinders). Still K20-sized and documented as debt: the piston-crown
 correlation's reference heat flux (14.2 MW/m² ↔ +150 K, dimensional, not size-specific but fitted on one engine),
-the header/runner tuning constants (in piston-speed and length terms, fitted on one family), the oil conductance
+the header tuning constant and the valve-event constants v₀ and the ceiling (re-anchored on the K20 in Intake Gas
+Dynamics 2.0; the runner's old length factor is gone, and its gain is physical except for the shared, pre-registered
+K, ζ and κ), the oil conductance
 reference (scaled by displacement). Class D (explicit gameplay): failure severities (a blown gasket × 0.75
 efficiency and × 1.3 coolant share, a warped head × 0.9), game-compressed fatigue lives, wear rates.
 
 ## Calibration reference (stock Kestrel K20, RON 95, 90 °C coolant)
-Pinned loosely by tests (`EngineOutputTests.StockEngineCalibration`):
-peak torque ≈ 189 N·m at ≈ 4000 rpm, peak power ≈ 110 kW (148 hp) at ≈ 7000–7500 rpm,
-peak VE ≈ 0.93, WOT peak cylinder pressure ≈ 60–66 bar, hot oil pressure ≈ 1.3 bar at idle and
-5.2 bar (relief) above ≈ 4000 rpm. Unchanged by the second-family milestone: stock (RON 95 and 98), race-cam and T28
-turbo builds give bit-identical steady-state sweeps and dyno runs before and after it (the cam-timing terms are exactly
-zero for cams without authored centrelines); `EngineAgnosticTests` pins the dyno peak to the pre-milestone value.
+Pinned loosely by tests (`EngineOutputTests.StockEngineCalibration`) and, since Intake Gas Dynamics 2.0, by the anchor
+(`K20AnchorGuardTests`: air per cycle within ±3 % of its pre-Phase-1 reference at every 250 rpm from 1,500 to 7,500 rpm;
+peak torque, peak power and 0–100 km/h within ±3 %): peak torque ≈ 193 N·m at ≈ 4,250 rpm, peak power ≈ 108 kW
+(145 hp) at ≈ 7,000 rpm, peak VE ≈ 0.95, WOT peak cylinder pressure ≈ 60–67 bar, hot oil pressure ≈ 1.3 bar at idle
+and 5.2 bar (relief) above ≈ 4,000 rpm. Before Phase 1: 189 N·m at ≈ 3,750–4,000 rpm, 110–111 kW (148 hp) at
+7,000–7,500 rpm; the change is the documented generic correction of Phase 1 (docs/milestones/intake-gas-dynamics-2/
+PHASE1_GATE_REPORT.md, §6). Unchanged by the second-family milestone before it (the cam-timing terms are exactly zero for
+cams without authored centrelines); `EngineAgnosticTests` pins the dyno peak, re-pinned deliberately by Phase 1.
 
 ## Second engine family (Isar M54 = BMW M54B30 reference)
 The architecture test of the second-family milestone: a real engine (PARTS_DATABASE.md, "Isar M54 reference engine")
@@ -753,26 +767,32 @@ engine; the fictional K20's 148 hp is also ≈ 7 % under the real K20A3's 160 hp
 authored to that engine), peak-power speed 5,500–6,500 rpm, a broad NA curve (≥ 85 % of peak torque 1,500–5,000 rpm), idle at the tune's
 700 ± 75 rpm.
 
+Model column: Intake Gas Dynamics 2.0 Phase 1 (runner wave gain, DISA as two stages switched at 3,900 rpm); the
+pre-Phase-1 value follows in brackets.
+
 | RON 98, 90 °C coolant | Reference | Model | Δ |
 |---|---|---|---|
 | Displacement | 2979 cc | 2979.3 cc | +0.01 % |
 | Compression ratio | 10.2 | 10.20 (derived) | — |
-| Peak torque | 300 N·m @ 3,500 | 303.9 N·m @ 2,000 (flat within 1 % 1,500–2,750) | +1.3 % |
-| Torque at 3,500 rpm | 300 N·m | 291.1 N·m | −3.0 % |
-| Peak power | 170 kW @ 5,900 | 153.0 kW @ 6,250 (dyno sweep 153.9 kW @ 6,475) | −10.0 % |
-| Power at 5,900 rpm | 170 kW | ≈ 149.5 kW | −12 % |
-| Torque at 6,000 rpm | ≈ 270 N·m (from 170 kW @ 5,900) | 240.0 N·m | ≈ −11 % |
+| Peak torque | 300 N·m @ 3,500 | 297.6 N·m @ 3,000 (297.8 @ 3,100 on a 100 rpm grid) [303.9 @ 2,000, flat 1,500–2,750] | −0.8 % |
+| Torque at 3,500 rpm | 300 N·m | 296.8 N·m [291.1] | −1.1 % |
+| Peak power | 170 kW @ 5,900 | 152.3 kW @ 6,250 (dyno sweep 152.6 kW @ 6,475) [153.0] | −10.4 % |
+| Power at 5,900 rpm | 170 kW | ≈ 150.2 kW [≈ 149.5] | −12 % |
+| Torque at 6,000 rpm | ≈ 270 N·m (from 170 kW @ 5,900) | 240.3 N·m [240.0] | ≈ −11 % |
 | Rev limit | 6,500 rpm | fuel cut at 6,500 (150 rpm hysteresis); valve float ≈ 7,070 rpm | — |
 | Idle | ≈ 700 rpm | 700 rpm at ≈ 15 kPa MAP, λ 1.02 | — |
 
-Model reference (not a validation target): peak VE 1.00, peak BMEP 12.8 bar, WOT peak cylinder pressure ≤ 66 bar, oil
+Model reference (not a validation target): peak VE 0.98 (1.00 before Phase 1), peak BMEP 12.8 bar (before Phase 1), WOT peak cylinder pressure ≤ 66 bar, oil
 4.1 bar at 3,000 rpm and 4.7 bar at 6,000 (relief 4.5 bar + slope), rotating inertia 0.208 kg·m²; RON 95 and RON 91 lose
 ≈ 1 % at 2,000 rpm to knock retard and nothing at the power peak (octane only limits the NA engine at low speed; see
-Known issues on the octane sensitivity). In the Isar C30 the autopilot laps the test facility in 52.1 s (the stock
-Kestrel S2: 51.8 s).
+Known issues on the octane sensitivity). In the Isar C30 the autopilot laps the test facility in 52.2 s (52.1 s before
+Phase 1; the stock Kestrel S2: 51.8 s).
 
-Why the shape differs (a plateau from 1,500 to 2,750 rpm instead of a peak at 3,500): see "M54 torque-curve
-investigation" below. Low idle MAP (≈ 15 kPa; K20 ≈ 21 kPa) comes from the absence of accessory load in the model.
+The shape: before Phase 1 a plateau from 1,500 to 2,750 rpm instead of a peak at 3,500 (see "M54 torque-curve
+investigation" below). Since Phase 1 the curve rises from 290 N·m at 1,500 rpm to a mid-range peak near 3,000 rpm, the
+DISA stages switch at 3,900 rpm, and the top end has no second hump (held-out validation, reported by
+`IntakeGasDynamicsAcceptanceTests.TheM54DisaStagesFollowTheirProvenance`; the miss is classified in
+docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md, §7). Low idle MAP (≈ 15 kPa; K20 ≈ 21 kPa) comes from the absence of accessory load in the model.
 
 Content-only variant (a test fixture, not shipped): the M54 turned by JSON edits alone into an 80 × 76 mm straight
 eight (3,057 cc, 11:1, 7,500 rpm, 205° intake) builds, fires eight times per two revolutions, respects its own limit,
@@ -839,15 +859,117 @@ Why E10 is not shipped, although it is the missing physics: it is necessary but 
   second phased engine to check it on. DISA's open-stage effective runner length is not published. Choosing either to
   make the M54 match is the fitting the review forbids.
 
-It is the next generic-physics task (ROADMAP, with its prerequisites). Until then the limitation is pinned by
-`TorqueCurveDiagnosisTests`:
-- filling at the ceiling under a phaser;
-- the runner inert under a phaser;
-- a phased K20 flattening;
-- the cam calibration equal to the fixed-phase envelope;
-- knock-limited low-speed spark;
-- the top end's sensitivity to flow;
-- the plateau-then-fall shape.
+It became the next generic-physics task: Intake Gas Dynamics 2.0, whose Phase 1 implements the split ("Intake gas
+dynamics" below). Until then the limitation was pinned by `TorqueCurveDiagnosisTests`; Phase 1 changed them deliberately:
+- **inverted:** the phaser holds the valve-event filling at its ceiling but not the runner's gain; runner length matters
+  under the phaser; a phaser fills any family better low without being asserted flat;
+- **retired:** the plateau-then-fall shape (the shape is held-out validation now, reported, never asserted);
+- **kept:** the fixed-cam valve-event hump, the cam calibration equal to the fixed-phase envelope, knock-limited
+  low-speed spark, and the top end's sensitivity to flow.
+
+**Outcome of Phase 1** (docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md, §7): conclusion (B) is addressed.
+The runner gain has no cam input, so the phased M54 no longer fills at its ceiling at every speed: from 1,500 to 4,000
+rpm VE_dyn rises by 7 %. Most of that rise is absorbed by the pressure drop across the estimated intake and port flows
+(−5 % port pressure), so torque rises only 2.7 % to a peak near 3,000 rpm. DISA's stages act where their tuned speeds
+say. The top end (−10 %) and the missing second hump remain: the deferred group-plenum mode and the estimated flows,
+classified B/D.
+
+## Intake gas dynamics (`Simulation/IntakeGasDynamics.cs`, `Simulation/BankConfiguration.cs`, `Simulation/AirPath.cs`)
+Implemented by Intake Gas Dynamics 2.0, Phase 1, exactly as locked in
+[docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md)
+(the equations, pre-registered parameters, acceptance tests and regression rules). The Phase 0 specification, the design
+resolution (literature, derivations, Q1–Q5) and the Phase 1 gate report hold the history and the evidence:
+[INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md),
+[PHASE1_GATE_REPORT.md](docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md).
+
+**What it separates.** Valve-event filling η_ve (what the cams do, "Volumetric efficiency" above) and the pressure wave
+in the intake runner that raises or lowers the charge at the valve (what the intake does). A cam phaser moves the valve
+event against the wave, never the wave: `VE_dyn = (η_ve · G_wave + scavenging) · float`.
+
+**The mode.** The runner of the active stage and the cylinder volume behind the open valve form one acoustic mode,
+excited once per cycle. Per stage and bank, when the engine is built:
+- `L_eff = L + δ·r_r` (δ = 0.8216, a runner mouth in a plenum wall), `A_r = π·d²/4`, `V_eff = V_c + V_d/2` (the cylinder's
+  mean volume over the intake stroke, of that bank's own geometry), `β = A_r·L_eff/V_eff`;
+- the fundamental x ∈ (0, π/2) of `x·tan x = β` (a uniform runner, pressure node at the plenum, the cylinder's
+  compliance at the valve): Helmholtz `x → √β` for small β, quarter wave `x → π/2` for large β; solved by bisection.
+
+**Tuned speed.** `N_t = 60·x·a/(2π·L_eff) / (K·c₁)`, `c₁ = x(1) = 0.8603`, so that it equals Engelman's `60·f_H/K` at
+β = 1 (A7). `a = √(γ·R·T_man)` of the runner gas: the bank's manifold temperature **of the previous step** (ambient on
+an NA engine, intercooler or charge-pipe outlet under boost; initial value ambient). This keeps the gain out of the
+flow root find: a one-step lag under boost, exact on an NA engine. `N_t` is precomputed at 298.15 K and scaled by
+`a/a_ref` per step (exact). No cam input.
+
+**Response and amplitude.**
+- `R̃(r) = R(r·r_p)/R(r_p)`, with `R(r) = 4ζ²r/((1 − r²)² + 4ζ²r²)` (the forced oscillator's response in phase with the
+  flow) and r_p its peak. So R̃ is 1 at `r = N/N_t = 1`, positive, and falls off on both sides.
+- `A = min(A_max, κ·M_r)`, with `M_r = V_d,cyl·(N/120)/(A_r·f_event)/a` the runner's event-mean Mach number
+  (`f_event` = (duration@1 mm + 50°)/720 of the cam profile the bank runs).
+- `G_wave = 1 + A·R̃(N/N_t)`, in [1, 1 + A_max] by construction. The same equations hold for NA and boosted engines:
+  density cancels in the frequency and the relative amplitude is Mach-based.
+
+**Stages and banks.** A stage is `{runner_length_mm, runner_diameter_mm?}` (PARTS_DATABASE.md, `intake_manifold`). The
+ECU picks the stage ("Variable valve lift … and variable intake runners"). Each bank reads its own intake; a shared
+intake gives each bank the same per-runner geometry, so two alike banks equal one bank of all cylinders.
+
+**Constants** (every one pre-registered before any Phase 1 output; none fitted to an engine except v₀ and the ceiling):
+
+| Symbol | Value | Class | Provenance / band |
+|---|---|---|---|
+| γ, R | 1.4, 287.05 J/(kg·K) | physical | air |
+| δ | 0.8216 | physical, sourced | flanged pipe, Norris & Sheng 1989 (0.6133 unflanged, Levine & Schwinger 1948) |
+| c₁ (β_ref = 1) | 0.8603 | derived; A7 | root of x·tan x = 1 |
+| K | 2.1 | empirical, shared | secondary literature 2.0–2.1 (Engelman 1973 unverified); band 2.0–2.2 |
+| ζ | 0.35 | derived floor | the finite intake event; band 0.33–0.45 |
+| κ | 0.5 | engineering estimate, shared | unsourced; band 0.2–1.0 |
+| A_max | 0.15 | bound (A3) | — |
+| runner diameter default | 0.40 × bore | assumption A5 | flagged by the validator (`default_intake_geometry`) |
+| v₀, VE ceiling | 13.64 m/s, 0.973 | fitted on the K20 stock only | "Volumetric efficiency" above |
+
+**Bounds and tests.** `1 ≤ G ≤ 1 + A_max` for every validator-accepted geometry (component tests and spec fuzz over
+length, diameter and stages); `N_t` finite and positive; `VE_dyn ≤ 1.35` for every family
+(`IntakeGasDynamicsGuardTests`). Component tests (`IntakeGasDynamicsTests`) check:
+- the fundamental against its limits;
+- R̃(1) = 1 and unimodal;
+- one crossover between two stages;
+- no cam input;
+- exact √T scaling and the similarity law;
+- the previous-step runner gas;
+- the DISA derivation;
+- a three-stage intake switched onto its envelope.
+
+The system-level relationships are the five `IntakeGasDynamicsAcceptanceTests`:
+- the runner's crossover is not carried by the phaser;
+- the tuned speed scales with runner length (exponent 0.609);
+- a hotter charge raises the tuned speed with the speed of sound;
+- the phaser does not absorb a switched runner's effect;
+- the M54's DISA stages follow their provenance.
+
+**Assumptions:**
+- A1: one mode per stage;
+- A3: A_max;
+- A5: the default diameter;
+- A7: normalisation at β = 1;
+- A8: the cylinder volume frozen at its intake-stroke mean;
+- A9: runner gas at T_man;
+- A10: the previous step's T_man;
+- A-D1: DISA switches at its stages' full-load crossover (M54 content only).
+
+**Not modelled** (deferred, documented):
+- the intake-closing coupling of the runner's best speed (U6: no validated formulation; up to ±10–15 % placement for
+  atypical cams);
+- plenum and group resonance (DISA's real mechanism) and pipe harmonics;
+- off-tune losses (G < 1);
+- mean-flow and wall-temperature effects on the frequency (−1 to −2.5 % and +1.7 %/10 K; within the ±10–15 %
+  placement scale);
+- exhaust gas dynamics beyond scavenging.
+
+**Before Phase 1** (measured in Phase 0 on the old model):
+- the tuned speed went as L^−0.254;
+- charge temperature had no effect;
+- the runner's crossover moved with the cam phase;
+- a switched runner under the M54's VANOS map changed torque by < 2 %;
+- `syn_i6_vis`'s switched stage lost to its primary below ≈ 6,400 rpm. It now wins from ≈ 4,700 rpm, where the tune
+  driver sets its switch.
 
 ## Validation
 Deterministic xUnit tests cover: unit conversions, compressible flow, root finding, geometry and
@@ -886,3 +1008,11 @@ the K20's pre-milestone dyno reference pinned; cam timing (straight-up cams unto
 identical to straight up, validation, overlap, phaser lag, ECU without cam control, filling low vs high, shipped cam and
 spark maps not stale, the tuned-speed guard); spec fuzz and every-part-in-every-slot on the M54. Mutation-checked: a
 family-id hack, a cylinder-count hack, the content loader dropping the cam table, a phaser without effect.
+
+Added for Intake Gas Dynamics 2.0: the verification tools (regression fingerprint of 35 cases, tune-regeneration driver,
+mutation harness; docs/VERIFICATION.md); the K20 anchor (air per cycle, peak torque and power, 0–100 km/h within ±3 %);
+the five acceptance tests (runner vs phaser, length scaling, charge temperature, a switched runner on a phased engine,
+the M54's DISA provenance); component tests of the intake model (fundamental limits, normalised response, gain bounds
+and spec fuzz, no cam input, √T scaling, previous-step runner gas, the DISA derivation, N stages); the runner-stage schema
+and N-stage ECU switching with hysteresis. Mutation-checked: a cam input to the gain, a tuned speed without √T, an
+unnormalised response, the gain dropped, the runner gas temperature ignored (31 mutants in all).

@@ -10,11 +10,18 @@ using CarSim.Core.Simulation;
 namespace CarSim.Core.Tests.SecondFamily;
 
 /// <summary>
-/// Why the M54's modelled full-load curve differs in shape from the reference (a plateau from 1,500 to 2,750 rpm and
-/// a steady fall, against a first peak of 300 N·m at 3,500 rpm, a DISA dip near 4,000 and a second hump). These pin
-/// the conclusions of the investigation in SIMULATION_SPEC.md, "M54 torque-curve investigation": the shape is set by
-/// generic physics the model lacks, not by the M54's content or its calibration. If that physics is added (ROADMAP),
-/// the tests marked "known limitation" are expected to change, along with that section.
+/// The M54 torque-curve investigation (SIMULATION_SPEC.md, "M54 torque-curve investigation") found the shape set by
+/// generic physics the model lacked: one filling hump for valve timing and intake gas dynamics together, which a cam
+/// phaser moved whole. Intake Gas Dynamics 2.0 (Phase 1) split them, and these tests changed with it, deliberately
+/// (docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md):
+/// <list type="bullet">
+/// <item>inverted: the phaser keeps the <i>valve-event</i> filling at its ceiling, but not the runner's gain; runner length
+/// matters under the phaser; a phased engine is no longer pinned flat;</item>
+/// <item>retired: the M54's "plateau then monotonic fall" shape (the curve's shape is now held-out validation, reported by
+/// <c>IntakeGasDynamicsAcceptanceTests.TheM54DisaStagesFollowTheirProvenance</c>, never asserted);</item>
+/// <item>kept: the fixed-cam valve-event hump, the calibration methodology (cam envelope, knock-limited spark) and the
+/// top end's sensitivity to the estimated flows.</item>
+/// </list>
 /// </summary>
 public class TorqueCurveDiagnosisTests
 {
@@ -99,26 +106,33 @@ public class TorqueCurveDiagnosisTests
     }
 
     [Fact]
-    public void APhasedEngineSitsOnItsFillingCeilingAtEverySpeed()
+    public void APhasedEngineHoldsItsValveEventFillingButNotItsRunnerGain()
     {
-        // Known limitation (the root cause of the flat low end). The model has one filling hump for intake closing and
-        // intake gas dynamics together, and the phaser moves all of it: the calibrated VANOS keeps it centred on the
-        // engine speed, so the M54 fills as if tuned at every speed from idle to the power peak. Real low-speed filling
-        // lacks the runner's ram and resonance, which a cam phase cannot move.
+        // Inverted by Intake Gas Dynamics 2.0 (was "a phased engine sits on its filling ceiling at every speed", the root
+        // cause of the flat low end). The calibrated VANOS still keeps the valve-event filling at its ceiling — that is
+        // what a phaser does — but the runner's wave gain has no cam input: it rises toward the runner's tuned speed and
+        // falls past it whatever the phaser does, so the phased engine no longer fills as if tuned at every speed.
         var sim = SimFactory.Create(TestContent.StockM54(), M54Fuel);
-        foreach (var t in SteadyStateSweep.Run(sim, 1000, 6250, 750, settleSeconds: 1.0))
+        var sweep = SteadyStateSweep.Run(sim, 1000, 6250, 750, settleSeconds: 1.0);
+        foreach (var t in sweep)
         {
             Assert.InRange(ShapeAt(sim, t), 0.99, 1.0);
-            // The filling peak follows the speed wherever the phaser can reach (below the parked peak).
+            // The valve-event peak follows the speed wherever the phaser can reach (below the parked peak).
             if (t.Rpm is >= 1500 and <= 5000) Assert.Equal(t.Rpm, sim.Config.Banks[0].VePeakRpmAt(t.IntakeCamAdvance), t.Rpm * 0.06);
         }
+        // The gain is lowest at the bottom of the range and peaks near the tuned speed of the stage the engine runs.
+        var best = sweep.MaxBy(t => t.IntakeWaveGain)!;
+        Assert.True(sweep[0].IntakeWaveGain < best.IntakeWaveGain, "the runner gain varies with speed under the phaser");
+        Assert.InRange(best.Rpm, 0.8 * best.RunnerTunedRpm, 1.25 * best.RunnerTunedRpm);
     }
 
     [Fact]
-    public void ThePhaserFlattensAnyFamilyNotJustTheM54()
+    public void APhaserFillsAnyFamilyBetterLowNotJustTheM54()
     {
         // The same phaser given to the K20 by content alone (park centreline 20° late, 50° of intake phaser, an ECU that
-        // drives it) flattens its curve the same way: the effect is the generic model's, not the M54's data.
+        // drives it) lifts its low-speed filling the same way: the effect is the generic model's, not the M54's data.
+        // Inverted by Intake Gas Dynamics 2.0: the phased curve is no longer asserted flat (it was pinned within 2 % from
+        // 2,000 to 4,000 rpm, the old limitation); the runner's gain, which the phaser cannot move, now shapes it.
         var phased = Variant(item =>
         {
             var cams = Spec(item, "k20.cams.oem");
@@ -132,28 +146,36 @@ public class TorqueCurveDiagnosisTests
         double Fixed(double rpm) => SimFactory.At(SimFactory.Create(TestContent.StockK20()), rpm).AirPerCycle;
 
         Assert.True(Fixed(2000) < 0.9 * Fixed(4000)); // fixed cams: a torque curve that climbs to its peak
-        Assert.True(Phased(2000) > 0.98 * Phased(4000)); // phased: flat from 2,000 rpm
-        Assert.True(Phased(2000) > 1.15 * Fixed(2000));
+        Assert.True(Phased(2000) > 1.15 * Fixed(2000)); // phased: the valve event tuned to the speed fills far better low
+        Assert.True(Phased(4000) >= 0.995 * Fixed(4000)); // and costs nothing where the fixed cams are tuned
     }
 
     [Fact]
-    public void RunnerLengthOnlyMattersWhileThePhaserIsParked()
+    public void RunnerLengthMattersUnderThePhaserToo()
     {
-        // Known limitation: the runner shifts the one filling hump, and the phaser shifts it back, so under VANOS the
-        // intake runner has no effect on full-load filling. This is also why DISA (a switched runner) has nothing to act
-        // on in this model.
-        ContentDatabase WithRunner(double mm) => Variant(item => Spec(item, "m54.intake.disa")["runner_length_mm"] = mm);
+        // Inverted by Intake Gas Dynamics 2.0 (was "runner length only matters while the phaser is parked": the runner
+        // shifted the one filling hump and the phaser shifted it back). The runner's wave gain now has no cam input, so
+        // with the phase that tunes each engine's valve event to the speed the runner still decides the filling: the
+        // 550 mm runner (tuned ≈ 3,200 rpm) out-fills the 250 mm one (≈ 5,700 rpm) at 2,000 and 3,500 rpm, parked or
+        // phased, in the same direction. Test-only single-stage runners; the size is the unsourced amplitude's, so only
+        // the sign and a floor far below it (0.5 %) are asserted.
+        ContentDatabase WithRunner(double mm) => Variant(item =>
+        {
+            var spec = Spec(item, "m54.intake.disa");
+            spec["runner_length_mm"] = mm;
+            spec.Remove("switched_runner_length_mm");
+        });
         var shortRunner = WithRunner(250);
         var longRunner = WithRunner(550);
 
         // Parked, a longer runner tunes lower and fills better at 2,000 rpm.
-        Assert.True(AirAt(longRunner, TestContent.M54, M54Fuel, 2000, null) > 1.04 * AirAt(shortRunner, TestContent.M54, M54Fuel, 2000, null));
+        Assert.True(AirAt(longRunner, TestContent.M54, M54Fuel, 2000, null) > 1.005 * AirAt(shortRunner, TestContent.M54, M54Fuel, 2000, null));
 
-        // With the phase that tunes each engine to the speed, the runner no longer matters.
+        // With the phase that tunes each engine's valve event to the speed, the runner still matters, the same way.
         foreach (double rpm in new[] { 2000.0, 3500 })
         {
             double Tuned(ContentDatabase db) => AirAt(db, TestContent.M54, M54Fuel, rpm, PhaseTunedTo(Build(db, TestContent.M54, M54Fuel).Config, rpm));
-            Assert.Equal(1.0, Tuned(longRunner) / Tuned(shortRunner), 0.005);
+            Assert.True(Tuned(longRunner) > 1.005 * Tuned(shortRunner), $"{rpm} rpm: {Tuned(longRunner) / Tuned(shortRunner) - 1:P2}");
         }
     }
 
@@ -212,19 +234,7 @@ public class TorqueCurveDiagnosisTests
     }
 
     // ---- The resulting shape ---------------------------------------------------------------------------------------
-
-    [Fact]
-    public void TheModelledCurveIsAPlateauThenAMonotonicFall()
-    {
-        // Known limitation, pinned as documented: the peak sits on the low-speed plateau, 3,500 rpm is a few percent
-        // below it (the reference peaks there), and above the plateau torque only falls — the model has no intake
-        // resonance to make DISA's 3,500 rpm hump, its switch-over dip near 4,000 rpm or its second hump.
-        var curve = SteadyStateSweep.Run(SimFactory.Create(TestContent.StockM54(), M54Fuel), 1000, 6250, 250, settleSeconds: 1.0);
-        var peak = SimFactory.PeakTorque(curve);
-        Assert.InRange(peak.Rpm, 1500, 2750);
-        Assert.InRange(curve.Single(p => Math.Abs(p.Rpm - 3500) < 0.01).Torque / peak.Torque, 0.94, 0.98);
-        var above = curve.Where(p => p.Rpm >= 2500).ToList();
-        for (int i = 1; i < above.Count; i++)
-            Assert.True(above[i].Torque < above[i - 1].Torque + 0.2, $"torque rises at {above[i].Rpm} rpm");
-    }
+    // Retired by Intake Gas Dynamics 2.0: TheModelledCurveIsAPlateauThenAMonotonicFall pinned the old limitation's shape
+    // (peak on a 1,500–2,750 rpm plateau, then a monotonic fall). The curve's shape is held-out validation now: reported by
+    // IntakeGasDynamicsAcceptanceTests.TheM54DisaStagesFollowTheirProvenance against the reference, never asserted.
 }

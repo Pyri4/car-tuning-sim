@@ -144,9 +144,21 @@ exhaust_lift_mm}` — is the second cam profile a two-stage (VTEC-type) camshaft
 / retainer clearance).
 
 ### `intake_manifold`
-`runner_length_mm` (tunes the torque peak), `flow_cfm` (includes filter/inlet), optional `switched_runner_length_mm`
-(50–1000: the second runner length of a two-stage variable intake, used above the tune's `intake_runner_switch_rpm` by
-an ECU with `intake_runner_control`).
+- `runner_length_mm` (50–1000): the **acoustic length** of the primary runner stage, from the runner's mouth in the plenum
+  (or the airbox) to the intake valve seat, **including the cylinder head's intake port**. Longer runners tune to lower
+  speed.
+- `runner_diameter_mm` (optional, 15–120): mean inner diameter of the runners (a round runner of the same mean
+  cross-section). Without it the model assumes 0.40 × bore (assumption A5) and the validator reports
+  `default_intake_geometry`.
+- `flow_cfm` (includes filter/inlet).
+- Variable intakes (need an ECU with `intake_runner_control`; without it the primary stage stays and the validator warns):
+  - `switched_runner_length_mm` (50–1000): a two-stage intake's second stage, used above the tune's
+    `intake_runner_switch_rpm`;
+  - or `switched_stages`: any number of stages, `[{runner_length_mm, runner_diameter_mm?}, …]`, in the order the ECU
+    selects them as speed rises (stage 1, 2, …; the primary is stage 0). A stage without its own diameter takes the
+    manifold's. The tune's `intake_runner_switch_rpm` switches to stage 1 and `intake_runner_upper_switch_rpm`
+    (ascending) to stage 2 onwards. Not together with `switched_runner_length_mm`.
+- Not in the schema (deferred with the plenum mode): plenum volume.
 
 ### `throttle_body`
 `bore_mm`, `flow_cfm` (wide open).
@@ -373,15 +385,35 @@ How each authored value was set:
 | Published, used exactly | bore, stroke, cylinders, rod length, pin and journal diameters, deck height, rev limit (tune), cam lifts |
 | Derived, never authored | displacement 2979.3 cc and compression 10.20:1 (from chamber 34 cc, gasket 85 mm × 0.7 mm, deck clearance 0.7 mm from a 30.5 mm compression height, and a 12.1 cc bowl solved so the volumes give the published 10.2 — the one fitted geometric value; the forum's 17.4 cc "below the deck" measurement gives 9.9) |
 | Converted | 1 mm cam durations 190°/179° from the advertised 240°/228° by the model's own harmonic lift profile (event = 1 mm duration + 50°); VANOS park centrelines 134° (intake, fully retarded) and 136° (exhaust) with 60° of intake phaser |
-| Estimated (no source) | port flows (valve curtain area × typical discharge coefficients: 226 CFM at 10 mm intake, 168 CFM exhaust), intake 680 CFM and runner 380 mm, manifolds 700 CFM, exhaust 600 CFM, spring forces (set for float ≈ 7,100 rpm), ratings (rods 32/90 kN, pistons 120 bar, block 150 bar, bearings), oil pump 16 cc/rev at 450 kPa, radiator 1,900 W/K, masses and inertias (dual-mass flywheel 0.13 kg·m²) |
+| Estimated (no source) | port flows (valve curtain area × typical discharge coefficients: 226 CFM at 10 mm intake, 168 CFM exhaust), intake 680 CFM and runner 380 mm (DISA's open stage) with the default 33.6 mm runner diameter, manifolds 700 CFM, exhaust 600 CFM, spring forces (set for float ≈ 7,100 rpm), ratings (rods 32/90 kN, pistons 120 bar, block 150 bar, bearings), oil pump 16 cc/rev at 450 kPa, radiator 1,900 W/K, masses and inertias (dual-mass flywheel 0.13 kg·m²) |
 | Calibrated with the dev tools | stock tune: VANOS schedule (`calibrate-cams`), VE (`calibrate-ve`), spark (`calibrate-spark`, RON 98, 1.5° knock margin) — no table was edited by hand to reach the published output |
+
+**DISA as two effective stages** (Intake Gas Dynamics 2.0, Phase 1; the locked procedure is section 4 of
+docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md, the frozen derivation is
+docs/milestones/intake-gas-dynamics-2/M54_DISA_DERIVATION.md). `m54.intake.disa`: `runner_length_mm` 469.1 (flap closed,
+stage 0), `switched_runner_length_mm` 380 (flap open, stage 1); `ecu.m54_oem` drives it (`intake_runner_control`); the
+tune's `intake_runner_switch_rpm` comes from the tune driver (the stage-held full-load torque crossover: 3,900 rpm).
+
+| Value | Used as | Class | Basis |
+|---|---|---|---|
+| Switching mechanism (vacuum flap, sprung open) | ECU drives DISA (`intake_runner_control: true`) | sourced (secondary, corroborated) | Pelican Parts, BimmerFest, eEuroparts |
+| Switch band 3,750 / 4,100 rpm | crossover target 3,925 rpm (centre), check band 3,750–4,100 | sourced (secondary, corroborated) | same |
+| Topology: two groups of three, the flap joins them | why a stage is *effective* | sourced qualitatively; layout ambiguous | Pelican Parts, ASC, BMW training wording |
+| Open-stage acoustic length | 380 mm | **estimated** (no source) | band 300–450 mm |
+| Runner diameter (both stages) | 33.6 mm (0.40 × 84 mm) | **estimated** (A5 default, flagged by the validator) | band 30–40 mm |
+| End correction | 0.8216·r | sourced (physics) | Norris & Sheng 1989 |
+| V_eff | 302.2 cc | derived | bore, stroke, CR |
+| Closed-stage effective length | 469.1 mm (tuned 3,676 rpm; open stage 4,209 rpm) | **derived** (A-D1 + model, frozen before any M54 output) | M54_DISA_DERIVATION.md |
+| Tune `intake_runner_switch_rpm` | 3,900 rpm | calibrated (tune driver) | tune manifest |
+| Group plenum volumes, resonance tubes, flap bore; firing order | not used | unknown / not needed by Phase 1 | — |
+
+Not modelled: the flap is sprung open, so a real M54 whose ECU cannot drive it runs the open (short) stage; in the model a
+variable intake without control stays on its stage 0, here the closed (long) one.
 
 Simplifications (the part descriptions say so where a player would notice): the **exhaust VANOS** is held at its park
 position (in this model an exhaust phase would only add overlap, which it treats purely as a filling cost — there is
-no exhaust-opening/blowdown term); **DISA** is one effective runner length: the model has no intake resonance separate
-from cam timing, so the estimated 380 mm runner has no effect on full-load torque within the VANOS range and the real
-curve's 3,500 rpm hump, 4,000 rpm switch-over dip and second hump cannot be represented (SIMULATION_SPEC.md, "M54
-torque-curve investigation");
+no exhaust-opening/blowdown term); **DISA** is two effective runner stages of one runner–cylinder mode each (above); the
+real manifold's group plenums, resonance tubes and flap are not modelled (the plenum mode is deferred);
 **MS43 meters air with a hot-film mass-air-flow meter**, represented here by the model's speed-density ECU with a
 calibrated VE table; the E46's **returnless 3.5 bar fuel system** is represented as the model's manifold-referenced
 regulator (equivalent to MS43's pressure-compensated injection); the map-controlled thermostat is a fixed 90 °C one;

@@ -5,6 +5,9 @@ using CarSim.Core.Ecu;
 using CarSim.Core.Simulation;
 using CarSim.Core.Engines;
 using CarSim.Core.Parts;
+using CarSim.Verification;
+using CarSim.Verification.Calibration;
+using CarSim.Verification.Fingerprint;
 
 namespace CarSim.Cli;
 
@@ -41,6 +44,25 @@ public static class Program
           carsim bench <engine-id> [--steps 20000] [--repeats 5] [--rpm 5000] [build options]
                                                         Step cost: best-of-N time and allocated bytes per engine step (full
                                                         throttle, held speed) and per vehicle step (autopilot on the test track).
+          carsim fingerprint [--case <id>[,<id>...]] [--check <file>] [--write <file>] [--dump <dir>] [--jobs <n>] [--list 1]
+                                                        Regression fingerprint of the verification matrix (docs/VERIFICATION.md):
+                                                        runs every case (or --case, by id or id prefix) and compares it with the
+                                                        checked-in baseline (tests/baselines/fingerprint.txt, or --check <file>).
+                                                        --write <file> re-baselines (always the whole matrix); --dump <dir> also
+                                                        writes every value at full precision. Exit code 4 when it differs.
+          carsim derive-stage <engine-id> --switch <rpm> [--upper-length <mm>] [--diameter <mm>] [--k 2.1] [--damping 0.35]
+                                                        Assumption A-D1 for a two-stage intake: the effective lower stage whose
+                                                        gain crosses the upper stage's at a sourced switch speed (arithmetic on
+                                                        the model's gain functions; no engine is run). The upper stage defaults to
+                                                        the stock intake's last stage; prints the sensitivity to the inputs.
+          carsim fingerprint-diff <before-dir> <after-dir>
+                                                        Key-by-key comparison of two --dump directories (e.g. two commits).
+          carsim regenerate-tunes [--tune <id>[,<id>...]] [--write 1] [--jobs <n>] [--manifest <file>]
+                                                        The recalibration driver: runs every tune's recipe from
+                                                        tools/CarSim.Verification/tune-manifest.json with the dev calibrators and
+                                                        reports, table by table, whether the checked-in tables are reproduced;
+                                                        audits hand-authored spark maps. --write 1 rewrites the calibrated tables
+                                                        (never the hand-authored ones) in the tune files.
         <engine-id> (kestrel_k20, isar_m54, ...) may be left out only when the content has a single engine family.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
         Content options (every command): --content <dir> (default content/base)  --mods <dir> (default content/mods;
@@ -66,8 +88,12 @@ public static class Program
                 "drive" => Drive(options),
                 "calibrate-ve" => CalibrateVe(options),
                 "bench" => Bench(options),
+                "derive-stage" => DeriveStage(options),
                 "calibrate-spark" => CalibrateSpark(options),
                 "calibrate-cams" => CalibrateCams(options),
+                "fingerprint" => Fingerprint(options),
+                "fingerprint-diff" => FingerprintDiff(options),
+                "regenerate-tunes" => RegenerateTunes(options),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -377,6 +403,53 @@ public static class Program
         return 0;
     }
 
+    /// <summary>A-D1: the lower stage of a two-stage intake from a sourced switch speed (RunnerStageDerivation).</summary>
+    private static int DeriveStage(CliOptions o)
+    {
+        var db = ContentLoader.LoadWithMods(o.ContentDir, ModsDir(o)).GetOrThrow();
+        var engine = db.GetEngine(EngineId(o, db));
+        var assembly = EngineAssembly.CreateStock(engine, db, new PartInstanceFactory());
+        var geometry = EngineGeometry.TryCreate(assembly, 0, out _) ?? throw new InvalidOperationException("Incomplete geometry.");
+        var intake = assembly.SpecFor<CarSim.Core.Parts.Specs.IntakeManifoldSpec>(PartCategory.IntakeManifold, 0)
+                     ?? throw new InvalidOperationException("No intake manifold on the first bank.");
+        var last = intake.AllStages()[^1];
+        if (!o.Named.ContainsKey("switch")) return Fail("derive-stage needs --switch <rpm> (the sourced switch speed).");
+        double switchRpm = Num(o, "switch", 0), upperMm = Num(o, "upper-length", last.RunnerLengthMm);
+        double? diameterMm = o.Named.ContainsKey("diameter") ? Num(o, "diameter", 0) : last.RunnerDiameterMm;
+        double k = Num(o, "k", IntakeGasDynamics.TunedFrequencyRatio), zeta = Num(o, "damping", IntakeGasDynamics.Damping);
+        var d = RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, k, zeta);
+        double shownDiameter = diameterMm ?? Units.MToMm(RunnerStageConfiguration.DefaultDiameterPerBore * geometry.Bore);
+        Console.WriteLine($"{engine.Name}: upper stage {upperMm:F1} mm × Ø{shownDiameter:F1} mm{(diameterMm == null ? " (default 0.40 × bore)" : "")}, " +
+                          $"switch {switchRpm:F0} rpm, K {k}, ζ {zeta}, runner gas {IntakeGasDynamics.ReferenceTemperature} K");
+        Console.WriteLine($"  upper stage tuned      {d.UpperTunedRpm,8:F1} rpm");
+        Console.WriteLine($"  lower stage tuned      {d.LowerTunedRpm,8:F1} rpm");
+        Console.WriteLine($"  lower stage length     {(d.LowerLengthMm is double l ? $"{l,8:F2} mm" : "none in 50–1000 mm")}");
+        Console.WriteLine($"  gain crossover (check) {d.CrossoverRpm,8:F1} rpm");
+        Console.WriteLine();
+        Console.WriteLine("Sensitivity (each input moved alone):");
+        void Row(string label, StageDerivation r) =>
+            Console.WriteLine($"  {label,-26} upper {r.UpperTunedRpm,6:F0} rpm  lower {r.LowerTunedRpm,6:F0} rpm  length {(r.LowerLengthMm is double x ? $"{x:F1} mm" : "—")}");
+        StageDerivation? Try(Func<StageDerivation> f) { try { return f(); } catch (ArgumentException) { return null; } }
+        foreach (var (label, run) in new (string, Func<StageDerivation>)[]
+        {
+            ("switch 3,750 rpm (band low)", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, 3750, k, zeta)),
+            ("switch 4,100 rpm (band high)", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, 4100, k, zeta)),
+            ("K 2.0", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, 2.0, zeta)),
+            ("K 2.2", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, 2.2, zeta)),
+            ("ζ 0.33", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, k, 0.33)),
+            ("ζ 0.45", () => RunnerStageDerivation.LowerStage(upperMm, diameterMm, geometry, switchRpm, k, 0.45)),
+            ("upper 300 mm", () => RunnerStageDerivation.LowerStage(300, diameterMm, geometry, switchRpm, k, zeta)),
+            ("upper 450 mm", () => RunnerStageDerivation.LowerStage(450, diameterMm, geometry, switchRpm, k, zeta)),
+            ("diameter 30 mm", () => RunnerStageDerivation.LowerStage(upperMm, 30, geometry, switchRpm, k, zeta)),
+            ("diameter 40 mm", () => RunnerStageDerivation.LowerStage(upperMm, 40, geometry, switchRpm, k, zeta)),
+        })
+        {
+            if (Try(run) is { } r) Row(label, r);
+            else Console.WriteLine($"  {label,-26} excluded: the upper stage then tunes below the switch speed");
+        }
+        return 0;
+    }
+
     private static (double MicrosecondsPerStep, double BytesPerStep) Measure(Action step, int steps, int repeats)
     {
         for (int i = 0; i < Math.Min(steps, 2000); i++) step();
@@ -391,6 +464,100 @@ public static class Program
             bytes = (double)(GC.GetAllocatedBytesForCurrentThread() - allocated) / steps;
         }
         return (best, bytes);
+    }
+
+    /// <summary>The regression fingerprint: run the matrix, compare with (or write) the baseline.</summary>
+    private static int Fingerprint(CliOptions o)
+    {
+        var all = FingerprintMatrix.Cases;
+        if (o.Named.ContainsKey("list"))
+        {
+            foreach (var c in all) Console.WriteLine($"{c.Id,-26} {c.Description}");
+            return 0;
+        }
+        var cases = all.ToList();
+        if (o.Named.TryGetValue("case", out var filter))
+        {
+            var wanted = filter.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            cases = all.Where(c => wanted.Any(w => c.Id == w || c.Id.StartsWith(w, StringComparison.Ordinal))).ToList();
+            if (cases.Count == 0) return Fail($"No fingerprint case matches '{filter}' (carsim fingerprint --list 1).");
+        }
+        string? dump = o.Named.GetValueOrDefault("dump");
+        int? jobs = o.Named.TryGetValue("jobs", out var j) ? int.Parse(j, System.Globalization.CultureInfo.InvariantCulture) : null;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        if (o.Named.TryGetValue("write", out var writePath))
+        {
+            if (cases.Count != all.Count) return Fail("--write re-baselines the whole matrix; leave out --case.");
+            var records = FingerprintRunner.Run(cases, schema: null, dumpDirectory: dump, parallelism: jobs);
+            var baseline = FingerprintBaseline.FromRecords(cases.Zip(records));
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(writePath))!);
+            File.WriteAllText(writePath, baseline.ToText(all.Select(c => c.Id).ToList()));
+            Console.WriteLine($"Wrote {writePath}: {cases.Count} cases, {baseline.Sections.Count} sections, {baseline.Schema.Count} channels ({watch.Elapsed.TotalSeconds:F1} s).");
+            return 0;
+        }
+        string path = o.Named.GetValueOrDefault("check") ?? RepoPaths.FingerprintBaseline;
+        var expected = FingerprintBaseline.Load(path);
+        var run = FingerprintRunner.Run(cases, expected.Schema, dump, parallelism: jobs);
+        var comparison = FingerprintComparison.Compare(expected, run);
+        int sections = run.Sum(r => r.Sections.Count);
+        Console.WriteLine($"Fingerprint: {cases.Count} cases, {sections} sections against {path} ({watch.Elapsed.TotalSeconds:F1} s).");
+        foreach (var line in comparison.Changed) Console.WriteLine("  CHANGED " + line);
+        foreach (var line in comparison.Missing) Console.WriteLine("  MISSING " + line);
+        foreach (var line in comparison.Diagnostics) Console.WriteLine("  DIAGNOSTIC (knife edge, reported, not a regression) " + line);
+        if (comparison.NewChannels.Count > 0)
+            Console.WriteLine($"  new channels (not in the baseline's schema, not compared): {string.Join(", ", comparison.NewChannels)}");
+        Console.WriteLine(comparison.Identical ? "  IDENTICAL: every digested value is bit-for-bit the baseline's."
+            : "  DIFFERENT. A deliberate change is re-baselined with `carsim fingerprint --write tests/baselines/fingerprint.txt` and documented.");
+        return comparison.Identical ? 0 : 4;
+    }
+
+    private static int FingerprintDiff(CliOptions o)
+    {
+        if (o.Positional.Count != 2) return Fail("Usage: carsim fingerprint-diff <before-dir> <after-dir>");
+        Console.Write(FingerprintRunner.DiffDumps(o.Positional[0], o.Positional[1]));
+        return 0;
+    }
+
+    /// <summary>The recalibration driver over the tune manifest.</summary>
+    private static int RegenerateTunes(CliOptions o)
+    {
+        var manifest = TuneManifest.Load(o.Named.GetValueOrDefault("manifest") ?? RepoPaths.TuneManifest);
+        var recipes = manifest.Tunes.ToList();
+        if (o.Named.TryGetValue("tune", out var filter))
+        {
+            var wanted = filter.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            recipes = recipes.Where(r => wanted.Contains(r.Tune)).ToList();
+            if (recipes.Count == 0) return Fail($"No tune in the manifest matches '{filter}'.");
+        }
+        bool write = o.Named.GetValueOrDefault("write") == "1";
+        int jobs = o.Named.TryGetValue("jobs", out var j) ? int.Parse(j, System.Globalization.CultureInfo.InvariantCulture) : Environment.ProcessorCount;
+        string root = RepoPaths.Root;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var results = new TuneRegeneration[recipes.Count];
+        Parallel.For(0, recipes.Count, new ParallelOptions { MaxDegreeOfParallelism = jobs }, i => results[i] = TuneRegenerator.Run(recipes[i], root));
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        foreach (var r in results)
+        {
+            Console.WriteLine($"{r.Recipe.Tune} ({r.Recipe.Engine}, {r.Recipe.Fuel}; {string.Join(" → ", r.Recipe.Steps.Select(s => s.Calibrator))}; {r.Seconds:F0} s)");
+            foreach (var f in r.Fields)
+            {
+                string cycle = f.Oscillating == 0 ? "" : $"; {f.Oscillating} in a rounding 2-cycle keep their checked-in value";
+                string open = f.Unsettled == 0 ? "" : $"; WARNING: {f.Unsettled} moved again on a second pass (not settled)";
+                Console.WriteLine(f.Reproduced ? $"  {f.Field}: reproduced ({f.Cells} values{cycle})"
+                    : string.Create(inv, $"  {f.Field}: {f.Differing} of {f.Cells} values differ (max |Δ| {f.MaxAbsDifference:0.###}){cycle}{open}"));
+            }
+            foreach (var a in r.Audit) Console.WriteLine("  audit: " + a);
+            if (!r.FileRoundTrips) Console.WriteLine("  WARNING: rewriting the file with its own values would change it (format drift); --write would reformat these tables.");
+            if (write && !r.Reproduced)
+            {
+                string path = Path.Combine(root, r.Recipe.File);
+                File.WriteAllText(path, TuneRegenerator.Write(File.ReadAllText(path), r.Recipe.Tune, r.Regenerated, r.Fields.Select(f => f.Field)));
+                Console.WriteLine($"  wrote {r.Recipe.File}");
+            }
+        }
+        int reproduced = results.Count(r => r.Reproduced);
+        Console.WriteLine($"{reproduced} of {results.Length} tunes reproduced exactly ({watch.Elapsed.TotalSeconds:F0} s).");
+        return 0;
     }
 
     private static void SwapPart(EngineAssembly a, string slot, PartDefinition part, PartInstanceFactory factory)
@@ -451,6 +618,20 @@ public static class Program
         }
 
         var report = AssemblyValidator.Validate(assembly);
+        // Intake gas dynamics: each bank's runner stages and the speed each tunes to (runner gas at the reference ambient).
+        if (report.CanRun && EngineConfiguration.Build(assembly, db.Fuels.Values.First()).Configuration is { } built)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"Intake runner stages (tuned speed with the runner gas at {IntakeGasDynamics.ReferenceTemperature:F2} K):");
+            foreach (var bank in built.Banks)
+                for (int s = 0; s < bank.RunnerStages.Count; s++)
+                {
+                    var stage = bank.RunnerStages[s];
+                    string which = built.Banks.Count > 1 ? $"bank {bank.Definition.Id}, " : "";
+                    Console.WriteLine($"  {which}stage {s}: L {Units.MToMm(stage.Length):F1} mm, d {Units.MToMm(stage.Diameter):F1} mm{(stage.DefaultDiameter ? " (default)" : "")}, " +
+                                      $"β {stage.VolumeRatio:F3}, x {stage.Fundamental:F4}, tuned {stage.TunedRpmAtReference:F0} rpm");
+                }
+        }
         Console.WriteLine();
         Console.WriteLine($"Compatibility: {(report.CanRun ? "can run" : "CANNOT RUN")}");
         foreach (var issue in report.Issues) Console.WriteLine($"  {issue}");

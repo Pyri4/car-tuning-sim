@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Mutation harness (docs/VERIFICATION.md): injects each known bug from mutations.json into the sources, rebuilds, and
+       proves the tests guarding it fail. Runs `dotnet build`/`dotnet test` as child processes; references no project. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>CarSim.MutationCheck</RootNamespace>
+    <AssemblyName>carsim-mutation-check</AssemblyName>
+  </PropertyGroup>
+</Project>

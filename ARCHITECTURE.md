@@ -78,7 +78,10 @@ content/test/              test-only content layers (the synthetic engine matrix
 src/CarSim.Core/           game-engine-agnostic simulation + domain model (NO Godot references)
 src/CarSim.Gameplay/       garage, economy, scenarios, save/load (NO Godot references)
 tests/CarSim.Core.Tests/   xUnit tests for the core
-tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno) built on the core
+tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno, fingerprint, regenerate-tunes) built on the core
+tools/CarSim.Verification/ regression fingerprint and tune-regeneration driver (+ tune-manifest.json); CLI and tests only
+tools/CarSim.MutationCheck/ mutation harness (mutations.json): injects known bugs, proves the guarding tests fail
+tests/baselines/           checked-in regression fingerprint
 game/                      Godot 4.7 project (presentation layer); references CarSim.Core
 docs/                      audits and milestone definitions (docs/milestones/)
 tools/agent-skills/        sources of this project's agent skills (installed with `npx skills`)
@@ -204,10 +207,13 @@ Engines are data; the code knows categories, capabilities and topology rules, ne
   several banks. Families that break the rules are rejected at load with a diagnostic.
 - **Configuration.** `EngineConfiguration` (engine-wide specs, geometry of the bottom end) holds one
   `BankConfiguration` per bank (its parts, its geometry with its own head and gasket, flow areas scaled by its share of
-  shared elements, cam profiles, runner stages, capability hardware) and one `TurboConfiguration` per turbocharger
+  shared elements, cam profiles, runner stages with their acoustic mode solved once (`RunnerStageConfiguration`),
+  capability hardware) and one `TurboConfiguration` per turbocharger
   (which banks feed it). Nothing reads "the first bank" except where the model has one of something by design (the MAP
   sensor).
-- **Simulation.** One `AirPath` per bank; combustion, knock, heat, friction and exhaust per bank; one shaft per turbo;
+- **Simulation.** One `AirPath` per bank, whose filling is valve-event filling (cams) times the intake's wave gain
+  (`IntakeGasDynamics`: runner geometry and the speed of sound, no cam input); combustion, knock, heat, friction and
+  exhaust per bank; one shaft per turbo;
   engine-wide speed, coolant, oil, knock retard and crown temperature. Telemetry aggregates explicitly (sums,
   cylinder-weighted means, worst-bank limits) and carries `Banks[]`/`Turbos[]`. With one bank every weight is exactly
   1, which keeps single-bank engines bit-identical to the pre-bank model.
@@ -281,6 +287,12 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
   numeric field of every fitted part scaled from −1× to 10³×; wherever the part's validator accepts the value, the
   engine or car must be refused with reasons or run finite); clamp-activation tests (guards on fitted laws never
   carry normal running); tyre-width and suspension trade-offs; Miner additivity across a save/load.
+- **Regression fingerprint** (Intake Gas Dynamics 2.0, Phase 0; docs/VERIFICATION.md): every K20, M54 and synthetic
+  output in a fixed build matrix — sweeps, dyno modes, cold start, failure holds, scenarios, laps — digested at full
+  precision and checked by the suite against `tests/baselines/fingerprint.txt`; bit-identity claims are checked by it,
+  and a deliberate change is a measured, documented re-baseline. Tunes are regenerated through the recipes of
+  `tools/CarSim.Verification/tune-manifest.json` (`carsim regenerate-tunes`). Acceptance tests of a milestone may be
+  written before its code as `PendingAcceptanceFact` (skipped until the milestone; each recorded failing when written).
 - **Mutation checks:** new invariants are shown to fail on the bug they guard — the previous physics (overrun
   exhaust heat), an ECU fed the true air mass or the true fuel density, boost feedback from the compressor outlet,
   choke that removes compressor work, no boost anti-windup, a raised VE floor. A test that cannot fail on its bug is
@@ -366,3 +378,15 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
 | 2026-09-27 | A car names only its stock engine; whether an engine fits a car is decided by interfaces (gearboxes require a bellhousing pattern), checked by scenarios, the garage and the CLI | Engine swaps are a core feature; a car hard-wired to an engine family made them impossible |
 | 2026-09-27 | A synthetic engine matrix lives in `content/test/` as a content layer, calibrated with the dev calibrators; its ids are forbidden in `src/` | Genericity is demonstrated, not claimed: architectures the code was never written for must run as data |
 | 2026-09-27 | Agent skills are managed with the skills CLI (`npx skills`, vercel-labs/skills): project procedures (verify, add an engine, project gate) as skills with sources in `tools/agent-skills/`, installed to `.agents/skills/` (+ `.claude/skills/` links), pinned in `skills-lock.json`; CI checks installed copies against their sources | One install for every coding agent the project uses (Claude Code, Codex, …); skills turn AGENTS.md procedures into checklists agents load when a task matches. Third-party skills need the owner's approval (they run with full agent permissions) |
+| 2026-09-27 | Verification tooling lives in the repo: a regression fingerprint (per-section SHA-256 over every telemetry value at round-trip precision, readable key numbers, a channel schema so added telemetry is not a difference), a tune-regeneration driver over a per-tune recipe manifest, and a mutation harness over a list of known bugs | The last milestone's bit-identity and mutation claims rested on tools outside the repo (audit G3); Intake Gas Dynamics 2.0 changes the K20 and M54 on purpose and invalidates every calibrated table, so the change must be measurable and reproducible first |
+| 2026-09-27 | Acceptance tests may precede their physics as skipped `PendingAcceptanceFact` tests, each shown to fail on the current model when written | The criteria of a physics change are fixed, reviewable and executable before the change, instead of being written to fit it afterwards |
+| 2026-09-27 | A regenerated tune table is written only if it settles: calibration recipes set the hardware schedule (cam phase, switch speeds) before the maps measured on it, and a cell the recipe moves and moves back on a second pass (a rounding 2-cycle) keeps its checked-in value | A switch speed moved after the fuel map left VE measured on the other stage; 0.5° spark 2-cycles made every regeneration report noise that a physics diff would be mixed with |
+| 2026-09-27 | Shared model constants with no verifiable source are pre-registered priors, not fits; with one real-engine reference (the M54), which is held out, only the valve-event level constants are re-anchored, on the fictional K20 stock (Intake Gas Dynamics 2.0 design resolution, Q3) | The current content cannot identify more than a level constant without fitting the M54; a prior chosen before the run cannot be tuned toward an acceptance test |
+| 2026-09-27 | The regression fingerprint has knife-edge diagnostic sections: recorded and re-baselined, a difference reported with its reason but not failed (today only the worn project car's autopilot lap) | A lap that a 0.001 VE change flips is not a behaviour anyone can protect; treating it as a regression would force every filling change to be explained twice, while its dyno section and every other drive stay hard checks |
+| 2026-09-27 | A physics regression anchor is measured on an observable the tune cannot move (the stock K20's full-load air per cycle; a fuel-map change moved it by < 0.001 %), against a frozen reference; end-to-end outcomes are a separate calibration level | Tune changes must not masquerade as physics changes, or hide them |
+| 2026-09-28 | Intake filling is two factors per bank: valve-event filling (the cams; phaser, profile and centrelines act only here) times the intake's wave gain (one runner–cylinder mode per stage: `x·tan x = β`, a normalised quadrature response, a Mach amplitude; no cam input). The `(0.300 m/L)^0.25` runner factor is removed; v₀ and the ceiling are re-anchored on the K20 stock | A phaser moved the one filling hump whole, so runners were inert under it and a DISA-type intake had nothing to act on (the M54 investigation). Every engine has an intake: the capability is generic, and the M54 benefits only through its data. Intake Gas Dynamics 2.0 Phase 1; SIMULATION_SPEC.md, "Intake gas dynamics" |
+| 2026-09-28 | An intake has any number of runner stages (`switched_stages`, with `switched_runner_length_mm` as the two-stage shorthand); the ECU runs the highest stage whose switch speed is reached, hysteresis at every switch | A two-element array was a hidden limit (audit G5); N stages cost nothing when there are two |
+| 2026-09-28 | The wave's speed of sound comes from the bank's manifold gas temperature of the previous step | Keeps the gain out of the flow root find (no new iteration); exact on an NA engine, a one-step lag of a slow quantity under boost |
+| 2026-09-28 | A switched stage whose switch speed is sourced but whose geometry is not is derived from the switch speed (assumption A-D1) and frozen, in its own commit, before the engine's output is seen (`carsim derive-stage`) | The only way to author an unpublished effective geometry without fitting it to the output it will be judged on |
+| 2026-09-28 | Hot root finds take a struct function (`RootFinder.Brent<TFunction>`, `IRootFunction`): no closure, no delegate, no allocation. The downstream-pressure residual keeps its call boundary | Every air-path evaluation allocated closures, so allocation grew with the flow solve's iterations. A delegate-based generic solver cost 40 µs per step under .NET 8's dynamic PGO (measured and bisected); the struct form is bit-identical and faster than before |
+| 2026-09-28 | Correction to the anchor entry above: a full tune regeneration (VE cells up to 0.028) moved the anchor's air per cycle by ≈ 0.06 percentage points, not < 0.001 % | Through the fuel's evaporative charge cooling. Still ≈ 50 times under the ±3 % tolerance, so the anchor stays a physics check, but it is not strictly tune-independent |

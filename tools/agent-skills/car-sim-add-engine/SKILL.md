@@ -28,13 +28,15 @@ checklist, not a replacement.
    `inspect <engine-id>`; fix every error, read every warning (valve float, coil bind, quench, compression, interfaces).
 6. **Calibrate the base tune with the dev calibrators** — never hand-fit a curve: `calibrate-cams` (only with a
    phaser) → `calibrate-ve` → `calibrate-spark` → `calibrate-ve`, each with `--fuel <fuel>`; paste the printed tables;
-   say in the tune's `description` how it was made.
+   say in the tune's `description` how it was made, and add the recipe to `tools/CarSim.Verification/tune-manifest.json`
+   (a test requires one per tune; `carsim regenerate-tunes --tune <id>` then reproduces it).
 7. **Measure**: `sweep <engine-id> --fuel <fuel>`. For a real engine, compare against bands stated in advance. If it
    misses, classify why (content? missing capability? shared model simplification?) and document it.
    **Never change a shared model constant to hit one engine's numbers.**
 8. **Car**: a bellhousing interface on the block; `drive <engine-id> --vehicle <car>`; a scenario for the game.
 9. **Tests**: reference tests for a real engine (like `M54ReferenceTests`); the whole suite must stay green —
-   including `EngineAgnosticTests` (source audit) and the K20/M54 pins.
+   including `EngineAgnosticTests` (source audit) and the regression fingerprint (the K20/M54 pins). A real engine joins
+   the fingerprint matrix; re-baseline with `carsim fingerprint --write tests/baselines/fingerprint.txt`.
 10. Run the `car-sim-verify` checklist (Godot smoke test with the new scenario included).
 
 ## Never (guide §8)

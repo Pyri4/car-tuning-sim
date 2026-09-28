@@ -30,6 +30,11 @@ public static class SpecDescriber
                 rows.Add((Label(p.Name, out _), string.Join("  ", curve.Select(pt => $"{pt[0]:0.#}→{pt[1]:0}"))));
                 continue;
             }
+            if (value is System.Collections.IEnumerable items and not string)
+            {
+                rows.Add((Label(p.Name, out _), string.Join(", ", items.Cast<object>().Select(i => i.ToString()))));
+                continue;
+            }
             string label = Label(p.Name, out string unit);
             string text = value switch
             {

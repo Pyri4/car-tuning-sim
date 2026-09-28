@@ -6,8 +6,12 @@
     {
       "id": "m54.intake.disa", "name": "M54 OEM intake manifold (DISA)", "category": "intake_manifold", "manufacturer": "Isar",
       "price": 650, "mass_kg": 5.5, "requires": ["m54.intake_flange"],
-      "description": "Plastic manifold with long curved runners and the DISA resonance flap; includes the airbox, filter and air-mass meter.",
-      "spec": { "runner_length_mm": 380, "flow_cfm": 680 }
+      "description": "Plastic manifold with long curved runners and the DISA resonance flap (closed below about 3,900 rpm, open above), switched by the ECU; includes the airbox, filter and air-mass meter.",
+      // DISA as two effective runner stages (PARTS_DATABASE.md, "Isar M54 reference engine"; the frozen derivation in
+      // docs/milestones/intake-gas-dynamics-2/M54_DISA_DERIVATION.md). Flap open (stage 1): the runner, 380 mm acoustic
+      // length, estimated. Flap closed (stage 0): 469.1 mm effective, derived under A-D1 so that the two stages cross at
+      // 3,925 rpm, the centre of the sourced switch band. Diameter: the model default (0.40 x bore), estimated.
+      "spec": { "runner_length_mm": 469.1, "switched_runner_length_mm": 380, "flow_cfm": 680 }
     },
     {
       "id": "m54.exhaust_manifold.oem", "name": "M54 OEM exhaust manifolds (2 × 3-into-1, catalysts)", "category": "exhaust_manifold", "manufacturer": "Isar",

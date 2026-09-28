@@ -127,8 +127,11 @@ public sealed class BankState
     /// <summary>Whether this bank's camshafts run their high-lift profile.</summary>
     public bool HighValveLift;
 
-    /// <summary>Whether this bank's intake manifold runs its switched runner.</summary>
-    public bool SwitchedRunner;
+    /// <summary>The runner stage this bank's intake manifold runs (0 = its primary runner).</summary>
+    public int RunnerStage;
+
+    /// <summary>Whether this bank's intake manifold runs a switched stage.</summary>
+    public bool SwitchedRunner => RunnerStage > 0;
 
     public BankState Clone() => (BankState)MemberwiseClone();
 }
@@ -191,6 +194,12 @@ public sealed record EngineTelemetry
     /// <summary>Tuning (cam/runner/header) VE component, relative to port conditions.</summary>
     public double VeDynamic { get; init; }
 
+    /// <summary>The intake runners' wave gain G_wave in VeDynamic (1 = no ram or resonance; cylinder-weighted mean of the banks).</summary>
+    public double IntakeWaveGain { get; init; }
+
+    /// <summary>Tuned speed of the runner stage each bank runs, at its runner gas temperature, rpm (cylinder-weighted mean).</summary>
+    public double RunnerTunedRpm { get; init; }
+
     /// <summary>Residual-gas / reversion multiplier from exhaust backpressure (1 = none).</summary>
     public double ResidualFactor { get; init; }
 
@@ -202,6 +211,9 @@ public sealed record EngineTelemetry
 
     /// <summary>Whether a variable intake manifold runs its switched runner (any bank).</summary>
     public bool SwitchedRunner { get; init; }
+
+    /// <summary>The highest runner stage any bank's intake runs (0 = primary runners everywhere).</summary>
+    public int RunnerStage { get; init; }
 
     public double TargetLambda { get; init; }
     public double Lambda { get; init; }
@@ -354,7 +366,8 @@ public readonly record struct BankTelemetry(
     bool HighValveLift,
     bool SwitchedRunner,
     double ValveFloatRpm,
-    double Torque);
+    double Torque,
+    int RunnerStage);
 
 /// <summary>One turbocharger's state in a step.</summary>
 public readonly record struct TurboTelemetry(

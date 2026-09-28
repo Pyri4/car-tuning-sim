@@ -1,0 +1,101 @@
+{
+  // How every shipped and test tune is (re)generated with the dev calibrators (docs/VERIFICATION.md, "Tune
+  // regeneration"). `carsim regenerate-tunes --check` runs each recipe on the checked-in tune and reports, table by table,
+  // whether the result reproduces what is checked in; `--write` rewrites the calibrated tables in place (and only those).
+  //
+  // Steps run in order, each on a fresh engine built from `build` with the tune as left by the previous step, exactly
+  // as `carsim calibrate-*` would after pasting (values pass through the file format). Calibrators:
+  //   cams  -> intake_cam_advance_deg   (CamPhaseCalibrator: best-trapping advance; step_deg, hold_s)
+  //   ve    -> volumetric_efficiency    (VeCalibrator: two measurement passes; hold_s)
+  //   spark -> ignition_advance_deg     (SparkCalibrator: min(MBT - mbt_margin, knock limit - knock_margin); hold_s)
+  //   runner_switch / lift_switch -> intake_runner_switch_rpm / valve_lift_switch_rpm (full-load torque crossover of the
+  //                                  two stages held, 100 rpm grid, rounded to 100 rpm)
+  //
+  // Order: the hardware schedule first (cams, switch speeds), then the fuel and spark maps measured on it
+  // (ve -> spark -> ve). A switch speed set after the fuel map leaves VE cells measured on the other stage between the
+  // old and the new switch speed (TuneRegenerationTests checks the order).
+  //
+  // Rule for hand-authored tables: they are listed under `hand_authored`, never written by the driver, and audited after
+  // a physics change: a hand-authored spark map is compared cell by cell with what the spark calibrator would write on
+  // the tune's fuel, and every cell more advanced than that knock/MBT ceiling is reported for a human decision (keep,
+  // lower by hand, or convert the table to a calibrated one - recorded in the tune's comment and here).
+  "tunes": [
+    {
+      "tune": "k20.stock", "engine": "kestrel_k20", "layer": "base", "file": "content/base/tunes/k20_stock.json", "fuel": "gasoline_95",
+      "build": {},
+      "steps": [ { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda", "ignition_advance_deg" ],
+      "provenance": "Factory map. VE measured on the stock engine (RON 95) with calibrate-ve; the spark map is the hand-authored factory map (knock-limited cells 1.5 deg under the knock limit below ~2,900 rpm); lambda targets are design intent."
+    },
+    {
+      "tune": "k20.turbo_base", "engine": "kestrel_k20", "layer": "base", "file": "content/base/tunes/k20_turbo_base.json", "fuel": "gasoline_98",
+      "build": {
+        "swap": [ [ "pistons", "k20.pistons.forged_lc" ], [ "connecting_rods", "k20.rods.forged_h" ], [ "head_gasket", "k20.head_gasket.race" ],
+                  [ "injectors", "injectors.550cc" ], [ "fuel_pump", "fuel_pump.hf_330" ], [ "ecu", "ecu.standalone" ],
+                  [ "exhaust", "exhaust.sport_63mm" ], [ "exhaust_manifold", "k20.exhaust_manifold.turbo_log" ] ],
+        "add": [ [ "turbocharger", "turbo.t28_ball" ], [ "intercooler", "intercooler.fmic_street" ] ]
+      },
+      "steps": [ { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda", "ignition_advance_deg", "boost_target_kpa" ],
+      "provenance": "VE measured on the T28 base build (forged, log manifold, FMIC, RON 98) with calibrate-ve; spark, lambda and boost targets hand-authored."
+    },
+    {
+      "tune": "m54.stock", "engine": "isar_m54", "layer": "base", "file": "content/base/tunes/m54_stock.json", "fuel": "gasoline_98",
+      "build": {},
+      "steps": [ { "calibrator": "cams", "step_deg": 2.5 }, { "calibrator": "runner_switch" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda" ],
+      "provenance": "No M54 table was edited by hand (PR #4): calibrate-cams --step 2.5, the DISA switch speed at the stages' full-load torque crossover (Intake Gas Dynamics 2.0), calibrate-ve, calibrate-spark, calibrate-ve on RON 98."
+    },
+    {
+      "tune": "syn.s16.stock", "engine": "syn_i4_sohc", "layer": "test", "file": "content/test/engine-matrix/syn_i4_sohc.json", "fuel": "gasoline_95",
+      "build": {}, "steps": [ { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda" ], "provenance": "Base map from the dev calibrators on RON 95: calibrate-ve -> calibrate-spark -> calibrate-ve."
+    },
+    {
+      "tune": "syn.t3.stock", "engine": "syn_i3_turbo_vvl", "layer": "test", "file": "content/test/engine-matrix/syn_i3_turbo_vvl.json", "fuel": "gasoline_98",
+      "build": {}, "steps": [ { "calibrator": "lift_switch" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda", "boost_target_kpa" ],
+      "provenance": "Base map from the dev calibrators on RON 98: valve-lift switch speed from a sweep with each profile held, then calibrate-ve -> calibrate-spark -> calibrate-ve on that profile schedule."
+    },
+    {
+      "tune": "syn.t20.stock", "engine": "syn_i4_turbo", "layer": "test", "file": "content/test/engine-matrix/syn_i4_turbo.json", "fuel": "gasoline_98",
+      "build": {}, "steps": [ { "calibrator": "cams" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda", "boost_target_kpa" ],
+      "provenance": "Base map from the dev calibrators on RON 98: calibrate-cams -> calibrate-ve -> calibrate-spark -> calibrate-ve."
+    },
+    {
+      "tune": "syn.r6.stock", "engine": "syn_i6_vis", "layer": "test", "file": "content/test/engine-matrix/syn_i6_vis.json", "fuel": "gasoline_95",
+      "build": {}, "steps": [ { "calibrator": "runner_switch" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda" ],
+      "provenance": "Base map from the dev calibrators on RON 95: runner switch speed from a sweep with each stage held, then calibrate-ve -> calibrate-spark -> calibrate-ve on that stage schedule."
+    },
+    {
+      "tune": "syn.b20.stock", "engine": "syn_h4_turbo", "layer": "test", "file": "content/test/engine-matrix/syn_h4_turbo.json", "fuel": "gasoline_98",
+      "build": {}, "steps": [ { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda", "boost_target_kpa" ],
+      "provenance": "Base map from the dev calibrators on RON 98: calibrate-ve -> calibrate-spark -> calibrate-ve."
+    },
+    {
+      "tune": "syn.v6.stock", "engine": "syn_v6_na", "layer": "test", "file": "content/test/engine-matrix/syn_v6_na.json", "fuel": "gasoline_95",
+      "build": {}, "steps": [ { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda" ], "provenance": "Base map from the dev calibrators on RON 95: calibrate-ve -> calibrate-spark -> calibrate-ve."
+    },
+    {
+      "tune": "syn.v6tt.stock", "engine": "syn_v6_tt", "layer": "test", "file": "content/test/engine-matrix/syn_v6_tt.json", "fuel": "gasoline_98",
+      "build": {}, "steps": [ { "calibrator": "cams" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda", "boost_target_kpa" ],
+      "provenance": "Base map from the dev calibrators on RON 98: calibrate-cams -> calibrate-ve -> calibrate-spark -> calibrate-ve."
+    },
+    {
+      "tune": "syn.v8.stock", "engine": "syn_v8_ohv", "layer": "test", "file": "content/test/engine-matrix/syn_v8_ohv.json", "fuel": "gasoline_95",
+      "build": {}, "steps": [ { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda" ], "provenance": "Base map from the dev calibrators on RON 95: calibrate-ve -> calibrate-spark -> calibrate-ve."
+    },
+    {
+      "tune": "syn.v8d.stock", "engine": "syn_v8_dohc_vvt", "layer": "test", "file": "content/test/engine-matrix/syn_v8_dohc_vvt.json", "fuel": "gasoline_98",
+      "build": {}, "steps": [ { "calibrator": "cams" }, { "calibrator": "ve" }, { "calibrator": "spark" }, { "calibrator": "ve" } ],
+      "hand_authored": [ "target_lambda" ],
+      "provenance": "Base map from the dev calibrators on RON 98: calibrate-cams -> calibrate-ve -> calibrate-spark -> calibrate-ve."
+    }
+  ]
+}

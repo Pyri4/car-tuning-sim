@@ -198,11 +198,19 @@ public static class AssemblyValidator
                     $"{On(b)}The ECU cannot switch the variable-lift camshafts: they stay on their base profile, so the top end suffers.",
                     SlotOf(a, PartCategory.Ecu), camSlot);
             var intakeSlot = a.SlotFor(PartCategory.IntakeManifold, b)?.Id ?? PartCategory.IntakeManifold;
-            if (a.SpecFor<IntakeManifoldSpec>(PartCategory.IntakeManifold, b) is { SwitchedRunnerLengthMm: not null } && ecu is { IntakeRunnerControl: false }
+            if (a.SpecFor<IntakeManifoldSpec>(PartCategory.IntakeManifold, b) is { HasSwitchedStages: true } && ecu is { IntakeRunnerControl: false }
                 && !issues.Any(i => i.Code == "intake_runner_uncontrolled" && i.Slots.Contains(intakeSlot)))
                 Add(IssueSeverity.Warning, "intake_runner_uncontrolled",
                     $"{On(b)}The ECU cannot switch the variable intake manifold: it stays on its primary runner.",
                     SlotOf(a, PartCategory.Ecu), intakeSlot);
+            // Intake gas dynamics needs the runner diameter; without it the model assumes a typical one (assumption A5).
+            if (a.SpecFor<IntakeManifoldSpec>(PartCategory.IntakeManifold, b) is { } intake && block != null
+                && intake.AllStages().Any(s => s.RunnerDiameterMm == null)
+                && !issues.Any(i => i.Code == "default_intake_geometry" && i.Slots.Contains(intakeSlot)))
+                Add(IssueSeverity.Info, "default_intake_geometry",
+                    $"{On(b)}The intake manifold states no runner diameter: intake tuning assumes {Simulation.RunnerStageConfiguration.DefaultDiameterPerBore:0.00} × bore " +
+                    $"({Simulation.RunnerStageConfiguration.DefaultDiameterPerBore * block.BoreMm:F1} mm).",
+                    intakeSlot);
         }
 
         // Geometry-derived checks, per bank: each bank's gasket and head set its own chamber, quench and compression

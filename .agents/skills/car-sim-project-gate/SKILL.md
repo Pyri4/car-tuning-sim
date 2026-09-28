@@ -17,7 +17,9 @@ blockers (and doc contradictions, and missing tests for claims already made).
    docs/milestones/.
 3. **Re-verify from scratch** (the `car-sim-verify` skill) on every branch under review — a clean build, tests,
    content validation, CLI, Godot smoke tests, CI — plus the regression-identity comparison where behaviour must not
-   have moved. Do not trust earlier reports' numbers; say where a claim was wrong or untested.
+   have moved (the fingerprint; `carsim fingerprint --dump` + `fingerprint-diff` against the base for every value) and
+   the mutation harness for the milestone's new invariants (docs/VERIFICATION.md). Do not trust earlier reports'
+   numbers; say where a claim was wrong or untested.
 4. **Review each PR**: the full diff, leftovers (prototype code, TODOs), identity branches
    (`git diff main... -- src | grep -E '\.Id ==|== "[a-z0-9_.]+"'`), stale docs, whether it met its stated purpose.
    Do not modify a PR just to make it easier to merge.

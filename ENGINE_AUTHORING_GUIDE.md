@@ -127,10 +127,11 @@ standards (`turbo_flange.t25`). Prefer a physical description of the interface o
 
 | Capability | Part data that enables it | ECU / tune | What the physics does |
 |---|---|---|---|
-| Cam timing | camshafts `intake_centerline_deg`, `exhaust_centerline_deg` | — | Intake-closing shift of the VE tuning speed; overlap from installed centrelines |
+| Cam timing | camshafts `intake_centerline_deg`, `exhaust_centerline_deg` | — | Intake-closing shift of the valve-event filling speed; overlap from installed centrelines |
+| Intake gas dynamics (every engine) | intake manifold `runner_length_mm` (acoustic length, head port included), optional `runner_diameter_mm` | — | Each bank's runner and cylinder form one acoustic mode; its wave gain peaks at the runner's tuned speed (geometry, speed of sound of the manifold gas), independently of cam timing |
 | Intake cam phasing (VVT) | camshafts `intake_phaser_range_deg` | ECU `cam_phase_control`; tune `intake_cam_advance_deg` table | Each bank's phaser follows the table (0.15 s lag; parked without oil pressure) |
 | Variable valve lift (two-stage, VTEC-type) | camshafts `high_lift_profile` (`intake/exhaust_duration_deg`, `_lift_mm`) | ECU `valve_lift_control`; tune `valve_lift_switch_rpm` | Above the switch speed (150 rpm hysteresis) the bank breathes, overlaps, floats and loads its springs on the high-lift profile |
-| Variable intake runner (two-stage, DISA-type) | intake manifold `switched_runner_length_mm` | ECU `intake_runner_control`; tune `intake_runner_switch_rpm` | Above the switch speed the bank's runner tuning uses the second length |
+| Variable intake runner (N-stage, DISA/VIS-type) | intake manifold `switched_runner_length_mm` (two stages) or `switched_stages` (any number) | ECU `intake_runner_control`; tune `intake_runner_switch_rpm` (stage 1), `intake_runner_upper_switch_rpm` (stages 2+) | The ECU runs the highest stage whose switch speed is reached (150 rpm hysteresis at each); each stage's geometry sets the wave gain |
 | Turbocharging (any count) | turbocharger parts in `turbocharger` slots; turbo manifold flanges | ECU `boost_control`, MAP range; tune `boost_target_kpa` | One shaft per turbo; each bank's air path through its turbo |
 | Intercooling | intercooler part | — | Charge cooling at the bank's share of flow |
 | Valvetrain type | heads and camshafts `valvetrain` | — | Compatibility (a DOHC head cannot take OHV cams); friction via valve count |
@@ -141,9 +142,23 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
 `intake_runner_uncontrolled`. `carsim inspect` prints the resolved architecture, e.g. *"V8 (90°), 2 banks, OHV
 (pushrod), 2 valves/cyl, naturally aspirated, 2 exhaust paths, firing order 1-8-4-3-6-5-7-2"*.
 
-Known limit: under a cam phaser the VE model has a single filling hump that the phaser moves whole, so a variable
-runner has little effect on a phased engine until the intake-filling model is split (ROADMAP, next tasks). This is why
-the M54's DISA is not authored.
+**Authoring an intake** (Intake Gas Dynamics 2.0; SIMULATION_SPEC.md, "Intake gas dynamics"):
+- `runner_length_mm` is the **acoustic length**: from the runner's mouth in the plenum (or airbox) to the valve seat,
+  **including the head's intake port**. Measure it along the centreline, or estimate it and say so in PARTS_DATABASE.md.
+- `runner_diameter_mm` is the mean inner diameter (a round runner of the same mean cross-section). Leave it out only if
+  unknown: the model then assumes 0.40 × bore and the validator reports `default_intake_geometry` (Info).
+- `carsim inspect <id>` prints each bank's stages with β, the fundamental and the tuned speed (at 298 K): check that they
+  fall where a production intake of that kind is tuned (mid to upper rev range).
+- A switched intake whose switch speed is **sourced** but whose closed-stage geometry is not (a resonance flap such as
+  BMW's DISA): derive the effective lower stage from the switch speed with `carsim derive-stage <id> --switch <rpm>`
+  (assumption A-D1: the maker switches at the stages' full-load crossover), freeze it **before** looking at the engine's
+  output, and classify it as derived (the M54 is the worked example: docs/milestones/intake-gas-dynamics-2/
+  M54_DISA_DERIVATION.md). Never back-solve a stage from a dyno curve.
+- Switch speeds come from the tune driver's `runner_switch` step (the crossover of adjacent stages held), set before the
+  fuel and spark maps. For three or more stages, add a placeholder `intake_runner_upper_switch_rpm` list to the tune
+  first.
+- Not representable yet: plenum or group resonance, pipe harmonics, the intake-closing coupling of the runner's best
+  speed (see §9).
 
 ## 6. Adding an engine — the procedure
 
@@ -165,19 +180,28 @@ the M54's DISA is not authored.
 6. **Calibrate the base tune with the dev tools** — never by hand-fitting a curve:
    - start from a tune with sensible limits (rev limit, idle, λ targets, injector flow, displacement, fuel density)
      and any table axes you want;
-   - with a phaser: `carsim calibrate-cams <id> --fuel <fuel>` → `intake_cam_advance_deg`;
+   - first the hardware schedule the maps are measured on:
+     - with a phaser: `carsim calibrate-cams <id> --fuel <fuel>` → `intake_cam_advance_deg`;
+     - with switched hardware: switch speeds (`valve_lift_switch_rpm`, `intake_runner_switch_rpm` and, for three or
+       more intake stages, `intake_runner_upper_switch_rpm`) from full-load sweeps with each stage held (the torque
+       crossover of adjacent stages; the driver's `runner_switch` / `lift_switch` steps);
    - `carsim calibrate-ve <id> --fuel <fuel>` → `volumetric_efficiency`;
    - `carsim calibrate-spark <id> --fuel <fuel>` → `ignition_advance_deg` (MBT and knock margins);
-   - `calibrate-ve` again (spark changes exhaust temperature and residuals);
-   - set switch speeds (`valve_lift_switch_rpm`, `intake_runner_switch_rpm`) from a sweep with each stage held.
-   The tune's `description` should say how it was made. The synthetic matrix was calibrated exactly this way.
+   - `calibrate-ve` again (spark changes exhaust temperature and residuals).
+   A switch speed moved after the fuel map leaves the VE cells between the old and the new speed measured on the other
+   stage (it happened to `syn_i6_vis`; `TuneRegenerationTests` now checks every recipe's order).
+   The tune's `description` should say how it was made. The synthetic matrix was calibrated this way (its switch speeds
+   were re-set in the schedule-first order by the 2026-09-27 regeneration).
+   Record the recipe in `tools/CarSim.Verification/tune-manifest.json` (steps, fuel, build, hand-authored tables; a test
+   requires one per tune) so `carsim regenerate-tunes` can reproduce and regenerate it (docs/VERIFICATION.md).
 7. **Measure.** `carsim sweep <id> --fuel <fuel>`; for a real engine compare against its published figures with
    acceptance bands stated in advance. If it misses, find out why (content? a missing capability? a shared model
    simplification?) and document it. **Do not change model constants to hit one engine's numbers.**
 8. **Car and swaps.** Give the block a bellhousing interface (reuse an existing pattern only if it is physically the
    same). Test it in a car: `carsim drive <id> --vehicle <car>`; a scenario puts it in the game.
 9. **Tests.** Real engines get reference tests (as `M54ReferenceTests`) and join the cross-family pipeline tests. Run the
-   whole suite: the architecture tests, the source audit and the K20/M54 pins must stay green.
+   whole suite: the architecture tests, the source audit and the K20/M54 pins — the regression fingerprint — must stay
+   green. A real engine joins the fingerprint matrix (`FingerprintMatrix`) and the baseline is re-written.
 10. **Game.** `godot --headless --path game -- --smoke-test --scenario=<scenario>` (and `--drive --smoke-test`); look at
     the Workshop, Tuning and Dyno tabs.
 
@@ -221,7 +245,8 @@ numbers are off. Before writing code, write down the physics and which engines h
 | One MAP sensor on the first bank's plenum; one fuel command for all banks | Speed-density ECUs have one; banks with different breathing run at different λ (a real symptom) | Per-bank fuel trim as an ECU capability |
 | Shared elements split by cylinders, no cross-feed between banks | Exact for alike banks; dissimilar banks sharing a plenum or turbo are an approximation (a failed turbo's bank runs as NA even with a shared plenum) | A network solve of shared plenums/collectors |
 | Mean-value, bank resolution | Captures torque, breathing, heat and damage; firing order is validated data without physics | Per-cylinder state (a later milestone) |
-| One VE filling hump moved whole by a phaser | Documented diagnosis of the M54 curve | Intake-filling model split (ROADMAP) |
+| One runner–cylinder mode per intake stage; no plenum/group resonance, pipe harmonics or intake-closing coupling of the runner's best speed | Implemented and validated generically (Intake Gas Dynamics 2.0 Phase 1); the deferred parts have no sourced formulation or no engine with the geometry | Phase 2 of Intake Gas Dynamics 2.0 |
+| Wave amplitude κ = 0.5 unsourced, K = 2.1 from secondary sources | Shared, pre-registered, never fitted; its effect is reported at the band edges | A second real reference engine with published intake geometry and curves |
 | Exhaust cam phasing, superchargers, direct injection, dry sump | Not modelled; the loader rejects families that need them | New capabilities (§7) |
 | Level-setting constants fitted on the K20 | Re-fitting per engine would be hidden correction | A calibration pass over several families at once |
 | Mounts, clearances, wiring, driveshafts, cooling capacity for swaps | Interfaces decide fit today (bellhousing) | Swap interfaces on mounts and chassis parts |

@@ -66,7 +66,7 @@ fitted on one engine, and UI or CLI code that only makes sense for one topology.
 | D3 | Engine-wide states (speed, coolant, oil, crown temperature, knock retard) | `EngineState` | 2 | Kept engine-wide; crown temperature follows the hottest bank, the knock sensor hears the worst bank (one retard for all — documented) |
 | D4 | Damage finds "the" part of a category | `DamageModel`, `StressEvaluator`, `FailureDiagnostics`, `Inspection` | 3 | Stress readings name the part instance; a bank's gasket, head, springs and turbo are loaded from that bank's operating point; collateral damage stays on the failed part's banks |
 | D5 | Mean-value, not per-cylinder | whole model | 2 | Documented; banks are the finest resolution |
-| D6 | Under a cam phaser the intake runner is inert and DISA cannot act (single filling hump) | `AirPath.VeShape` | 2 → next milestone | Documented in the M54 investigation; the variable-runner capability added here acts through the existing runner term, so it has its full effect on fixed-cam engines and none under a phaser until the intake-filling model is split |
+| D6 | Under a cam phaser the intake runner is inert and DISA cannot act (single filling hump) | `AirPath.VeShape` | 2 → next milestone | Documented in the M54 investigation. **Resolved by Intake Gas Dynamics 2.0 Phase 1:** the runner's wave gain (`IntakeGasDynamics`) is separate from valve-event filling and has no cam input; the M54's DISA is authored as two stages |
 | D7 | Size-dependent constants scale with displacement or bore (friction, oil, heat) since the validation pass | various | 1 | — |
 
 ## E. UI assumptions
@@ -159,16 +159,18 @@ calibrators. Classification (the milestone brief's):
   (exact for alike banks); shared elements have no cross-feed between dissimilar banks.
 - Engine-wide lubrication (wet sump), cooling (one radiator), fuel system (port injection: 20 % of the fuel evaporates
   before the inlet valve closes), ECU.
-- Intake-only cam phasing, no exhaust-opening term; two-stage valve lift and two-stage runners (the `Profiles` and
-  `RunnerTuning` arrays hold two stages).
-- The VE model's single filling hump (a phaser moves it whole; the runner stage has little effect under a phaser).
+- Intake-only cam phasing, no exhaust-opening term; two-stage valve lift (the `Profiles` array holds two). Runner stages
+  are N-stage since Intake Gas Dynamics 2.0 Phase 1.
+- One runner–cylinder mode per intake stage: no plenum/group resonance, pipe harmonics or intake-closing coupling
+  (Intake Gas Dynamics 2.0, deferred to Phase 2).
 - Mean-value, bank resolution: firing order and bank angle are validated data without physics.
 - `EngineConfiguration.Geometry` is the first bank's and is used only for bottom-end quantities.
 - Level-setting constants fitted on the K20.
 
 ### D — future work, safe to defer
 - Superchargers and twin-charging (a crank-driven compressor category with drive power), sequential turbos.
-- Direct injection, dry sump, exhaust cam phasing, continuous variable lift, three-stage intakes.
+- Direct injection, dry sump, exhaust cam phasing, continuous variable lift (three-stage and larger intakes exist since
+  Intake Gas Dynamics 2.0 Phase 1).
 - Per-bank fuel trims and knock control as an ECU capability; a network solve of shared plenums and collectors.
 - Per-cylinder state (misfire, one bent valve, per-cylinder knock).
 - Swap interfaces beyond the bellhousing: engine mounts, clearances, cooling capacity, fuel and exhaust routing,
@@ -184,9 +186,9 @@ direct-injection and dry-sump engines.
 |---|---|---|---|
 | G1 | The architecture rules (bank partition, bank count per layout, bank angle, firing order, slot banks) had no negative tests | C | Fixed in the gate: `AnInconsistentArchitectureIsRejectedWithItsReason` (10 cases) |
 | G2 | An inline engine may declare only one bank, so a turbo per three cylinders on one head (RB26, N54, 2JZ parallel twins) or split manifolds on one head cannot be authored. The per-bank model already supports a head slot shared by several banks (VR6-style), so the fix is a topology rule: cylinder groups on inline engines | D, high priority | ROADMAP next task 2 |
-| G3 | The verification tools behind the milestone's claims (the K20/M54 identity probe, the mutation harness, the matrix recalibration driver) lived outside the repository | C before the next milestone | Phase 0 of Intake Gas Dynamics 2.0 (docs/milestones/INTAKE_GAS_DYNAMICS_2.md) |
-| G4 | The intake-filling correlation's constants (15 m/s tuned piston speed at 220°, 0.15 m/s per degree, 112° reference centreline, 0.300 m reference runner, shape coefficients, 1.02 ceiling) were fitted on the K20 | B → next milestone | Replaced by sourced constants in Intake Gas Dynamics 2.0 |
-| G5 | Runner and cam-profile stages are fixed two-element arrays (`RunnerTuning`, `Profiles`) | B | N runner/plenum states in Intake Gas Dynamics 2.0; continuous valve lift later |
+| G3 | The verification tools behind the milestone's claims (the K20/M54 identity probe, the mutation harness, the matrix recalibration driver) lived outside the repository | C before the next milestone | **Resolved** in Phase 0 of Intake Gas Dynamics 2.0: regression fingerprint, tune-regeneration driver and mutation harness in the repo (docs/VERIFICATION.md) |
+| G4 | The intake-filling correlation's constants (15 m/s tuned piston speed at 220°, 0.15 m/s per degree, 112° reference centreline, 0.300 m reference runner, shape coefficients, 1.02 ceiling) were fitted on the K20 | B → next milestone | Intake Gas Dynamics 2.0 Phase 1: the 0.300 m runner factor is gone (the runner is a physical mode with shared, pre-registered K, ζ, κ); v₀ and the ceiling are still fitted on the K20 (13.64 m/s, 0.973), the other correlation constants unchanged |
+| G5 | Runner and cam-profile stages are fixed two-element arrays (`RunnerTuning`, `Profiles`) | B | Runner stages: N-stage in Intake Gas Dynamics 2.0 Phase 1; cam profiles: still two (continuous valve lift later) |
 | G6 | Stale references in ARCHITECTURE.md (decision log) and ROADMAP.md (review table row 12) | C | Fixed in the gate |
 
 Real engines against the architecture (what already has a sane data-only path, what needs a capability first):
@@ -199,4 +201,19 @@ Real engines against the architecture (what already has a sane data-only path, w
   charge cooling after IVC), exhaust cam phasing (EA888, B58, M54 double VANOS), dry sump (LS7-type), sequential
   turbocharging, twin-scroll turbines.
 - **Outside the piston model:** rotaries, diesels (compression ignition), two-strokes, hybrids.
+
+## Intake Gas Dynamics 2.0 Phase 1 (2026-09-28): structural findings
+- **Runner stages are per bank and N-stage.** `RunnerStageConfiguration` solves each stage's acoustic mode once, with
+  that bank's own cylinder volume (a bank with another head or gasket tunes differently, correctly). The ECU's stage
+  selection generalises the two-stage rule without changing it (bit-identical for two stages, tested).
+- **The runner gas temperature is per bank and lagged one step**, taken from the bank's previous air-path result. No
+  new state field was needed, and no root find was added.
+- **Allocation scaled with the flow solve's iterations.** Every air-path evaluation allocated closures for its nested
+  root finds, so a physics change that moved an operating point changed the allocation (`syn_v6_tt` +6 %). The root
+  finds now take struct functions (`RootFinder.Brent<TFunction>`); the engine step no longer allocates in the air path.
+- **A JIT behaviour matters for this code:** under .NET 8's dynamic PGO, inlining a `Math.Pow`-heavy residual into
+  Brent's loop made the whole step 65 % slower. That residual is kept out of line, and the benchmark (`carsim bench`) and
+  the allocation guard are the checks.
+- **Nothing reads an engine's identity.** The M54's DISA is content: its closed stage is derived from a sourced switch
+  speed by a generic tool (`carsim derive-stage`, assumption A-D1), frozen before the engine was run.
 

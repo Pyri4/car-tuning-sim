@@ -3,10 +3,12 @@
 North Star: [GAME_VISION.md](GAME_VISION.md) — hundreds of engines and thousands of parts; *adding the 100th engine
 should be almost as easy as adding the 2nd*. Architecture first, content scale second.
 
-## Current state (2026-09-27)
+## Current state (2026-09-28)
 **The first playable prototype is complete, a second engine family validates that families are data, and the engine
 architecture is generic: banks, per-bank air paths and geometry, any number of turbos, valvetrain types, variable valve
-lift and variable intakes, engine ↔ car fit by interfaces — proven by a nine-engine synthetic matrix.** Two
+lift and variable intakes, engine ↔ car fit by interfaces — proven by a nine-engine synthetic matrix. Intake Gas
+Dynamics 2.0 Phase 1 (the runner's wave gain split from valve-event filling) is implemented and at its gate, awaiting
+review.** Two
 cars (Kestrel S2 coupe, Isar C30 coupé), two engine families (the fictional Kestrel K20 four and the Isar M54 straight
 six, a real-engine reference: the BMW M54B30), one garage, one engine dyno and one test track, and the whole required
 loop works in the game for both:
@@ -16,7 +18,8 @@ tune the ECU → dyno pull → drive the test track → break something through 
 → read the failure report → repair in the workshop.
 
 - Simulation lives in pure C# (`CarSim.Core`, `CarSim.Gameplay`); Godot 4.7 .NET only presents it.
-- 586 automated tests (484 before the engine-architecture milestone, 435 before the second engine family, 348
+- 683 automated tests, all run (654 before Intake Gas Dynamics 2.0 Phase 1, of which 5 were its pending acceptance tests; 651 before its
+  authorization gate, 649 before its design resolution, 586 before its Phase 0, 484 before the engine-architecture milestone, 435 before the second engine family, 348
   before the validation pass): simulation, content, damage, dyno, vehicle dynamics, wear, gameplay, saves, mods,
   physical invariants, property sweeps, spec fuzzing, clamp-activation checks, and architecture invariants over the
   synthetic engine matrix. CI runs them, CLI content checks and dyno sweeps (with and without the matrix), and headless
@@ -29,10 +32,10 @@ tune the ECU → dyno pull → drive the test track → break something through 
 - Content: 105 parts, 2 engine families, 2 vehicles, 5 fuels, 3 base tunes, 2 scenarios; mods load as extra
   content layers. Test content (`content/test/engine-matrix/`, not shipped): 142 more parts, 9 synthetic engine
   families with calibrated tunes, 18 scenarios (each engine on the stand and swapped into the Isar C30).
-- Reference numbers (re-measured after the validation pass): stock K20 ≈ 149 hp / 189 N·m (the worn project car
-  ≈ 137 hp); T28 turbo build ≈ 238 hp / 293 N·m; stock car 0–100 km/h ≈ 8.8 s, ≈ 0.90 g skidpad (≈ 0.84 g on
-  kerb-grade roughness). K20 output bit-identical after the second-family milestone. M54 (RON 98): 304 N·m (reference
-  300), 153 kW (reference 170: −10 %), 52.1 s laps in the Isar C30.
+- Reference numbers (Intake Gas Dynamics 2.0 Phase 1; before it in brackets): stock K20 ≈ 145 hp / 193 N·m [149 hp /
+  189 N·m] (the worn project car ≈ 134 hp [137]); T28 turbo build ≈ 235 hp / 302 N·m [238 / 293]; stock car 0–100 km/h
+  ≈ 8.8 s, ≈ 0.90 g skidpad (≈ 0.84 g on kerb-grade roughness). M54 (RON 98): 298 N·m near 3,000 rpm [304 N·m flat from
+  1,500] (reference 300 at 3,500), 152 kW [153] (reference 170: −10 %), 52.2 s laps in the Isar C30.
 
 ## Completed work
 ### Phase 0 — Architecture ✅
@@ -193,6 +196,48 @@ Audit first (`docs/ENGINE_ARCHITECTURE_AUDIT.md`, two passes), then:
 - Answer: **engines are data** for every architecture in the matrix; what still needs code is listed as B/D in the
   audit's second pass and in ENGINE_AUTHORING_GUIDE.md §9.
 
+### Intake Gas Dynamics 2.0 — Phase 0 ✅ (2026-09-27), Phase 1 implemented (2026-09-28; at its gate, awaiting review)
+Make the next physics change measurable, reproducible and reviewable before it is made (docs/milestones/INTAKE_GAS_DYNAMICS_2.md):
+- [x] **Regression fingerprint** in the repo (`carsim fingerprint`, `tests/baselines/fingerprint.txt`): K20, M54 and every
+      synthetic family, full precision, in every build, sweep, dyno mode, cold start, failure hold, scenario and lap
+- [x] **Recalibration driver** (`carsim regenerate-tunes`, a recipe per tune, hand-authored tables audited, format-keeping
+      writer) — finding: no shipped tune is an exact fixed point of its recipe today (docs/VERIFICATION.md)
+- [x] **Mutation harness** (`tools/CarSim.MutationCheck`, 21 mutants, manual CI job)
+- [x] **Model specification** with sources and assumptions (SIMULATION_SPEC.md, "Intake gas dynamics 2.0 — proposed model")
+- [x] **Acceptance tests before the code**: five pending system-level tests (each recorded failing on today's model) and
+      active guards; no physics, content or tune change
+- [x] **Design resolution** (after the owner accepted Phase 0; docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md):
+  - [x] Q1–Q5 decided or put to the owner as U1–U7;
+  - [x] the cited literature checked: K and V_eff are still unverifiable here, the formula forms are re-derived, and
+        three spec corrections were made;
+  - [x] the generic model boundary, the calibration strategy, the boosted treatment and the acceptance-test rationale;
+  - [x] the **pre-physics tune regeneration** in its own commits. Two driver rules were added (hardware schedule first;
+        only settled values written), and all 12 tunes are now fixed points of their recipes. The M54 is bit-identical;
+        the K20 moved by 11 VE cells of 0.001.
+- [x] **Final authorization gate** (U1–U7; docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md):
+  - [x] K classified as an empirical shared parameter (primary source unreachable);
+  - [x] the distributed frequency model locked;
+  - [x] damping bounded by the intake-event physics, amplitude a bounded shared parameter;
+  - [x] the M54 DISA procedure locked, with every value classified;
+  - [x] tests 1, 4 and 5 rewritten as relationships;
+  - [x] the intake-closing coupling deferred;
+  - [x] the K20 anchor executable (`K20AnchorGuardTests`);
+  - [x] the project-car lap reclassified as a knife-edge fingerprint diagnostic;
+  - [x] 5 new mutants, all caught.
+- [x] **Phase 1 — the physics** (authorized 2026-09-27; report:
+      [docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md](docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md)):
+  - [x] the runner-stage schema (diameter, N stages) and stage-by-stage switching, bit-identical;
+  - [x] the locked model (`IntakeGasDynamics`): one runner–cylinder mode per stage and bank, no cam input, same for NA and
+        boost; the old runner factor removed;
+  - [x] v₀ and the ceiling re-anchored on the K20 stock (anchor 2.87 % of ±3 %);
+  - [x] every tune regenerated (all 12 fixed points);
+  - [x] the M54's DISA derived by the frozen A-D1 procedure before any M54 output, then authored;
+  - [x] the five acceptance tests are facts;
+  - [x] `TorqueCurveDiagnosisTests` inverted or retired;
+  - [x] 31 of 31 mutants caught;
+  - [x] engine step −5 % (K20, M54), +2.4 % (`syn_v6_tt`), and allocation halved or better;
+  - [ ] the gate review (owner).
+
 ### Phase 6 (early) — Modding ✅
 - [x] Mods as content layers under `content/mods/` with override-by-id, reported overrides, example mod
 
@@ -201,11 +246,22 @@ Chosen by long-term value, not ease: prefer work that improves every engine or u
 milestone starts only when the owner authorizes it, and ends with a project gate (verify, review, merge order, define
 the next milestone).
 
-1. **Intake Gas Dynamics 2.0 (next milestone — proposed, awaiting authorization).** Definition, phases, test matrix and
-   acceptance criteria: [docs/milestones/INTAKE_GAS_DYNAMICS_2.md](docs/milestones/INTAKE_GAS_DYNAMICS_2.md). Separates
+1. **Intake Gas Dynamics 2.0 (current milestone — Phase 1 implemented, at its gate; Phase 2 not defined or authorized).**
+   Definition, phases, test matrix, acceptance criteria and Phase 0 results:
+   [docs/milestones/INTAKE_GAS_DYNAMICS_2.md](docs/milestones/INTAKE_GAS_DYNAMICS_2.md). Separates
    valve-event filling from runner/plenum gas dynamics, so a cam phaser no longer carries the runner response, variable
-   intakes act on phased engines, and the K20-fitted correlation constants give way to sourced ones. Phase 0 brings the
-   verification tooling into the repo first (regression fingerprint, recalibration driver, mutation harness). Background:
+   intakes act on phased engines, and the K20-fitted correlation constants give way to sourced ones. Phase 0 brought the
+   verification tooling into the repo (regression fingerprint, recalibration driver, mutation harness; docs/VERIFICATION.md)
+   and wrote the model specification and acceptance tests. The design-resolution pass
+   ([docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_DESIGN_RESOLUTION.md))
+   answered Q1–Q5 and regenerated the tunes under the old physics. The final authorization gate resolved U1–U7 into a
+   Phase 1 proposal
+   ([docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md](docs/milestones/INTAKE_GAS_DYNAMICS_2_PHASE1_PROPOSAL.md)),
+   which the owner authorized and Phase 1 implemented
+   ([gate report](docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md)). Candidates the report lists for
+   later: the group-plenum mode (DISA's real mechanism; the M54's missing second hump), the intake-closing coupling (U6),
+   and a second real reference with published intake geometry (U8, to turn the amplitude κ from an estimate into a fit).
+   Background:
    the M54 torque-curve investigation (SIMULATION_SPEC.md; its E10 prototype is an input, not the design).
 2. **Cylinder groups on inline engines.** Banks are the unit of per-bank parts and air paths, and an inline engine may
    declare only one. That blocks an inline twin turbo (a turbo per three cylinders on one head: RB26-, N54-, 2JZ-type
@@ -233,16 +289,17 @@ the next milestone).
 11. **Audio.** Engine sound from rpm/load/boost (presentation only).
 12. **Exported builds.** Godot export templates in CI and downloadable artifacts.
 
-Not yet: more real engines (the architecture is proven; more engines before the intake model is right would each need
-recalibration), bulk part catalogues, an open world, multiplayer, UI work beyond what a capability needs, matching any
+Not yet: more real engines (the architecture is proven, and the intake model is now generic; a second real engine is
+best chosen for its published intake geometry, see item 1), bulk part catalogues, an open world, multiplayer, UI work beyond what a capability needs, matching any
 single engine's dyno curve.
 
 ## Known issues
-- Second engine family vs its reference: peak power −10 % (153 vs 170 kW) with torque +1 %. The model's curve is a plateau
-  from 1,500 to 2,750 rpm and then a steady fall, where the M54 peaks at 3,500 rpm with a DISA dip near 4,000. Classified
-  in SIMULATION_SPEC.md, "M54 torque-curve investigation" (11 experiments, pinned by `TorqueCurveDiagnosisTests`):
-  - the shape is **missing generic physics**: a phaser moves the one filling hump whole, so it fills at its ceiling at
-    every speed and the runner (and so DISA) has no effect;
+- Second engine family vs its reference: peak power −10 % (152 vs 170 kW) with torque −1 %. Since Intake Gas Dynamics 2.0
+  Phase 1 the curve rises from 290 N·m at 1,500 rpm to a peak near 3,000 rpm (reference 3,500) and DISA switches at 3,900
+  rpm, but there is no second hump and the top end is short (gate report §7). Before Phase 1 it was a plateau from 1,500
+  to 2,750 rpm and a steady fall, classified in SIMULATION_SPEC.md, "M54 torque-curve investigation" (11 experiments):
+  - the plateau was **missing generic physics** (a phaser moved the one filling hump whole) — addressed by Phase 1;
+  - the missing second hump is the deferred group-plenum mode (DISA's real mechanism), class B → D;
   - part of the top end is **estimated flow content** (up to +6.6 % at 6,000 rpm);
   - the rest of the level is **the mean-value model's shared simplifications**; high-piston-speed losses cost both
     families about equally (the K20 sits ≈ 7 % under the real K20A3 it resembles).
@@ -295,21 +352,23 @@ single engine's dyno curve.
   direct injection and exhaust cam phasing are rejected at load until they exist as capabilities. Shared elements are
   split by cylinders without cross-feed (exact for alike banks); a network solve is deferred until an engine needs it.
 - Level-setting calibration is fitted to the K20 (Otto realisation 0.80, FMEP coefficients, the cam correlation's
-  112° reference centreline), and the crown heat-flux and wave-tuning correlations are fitted on one family. The second
+  112° reference centreline, and since Intake Gas Dynamics 2.0 the valve-event v₀ and ceiling), and the crown heat-flux
+  and header-tuning correlations are fitted on one family. The intake's wave gain is physical apart from three shared,
+  pre-registered parameters (K from secondary sources, ζ from the intake event, κ unsourced). The second
   family ran through them unchanged (+1 % torque, −10 % power against its reference); re-fitting on both families
   together — not per engine — is the honest next step, and would move the K20's pinned numbers deliberately. The
   valvetrain and thermal-conductance terms are size-aware since the validation pass.
-- The VE model has one filling hump for intake closing and runner gas dynamics; a cam phaser moves all of it (optimistic
-  low-speed torque with a phaser, runner length inert under one, no two-stage intakes). The split was prototyped and not
-  shipped; see "Next recommended tasks" 2. Exhaust phasing has no effect to model until there is an exhaust-opening term.
+- Intake gas dynamics has one runner–cylinder mode per stage: no plenum or group resonance (the M54's second hump), no
+  pipe harmonics, no intake-closing coupling of the runner's best speed (U6), no off-tune losses. The K20 anchor holds with
+  a thin margin (2.87 % of ±3 %). Exhaust phasing has no effect to model until there is an exhaust-opening term.
 - The ECU has one MAP sensor, one fuel command and one knock retard for all banks; per-bank trims are a future ECU
   capability. The engine-level `EngineConfiguration.Geometry` is the first bank's (used only for bottom-end values).
-- The engine step allocates 10.4 KB (single-bank NA) / 13.1 KB (single-bank turbo) — two-bank engines ≈ 18 KB, the
-  twin-turbo V6 28 KB, since each bank solves its own air path — and the vehicle step ≈ 13 KB: closures in the orifice root
-  finds (≈ 5–8 KB) and live warning strings rebuilt every step (≈ 3 KB). An allocation-free root finder
-  (struct-generic Brent, bit-identical) was measured ≈ 25 % slower on NA/vehicle steps under .NET 8's default
-  dynamic PGO and not merged; revisit with a profiler (or cache warnings at display rate). An allocation-budget
-  test guards regressions.
+- The engine step allocates 5.2 KB (single-bank NA; the twin-turbo V6 11.1 KB) and the vehicle step 6.0 KB, mostly
+  telemetry records and live warning strings rebuilt every step (cache warnings at display rate). The orifice root finds
+  are allocation-free since Intake Gas Dynamics 2.0 (struct functions, bit-identical). An earlier struct-generic attempt
+  was slower under .NET 8's dynamic PGO: the trigger is inlining the downstream-pressure residual's three `Math.Pow`
+  calls into the solver loop, and that residual keeps its call boundary (measured in the Phase 1 gate report, §12). An
+  allocation-budget test guards regressions.
 - Guards on fitted laws (VE floor, wall-heat scaling, tyre µ cap, weight-share and CG guards, turbine efficiency
   floor below the optimum) are flagged (debug telemetry / helpers) and tested inactive in normal running.
 - `FailureMode` mixes engine and chassis modes; chassis warnings reuse the `EngineWarning` type.

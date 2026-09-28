@@ -245,7 +245,9 @@ public partial class DynoView : HSplitContainer
         // Switched valvetrain and intake stages (sensed by the ECU's own outputs), per-bank mixture and EGT on a multi-bank engine.
         var stages = new List<string>();
         if (_sim?.Config.Banks.Any(b => b.HasVariableLift) == true) stages.Add(t.HighValveLift ? "high lift" : "base lift");
-        if (_sim?.Config.Banks.Any(b => b.HasSwitchedRunner) == true) stages.Add(t.SwitchedRunner ? "switched runner" : "primary runner");
+        if (_sim?.Config.Banks.Any(b => b.HasSwitchedRunner) == true)
+            stages.Add(t.RunnerStage == 0 ? "primary runner"
+                : _sim.Config.Banks.Max(b => b.RunnerStages.Count) > 2 ? $"runner stage {t.RunnerStage + 1}" : "switched runner");
         Set("Valve lift / runner", stages.Count > 0 ? string.Join(" / ", stages) : "—");
         Set("Banks", t.Banks.Count > 1 ? string.Join("  ", t.Banks.Select(b => $"λ {b.Lambda:F2} {Units.KToC(b.ExhaustGasTemperature):F0}°C")) : "—");
     }

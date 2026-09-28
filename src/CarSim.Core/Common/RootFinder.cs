@@ -8,9 +8,18 @@ public static class RootFinder
     /// and <paramref name="f"/>(b) must have opposite signs (or one be zero). Converges superlinearly
     /// and never leaves the bracket.
     /// </summary>
-    public static double Brent(Func<double, double> f, double a, double b, double tolerance, int maxIterations = 100)
+    public static double Brent(Func<double, double> f, double a, double b, double tolerance, int maxIterations = 100) =>
+        Brent(new DelegateFunction(f), a, b, tolerance, maxIterations);
+
+    /// <summary>
+    /// <see cref="Brent(Func{double, double}, double, double, double, int)"/> for a function given as a struct: the JIT
+    /// specialises the solver for it and calls it directly, so a hot caller allocates nothing and pays no delegate call
+    /// (the same iterations, bit for bit).
+    /// </summary>
+    public static double Brent<TFunction>(TFunction f, double a, double b, double tolerance, int maxIterations = 100)
+        where TFunction : struct, IRootFunction
     {
-        double fa = f(a), fb = f(b);
+        double fa = f.Evaluate(a), fb = f.Evaluate(b);
         if (fa == 0) return a;
         if (fb == 0) return b;
         if (fa * fb > 0) throw new ArgumentException($"Root not bracketed: f({a})={fa}, f({b})={fb}.");
@@ -68,8 +77,19 @@ public static class RootFinder
             a = b;
             fa = fb;
             b += Math.Abs(d) > tol1 ? d : (xm >= 0 ? tol1 : -tol1);
-            fb = f(b);
+            fb = f.Evaluate(b);
         }
         return b;
     }
+
+    private readonly struct DelegateFunction(Func<double, double> f) : IRootFunction
+    {
+        public double Evaluate(double x) => f(x);
+    }
+}
+
+/// <summary>A scalar function for <see cref="RootFinder.Brent{TFunction}"/>.</summary>
+public interface IRootFunction
+{
+    double Evaluate(double x);
 }

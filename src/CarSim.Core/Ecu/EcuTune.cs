@@ -80,6 +80,14 @@ public sealed class EcuTune
     /// <summary>Speed above which a variable intake manifold runs its switched runner, rpm (null: never).</summary>
     public double? IntakeRunnerSwitchRpm { get; set; }
 
+    /// <summary>Speeds above which an intake with more than two stages switches on to stage 2, 3, …, rpm (null: no further).</summary>
+    public double[]? IntakeRunnerUpperSwitchRpm { get; set; }
+
+    /// <summary>The speed above which the ECU selects runner stage <paramref name="stage"/> (≥ 1), or null if it never does.</summary>
+    public double? IntakeRunnerSwitchRpmOf(int stage) =>
+        stage == 1 ? IntakeRunnerSwitchRpm
+        : IntakeRunnerUpperSwitchRpm is { } upper && stage >= 2 && stage - 2 < upper.Length ? upper[stage - 2] : null;
+
     public double LambdaAt(double rpm, double mapKpa) => TargetLambda.Evaluate(rpm, mapKpa);
     public double AdvanceAt(double rpm, double mapKpa) => IgnitionAdvance.Evaluate(rpm, mapKpa);
     public double VolumetricEfficiencyAt(double rpm, double mapKpa) => VolumetricEfficiency.Evaluate(rpm, mapKpa);
@@ -105,6 +113,7 @@ public sealed class EcuTune
         {
             ValveLiftSwitchRpm = d.ValveLiftSwitchRpm,
             IntakeRunnerSwitchRpm = d.IntakeRunnerSwitchRpm,
+            IntakeRunnerUpperSwitchRpm = d.IntakeRunnerUpperSwitchRpm?.ToArray(),
         };
     }
 
@@ -129,6 +138,7 @@ public sealed class EcuTune
         FuelDensityKgL = FuelDensityKgL,
         ValveLiftSwitchRpm = ValveLiftSwitchRpm,
         IntakeRunnerSwitchRpm = IntakeRunnerSwitchRpm,
+        IntakeRunnerUpperSwitchRpm = IntakeRunnerUpperSwitchRpm?.ToArray(),
     };
 
     public EcuTune Clone() => FromDocument(ToDocument());
