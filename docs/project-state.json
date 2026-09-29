@@ -1,0 +1,121 @@
+{
+  "schema": "car-tuning-sim/project-state/1",
+  "canonical_doc": "docs/PROJECT_STATE.md",
+  "note": "Summary only; docs/PROJECT_STATE.md and the linked documents are authoritative. Re-verify before relying on any value.",
+  "snapshot": {
+    "date": "2026-09-29",
+    "main_commit": "c07804aded2031bea5e03007906cd27371a8df12",
+    "main_commit_subject": "Merge pull request #8 from Pyri4/claude/busy-curie-dx4vz2",
+    "written_on_branch": "claude/jolly-mccarthy-ze2vps",
+    "handoff_pr": 9
+  },
+  "project": {
+    "name": "Car Tuning Sim",
+    "repository": "https://github.com/Pyri4/car-tuning-sim",
+    "vision_doc": "GAME_VISION.md",
+    "north_star": "Adding the 100th engine should be almost as easy as adding the 2nd.",
+    "direction": "Content scale is a first-class goal: new engines as data entry + validation with zero new C#.",
+    "stack": { "presentation": "Godot 4.7.2 .NET", "simulation": "C# / .NET 8, no Godot references", "tests": "xUnit" }
+  },
+  "rules": [
+    "Never branch on engine/part/family identity, cylinder count or layout in src/, calibrators or tune generation.",
+    "Physics is code, engines are content; missing features become generic data-driven capabilities.",
+    "Reference data is evidence, not a target; never re-fit shared constants or loosen tolerances for one engine.",
+    "Parts act only through specifications and interfaces; no percentage bonuses.",
+    "Never present estimated or fitted values as published or measured; never invent sources.",
+    "Fingerprint baseline changes only by deliberate, approved, reported re-baseline.",
+    "Milestones and phases start only when the owner authorizes them; stacking on unmerged PRs needs authorization.",
+    "Never merge, close or force-push without explicit authorization.",
+    "On a failed gate: stop and investigate; do not weaken tests or tolerances.",
+    "Small models gather evidence; they never make architectural, tolerance or physics decisions; escalate instead of guessing."
+  ],
+  "completed_milestones": [
+    { "name": "Prototype (Phases 0-4, set-up, early modding)", "pr": [1, 2, 3], "merge": "5ed22f4" },
+    { "name": "Simulation-correction phase and validation pass", "pr": [2], "merge": "5ed22f4" },
+    { "name": "Second engine family (Isar M54 = BMW M54B30 reference)", "pr": [4], "merge": "0970bbe" },
+    { "name": "Engine Architecture 2.0", "pr": [5], "merge": "b3322ef" },
+    { "name": "Agent skills", "pr": [6], "merge": "ea63265" },
+    { "name": "Intake Gas Dynamics 2.0 Phase 0, design resolution, authorization gate, Phase 1", "pr": [7], "merge": "af0b289",
+      "reports": ["docs/milestones/intake-gas-dynamics-2/PHASE1_GATE_REPORT.md", "docs/milestones/intake-gas-dynamics-2/PHASE1_REVIEW.md"] },
+    { "name": "Engine Authoring Factory audit", "pr": [8], "merge": "c07804a", "report": "docs/ENGINE_AUTHORING_FACTORY_AUDIT.md" },
+    { "name": "Engine Authoring Factory 1.0 Phase 1 (schema and provenance)", "pr": [8], "merge": "c07804a",
+      "report": "docs/milestones/engine-authoring-factory-1/PHASE1_GATE_REPORT.md" },
+    { "name": "Engine Authoring Factory 1.0 Phase 2 (check-engine)", "pr": [8], "merge": "c07804a",
+      "report": "docs/milestones/engine-authoring-factory-1/PHASE2_GATE_REPORT.md" }
+  ],
+  "current_milestone": {
+    "name": "Engine Authoring Factory 1.0",
+    "definition": "docs/milestones/ENGINE_AUTHORING_FACTORY_1.md",
+    "authorization": "authorized phase by phase",
+    "phases": {
+      "phase_1": { "work_packages": "B1 except slot layouts", "status": "merged" },
+      "phase_2": { "work_packages": "B2 + part of B3", "status": "merged" },
+      "phase_3": { "work_packages": "rest of B3 (derived values) + C1 (generate-tune)", "status": "not_started",
+                   "brief": "docs/PROJECT_STATE.md section 7",
+                   "precondition_pr8_merged": true,
+                   "owner_go_ahead": "requested before starting (owner deferred it in the 2026-09-29 handoff session)" },
+      "later": { "work_packages": "slot layouts, validate --engines, list/schema, C2, C3, C4, D pilot (LS3-type V8, B58 negative), E gate", "status": "not_started" }
+    }
+  },
+  "next_action": {
+    "summary": "Confirm owner go-ahead, then start Engine Authoring Factory 1.0 Phase 3 (derived values + deterministic baseline tune generation) on a branch from current main.",
+    "steps": [
+      "git fetch origin; confirm main (c07804a at snapshot) and that no open PR conflicts",
+      "branch from current main",
+      "re-run Phase 2 gate: build, 766 tests, validate +/- matrix, check-engine x11, fingerprint IDENTICAL, regenerate-tunes 12/12, mutation harness 43/43",
+      "inspect calibrators, TuneRegenerator, tune-manifest.json, TuneDocument, EngineGeometry, EngineCheck before coding",
+      "implement per brief; write docs/milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md; update PROJECT_STATE; STOP"
+    ],
+    "must_not": ["change physics or engine parameters", "re-baseline fingerprints", "add LS3 or B58 content", "merge"]
+  },
+  "verification": {
+    "run_in_session_on": "c07804a",
+    "build_release": { "warnings": 0, "errors": 0 },
+    "tests": { "passed": 766, "failed": 0, "skipped": 0 },
+    "content_validation": { "base": "OK (105 parts, 2 engines, 5 fuels, 3 tunes)", "with_matrix": "OK (247 parts, 11 engines, 5 fuels, 12 tunes)" },
+    "check_engine": { "engines": 11, "all_exit_0": true, "k20_strict_exit": 0, "m54": "PASS with 6 warnings" },
+    "fingerprint": { "cases": 35, "sections": 100, "result": "IDENTICAL" },
+    "regenerate_tunes": { "reproduced": 12, "total": 12 },
+    "mutation_harness": { "caught": 43, "total": 43 },
+    "godot_smoke": { "local": "not run (Godot not installed)", "ci": "success on main run 79" },
+    "ci_main": { "run": 79, "url": "https://github.com/Pyri4/car-tuning-sim/actions/runs/36545578490", "conclusion": "success", "mutation_job": "manual-only, skipped" },
+    "skills_consistency": { "local": "not run", "ci": "success on main run 79" }
+  },
+  "github": { "open_prs": [ { "number": 9, "branch": "claude/jolly-mccarthy-ze2vps", "scope": "handoff docs only" } ], "open_issues": [], "unmerged_branches": [] },
+  "intake_gas_dynamics_constants": {
+    "source": "src/CarSim.Core/Simulation/IntakeGasDynamics.cs",
+    "TunedFrequencyRatio_K": 2.1,
+    "Damping_zeta": 0.35,
+    "AmplitudePerMach_kappa": 0.5,
+    "fundamental": "root of x*tan(x) = beta"
+  },
+  "known_discrepancies": [
+    { "item": "M54 vs BMW M54B30", "value": "153.9 kW vs 170 kW (-9.5%); no second torque hump; top end needs ~+12.5%", "class": "B -> D", "cause": "deferred group/plenum mode + estimated (possibly ~20% low) flow data" },
+    { "item": "M54 DISA", "value": "closed stage 469.1 mm (derived, A-D1); crossover 3924 rpm; switch 3900 rpm; band 3750-4100", "class": "derived" },
+    { "item": "K20 anchor margin", "value": "2.87% of +/-3% (floor ~2.69%)", "class": "B" },
+    { "item": "K20 T35", "value": "-7.1% peak power after IGD Phase 1; turbo model unvalidated", "class": "mechanism expected; magnitude D; content B",
+      "repo_vs_handoff": "k20_t35_98 is still a hard fingerprint case; the handoff calls T35 diagnostic; not changed" },
+    { "item": "ROADMAP M54 power", "value": "ROADMAP says 152 kW; IGD Phase 1 gate report says 153.9 kW", "class": "unreconciled documentation" }
+  ],
+  "stale_docs": [
+    "ROADMAP.md: Phase 2 'at its gate', owner review unchecked, 'Current state (2026-09-28)'",
+    "docs/milestones/ENGINE_AUTHORING_FACTORY_1.md: Phase 2 'at its gate'",
+    "PHASE1/PHASE2 gate reports: 'nothing merged, no PR open' (true when written)"
+  ],
+  "unsupported_features": [
+    "supercharger", "dry_sump", "direct_injection", "exhaust_cam_phasing", "variable_valve_lift_continuous",
+    "twin_scroll_turbine", "cylinder_deactivation", "cam_in_block_phaser_both_lobes", "inline_cylinder_groups"
+  ],
+  "authoring_cost": {
+    "m54_measured": { "total_added_lines": 2568, "content_json": 392, "src": 409, "tests": 1227 },
+    "estimated_today_real_v8": "1000-1150 lines, ~450 C#/YAML",
+    "target_after_factory": "300-400 data lines, 0 C#, ~5 commands; variant 20-60 lines (unmeasured until pilot)"
+  },
+  "skills": {
+    "installed": ["car-sim-verify", "car-sim-add-engine", "car-sim-project-gate", "find-skills"],
+    "sources": "tools/agent-skills/",
+    "installed_copies": ".agents/skills/",
+    "claude_links": ".claude/skills/",
+    "lock": "skills-lock.json"
+  }
+}
