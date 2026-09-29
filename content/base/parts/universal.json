@@ -25,7 +25,8 @@
     {
       "id": "throttle.68mm", "name": "68 mm electronic throttle body", "category": "throttle_body", "manufacturer": "Precision Flow",
       "price": 380, "mass_kg": 1.6,
-      "spec": { "bore_mm": 68, "flow_cfm": 670 }
+      "spec": { "bore_mm": 68, "flow_cfm": 670 },
+      "provenance": {"bore_mm": {"type": "secondary", "source": "bimmerworld_throttle_listing"}}
     },
     {
       "id": "exhaust.twin_50mm", "name": "Twin-pipe exhaust (2 × 50 mm, silencers)", "category": "exhaust", "manufacturer": "Isar",
@@ -74,7 +75,8 @@
     {
       "id": "radiator.m54_oem", "name": "M54 OEM radiator", "category": "radiator", "manufacturer": "Isar",
       "price": 320, "mass_kg": 6.5,
-      "spec": { "heat_rejection_w_per_k": 1900, "reference_air_speed_ms": 15, "coolant_capacity_l": 3.4, "thermostat_open_c": 90 }
+      "spec": { "heat_rejection_w_per_k": 1900, "reference_air_speed_ms": 15, "coolant_capacity_l": 3.4, "thermostat_open_c": 90 },
+      "provenance": {"heat_rejection_w_per_k": {"type": "estimated"}}
     },
     {
       "id": "ecu.m54_oem", "name": "M54 OEM ECU (reflashable)", "category": "ecu", "manufacturer": "Isar",

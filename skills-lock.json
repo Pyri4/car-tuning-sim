@@ -4,17 +4,17 @@
     "car-sim-add-engine": {
       "source": "./tools/agent-skills",
       "sourceType": "local",
-      "computedHash": "ede32a84990fec7f2a6eab851e87df99d767b53192ee2ca0d6919b9f09b6059a"
+      "computedHash": "2e69e809570f6b37713d09a1e71d0cb948ef80e6380da468dada7553ae45ff94"
     },
     "car-sim-project-gate": {
       "source": "./tools/agent-skills",
       "sourceType": "local",
-      "computedHash": "b22ad7115f789d4a0327c47b8b82d28edffdc2c5c8446d16a973f1a4ce9f1872"
+      "computedHash": "b4c0237957318b7b07aef44cf714303d6598a47ff7cc66e80157e4ad82293186"
     },
     "car-sim-verify": {
       "source": "./tools/agent-skills",
       "sourceType": "local",
-      "computedHash": "cb01a9ca8f2ee5eca54f2344aa5f74b3d658185bc39b3bec9dcb4b580bbc1fba"
+      "computedHash": "05509d4fb7c9d1abeab5a070cfd25f2b0b5124df79b9ba18dae036e85ff2e205"
     },
     "find-skills": {
       "source": "vercel-labs/skills",

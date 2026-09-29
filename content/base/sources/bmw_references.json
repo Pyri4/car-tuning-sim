@@ -1,0 +1,39 @@
+{
+  // Sources cited by content provenance: the Isar M54's (the BMW M54B30 reference; PARTS_DATABASE.md, "Isar M54 reference engine").
+  // They were gathered through web-search results: the development container could not open the pages, so published
+  // figures were accepted only where several independent results agreed. Facts are cited; nothing is copied.
+  "sources": [
+    {
+      "id": "bmw_m54_published_figures", "type": "reference_work",
+      "title": "BMW M54B30 published figures: Wikipedia \"BMW M54\"; BMW \"E85 M54 Engine\" technical training; automobile-catalog.com (2000 BMW 330i)",
+      "notes": "Displacement, bore, stroke, cylinders, valvetrain, compression ratio, rated power and torque. Read through search results; accepted where the three agreed.",
+      "license_note": "Facts cited; no text or images copied."
+    },
+    {
+      "id": "m54_enthusiast_measurements", "type": "enthusiast_measurement",
+      "title": "M54B30 specifications and measurements: E46Fanatics \"M54B30 specs and measurements\"; wersis.net service data",
+      "notes": "Rods 135 mm, 22 mm pins, 60/45 mm main/rod journals, forged-steel crank, about 34 cc chambers, about 0.7 mm gasket, 6.5 L oil, advertised cam durations 240/228 with 9.7/9.0 mm lift (forum measurements disagree on the lift point). Secondary sources.",
+      "license_note": "Facts cited; no text or images copied."
+    },
+    {
+      "id": "m54_deck_height_forums", "type": "enthusiast_measurement",
+      "title": "M52TU/M54 block deck height 211 mm: BimmerFest, R3VLimited",
+      "license_note": "Facts cited; no text or images copied."
+    },
+    {
+      "id": "bmw_vanos_repair_instruction", "type": "service_documentation",
+      "title": "BMW repair instruction 11 31 505 (M52TU/M54/M56), VANOS adjustment range, as quoted by forum and blog summaries",
+      "notes": "Intake centreline 74–134° ATDC, exhaust 76–136° BTDC (60° of crank each). Only the quotations were read, so the values are used as secondary.",
+      "license_note": "Facts cited; no text copied."
+    },
+    {
+      "id": "bimmerworld_throttle_listing", "type": "retailer",
+      "title": "BimmerWorld listing: M54 68 mm throttle body",
+      "license_note": "Facts cited."
+    },
+    {
+      "id": "m54_disa_derivation", "type": "project_document",
+      "title": "docs/milestones/intake-gas-dynamics-2/M54_DISA_DERIVATION.md (the frozen A-D1 derivation of DISA's closed stage)"
+    }
+  ]
+}

@@ -13,8 +13,12 @@ public sealed class ContentDatabase
         IReadOnlyDictionary<string, FuelDefinition> fuels,
         IReadOnlyDictionary<string, TuneDocument> tunes,
         IReadOnlyDictionary<string, ScenarioDefinition>? scenarios = null,
-        IReadOnlyDictionary<string, Vehicles.VehicleDefinition>? vehicles = null)
+        IReadOnlyDictionary<string, Vehicles.VehicleDefinition>? vehicles = null,
+        IReadOnlyDictionary<string, SourceDefinition>? sources = null,
+        IReadOnlyDictionary<string, EngineDefinition>? abstractEngines = null)
     {
+        Sources = sources ?? new Dictionary<string, SourceDefinition>();
+        AbstractEngines = abstractEngines ?? new Dictionary<string, EngineDefinition>();
         Vehicles = vehicles ?? new Dictionary<string, Vehicles.VehicleDefinition>();
         Parts = parts;
         Engines = engines;
@@ -32,7 +36,18 @@ public sealed class ContentDatabase
     public IReadOnlyDictionary<string, ScenarioDefinition> Scenarios { get; }
 
     public IReadOnlyDictionary<string, PartDefinition> Parts { get; }
+
+    /// <summary>Buildable engine definitions (families and their variants), in load order.</summary>
     public IReadOnlyDictionary<string, EngineDefinition> Engines { get; }
+
+    /// <summary>
+    /// Abstract family bases (<c>"abstract": true</c>): definitions that exist to be extended by variants. They are not
+    /// buildable, not offered to the game and not in <see cref="Engines"/>.
+    /// </summary>
+    public IReadOnlyDictionary<string, EngineDefinition> AbstractEngines { get; }
+
+    /// <summary>Cited sources that provenance and engine identities refer to (document kind <c>sources</c>).</summary>
+    public IReadOnlyDictionary<string, SourceDefinition> Sources { get; }
     public IReadOnlyDictionary<string, FuelDefinition> Fuels { get; }
 
     /// <summary>ECU calibrations as authored (converted to live tunes by the ECU layer).</summary>

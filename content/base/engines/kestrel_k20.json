@@ -7,6 +7,7 @@
       "name": "Kestrel K20 2.0L DOHC I4",
       "cylinders": 4,
       "layout": "inline",
+      "identity": { "kind": "fictional", "manufacturer": "Kestrel", "family": "K20" },
       "description": "Naturally aspirated 1998 cc twin-cam four from an ageing sports compact. Square bore/stroke, cast pistons, 7,600 rpm factory limit.",
       "slots": [
         { "id": "block",           "category": "block",           "display_name": "Cylinder block" },

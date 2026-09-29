@@ -8,6 +8,16 @@ description: Validate a change to the car-tuning-sim repository before committin
 Validation is part of the work, never optional (AGENTS.md). Report the numbers you actually saw — test counts,
 failures, script errors, CI conclusion — never "tests pass" from memory or from an earlier run.
 
+## Model tiers (AGENTS.md, "Model routing")
+Running the checks and reading clear results is **T1 (small model)** work: build, tests, CLI, Godot, CI status. Stop
+and escalate instead of deciding when a result needs interpretation:
+- a failing test whose cause is not obvious from its message → **T2**;
+- any fingerprint difference, a surviving mutant, a physics or reference-band failure, or any idea of changing a
+  tolerance, a test, a constant or the baseline → **T3** decides (fix, classify, or re-baseline as a documented generic
+  correction).
+
+A small model never re-baselines, skips, loosens or deletes a check to get green.
+
 ## When to use
 - Before every commit or push that touches `src/`, `content/`, `game/`, `tools/`, `tests/` or `.github/`.
 - Before writing a completion report, a PR description or a project-gate verdict.
@@ -25,7 +35,9 @@ failures, script errors, CI conclusion — never "tests pass" from memory or fro
    - `dotnet run --project tools/CarSim.Cli -c Release -- validate`
    - `dotnet run --project tools/CarSim.Cli -c Release -- validate --mods content/test`
 4. **CLI smoke** (what CI runs): sweeps of `kestrel_k20`, `isar_m54 --fuel gasoline_98`, and with `--mods content/test`
-   an `inspect syn_v8_ohv` and a `sweep syn_v6_tt --fuel gasoline_98` (see `.github/workflows/ci.yml`).
+   an `inspect syn_v8_ohv` and a `sweep syn_v6_tt --fuel gasoline_98`, and `check-engine` on `kestrel_k20 --strict 1`,
+   `isar_m54` and `syn_v6_tt --mods content/test` (see `.github/workflows/ci.yml`). For content changes, run
+   `check-engine` on every engine touched.
 5. **Godot headless smoke tests** for engine, gameplay or UI changes (Godot 4.7.2 .NET; if `godot` is not installed,
    download the official build from the URL in `.github/workflows/ci.yml`, then `dotnet build game/CarTuningSim.csproj`
    and `godot --headless --path game --import` once):

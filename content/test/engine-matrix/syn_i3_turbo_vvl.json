@@ -7,6 +7,7 @@
       "name": "Synth T3 1.2 turbo VVL",
       "cylinders": 3,
       "layout": "inline",
+      "identity": { "kind": "synthetic" },
       "firing_order": [1, 2, 3],
       "description": "1.2-litre three with a small turbo and two-stage variable valve lift (synthetic test content).",
       "slots": [

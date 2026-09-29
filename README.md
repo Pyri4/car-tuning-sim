@@ -9,7 +9,9 @@ experimentation. **[GAME_VISION.md](GAME_VISION.md) is the North Star.**
 
 The main attraction is building and tuning cars where component choices have meaningful mechanical consequences. The
 long-term scale is hundreds of engine families and thousands of parts, so engines are data: *adding the 100th engine
-should be almost as easy as adding the 2nd* ([ENGINE_AUTHORING_GUIDE.md](ENGINE_AUTHORING_GUIDE.md)).
+should be almost as easy as adding the 2nd* ([ENGINE_AUTHORING_GUIDE.md](ENGINE_AUTHORING_GUIDE.md)). Content scale is a
+first-class goal: the project optimizes for correctness, genericity, authoring speed, provenance and verifiability
+([docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](docs/ENGINE_AUTHORING_FACTORY_AUDIT.md)).
 
 ## Gameplay loop
 BUY → INSPECT → DISASSEMBLE → DIAGNOSE → REPAIR → BUILD → MODIFY → SWAP → TUNE → DYNO → DRIVE → BREAK → DIAGNOSE → REBUILD
@@ -43,6 +45,8 @@ DOHC V8s, a flat-four, VVL, variable intake) proves that other architectures run
 - PARTS_DATABASE.md — initial component/data schema
 - docs/ENGINE_ARCHITECTURE_AUDIT.md — structural engine assumptions found in the code and what was done about each
 - docs/VERIFICATION.md — the regression fingerprint, the tune-regeneration driver and the mutation harness
+- docs/ENGINE_AUTHORING_FACTORY_AUDIT.md — what adding an engine costs today, what should become data or tooling, and the
+  Engine Authoring Factory milestone
 - docs/milestones/ — milestone definitions (the next one is proposed until the owner authorizes it)
 
 Coding agents also get this project's procedures as agent skills (`.agents/skills/`, `.claude/skills/`, managed with
@@ -72,6 +76,8 @@ Command-line tools (no Godot needed):
 ```
 dotnet run --project tools/CarSim.Cli -- validate                      # check all content
 dotnet run --project tools/CarSim.Cli -- inspect isar_m54              # architecture, stock build, geometry, compatibility
+dotnet run --project tools/CarSim.Cli -- check-engine isar_m54 [--verbose 1] [--strict 1]
+                                                                       # is this an authorable engine? (exit 0 ok, 2 errors, 3 strict warnings)
 dotnet run --project tools/CarSim.Cli -- validate --mods content/test  # base content plus the synthetic engine matrix
 dotnet run --project tools/CarSim.Cli -- sweep syn_v6_tt --mods content/test --fuel gasoline_98   # per-bank/per-turbo columns
 dotnet run --project tools/CarSim.Cli -- drive syn_v8_ohv --mods content/test --vehicle isar_c30   # an engine swap

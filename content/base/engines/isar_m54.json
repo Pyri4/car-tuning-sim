@@ -10,6 +10,25 @@
       "name": "Isar M54 3.0L DOHC I6",
       "cylinders": 6,
       "layout": "inline",
+      // The real reference and its hardware. Features the simulator does not model are declared with what stands in for
+      // them (PARTS_DATABASE.md, "Simplifications"); nothing is simulated that is not modelled.
+      "identity": {
+        "kind": "real", "manufacturer": "Isar (BMW)", "family": "M54", "variant": "M54B30", "years": "2000-2006",
+        "market": "Europe, E46 330i/330Ci, MS43, not ZHP", "reference": "bmw_m54_published_figures",
+        "features": [
+          { "feature": "intake_cam_phasing" },
+          { "feature": "variable_intake", "notes": "DISA as two effective runner stages." },
+          { "feature": "exhaust_cam_phasing", "approximation": "Exhaust cam held at its park centreline (no exhaust-opening term in the model)." },
+          { "feature": "mass_air_flow_metering", "approximation": "Speed-density ECU with a calibrated VE table." },
+          { "feature": "returnless_fuel_system", "approximation": "Manifold-referenced regulator (equivalent to MS43's pressure-compensated injection)." },
+          { "feature": "map_controlled_thermostat", "approximation": "Fixed 90 °C thermostat." },
+          { "feature": "dual_mass_flywheel", "approximation": "One flywheel inertia, no torsional isolation." }
+        ]
+      },
+      "provenance": {
+        "cylinders": { "type": "published", "source": "bmw_m54_published_figures" },
+        "layout": { "type": "published", "source": "bmw_m54_published_figures" }
+      },
       "description": "2979 cc twin-cam straight six with double VANOS and a two-stage (DISA) intake. Aluminium block with iron liners, forged crank on seven mains, long 135 mm rods. Torquey rather than peaky; 6,500 rpm factory limit.",
       "slots": [
         { "id": "block",           "category": "block",           "display_name": "Cylinder block" },

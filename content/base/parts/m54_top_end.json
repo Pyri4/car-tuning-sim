@@ -6,7 +6,8 @@
     {
       "id": "m54.head_gasket.oem", "name": "M54 OEM MLS head gasket (0.7 mm)", "category": "head_gasket", "manufacturer": "Isar",
       "price": 140, "mass_kg": 0.5, "requires": ["m54.deck"],
-      "spec": { "bore_mm": 85.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 140, "material": "mls" }
+      "spec": { "bore_mm": 85.0, "compressed_thickness_mm": 0.7, "max_cylinder_pressure_bar": 140, "material": "mls" },
+      "provenance": {"compressed_thickness_mm": {"type": "secondary", "source": "m54_enthusiast_measurements"}}
     },
     {
       "id": "m54.head.oem", "name": "M54 OEM cylinder head", "category": "cylinder_head", "manufacturer": "Isar",
@@ -17,19 +18,33 @@
         "chamber_volume_cc": 34.0, "valve_moving_mass_g": 105, "valves_per_cylinder": 4,
         "intake_port_flow_cfm":  [[1, 30], [2, 62], [3, 94], [4, 124], [5, 151], [6, 174], [7, 193], [8, 208], [9, 219], [10, 226], [11, 230], [12, 232]],
         "exhaust_port_flow_cfm": [[1, 25], [2, 50], [3, 75], [4, 97], [5, 117], [6, 133], [7, 146], [8, 156], [9, 163], [10, 168], [11, 171], [12, 172]]
-      }
+      },
+      "provenance": {"chamber_volume_cc": {"type": "secondary", "source": "m54_enthusiast_measurements"},
+                      "exhaust_port_flow_cfm": {"type": "estimated", "notes": "Valve curtain area x typical discharge coefficients; not bench data."},
+                      "intake_port_flow_cfm": {"type": "estimated", "notes": "Valve curtain area x typical discharge coefficients; not bench data. Worth up to +6.6 % of power at 6,000 rpm (SIMULATION_SPEC.md, M54 investigation)."},
+                      "valve_moving_mass_g": {"type": "estimated", "notes": "Masses and inertias are estimates (PARTS_DATABASE.md)."},
+                      "valves_per_cylinder": {"type": "published", "source": "bmw_m54_published_figures"}}
     },
     {
       "id": "m54.valve_springs.oem", "name": "M54 OEM valve springs", "category": "valve_springs", "manufacturer": "Isar",
       "price": 180, "mass_kg": 1.2, "requires": ["m54.cam_carrier"],
-      "spec": { "seat_force_n": 240, "open_force_n": 640, "max_lift_mm": 10.8 }
+      "spec": { "seat_force_n": 240, "open_force_n": 640, "max_lift_mm": 10.8 },
+      "provenance": {"open_force_n": {"type": "estimated", "notes": "Set for valve float near 7,100 rpm."},
+                      "seat_force_n": {"type": "estimated", "notes": "Set for valve float near 7,100 rpm."}}
     },
     {
       "id": "m54.cams.oem", "name": "M54 OEM camshafts (double VANOS)", "category": "camshafts", "manufacturer": "Isar",
       "price": 1100, "mass_kg": 8.5, "requires": ["m54.cam_carrier"],
       "description": "Short, mild lobes (240°/228° advertised) on VANOS phasers: the ECU swings the intake cam through 60° of crank, closing the valve early for low-speed torque and late for top-end breathing. The exhaust phaser is held at its park position.",
       "spec": { "valvetrain": "dohc", "intake_duration_deg": 190, "intake_lift_mm": 9.7, "exhaust_duration_deg": 179, "exhaust_lift_mm": 9.0, "lobe_separation_deg": 112,
-                "intake_centerline_deg": 134, "exhaust_centerline_deg": 136, "intake_phaser_range_deg": 60 }
+                "intake_centerline_deg": 134, "exhaust_centerline_deg": 136, "intake_phaser_range_deg": 60 },
+      "provenance": {"exhaust_centerline_deg": {"type": "converted", "source": "bmw_vanos_repair_instruction", "method": "Park position = the retarded end of the quoted 76-136 deg BTDC range; the exhaust phaser is held there (exhaust cam phasing is not modelled)."},
+                      "exhaust_duration_deg": {"type": "converted", "source": "m54_enthusiast_measurements", "method": "Advertised 228 deg (seat to seat) to 1 mm duration by the model's harmonic lift profile: event = 1 mm duration + 50 deg."},
+                      "exhaust_lift_mm": {"type": "secondary", "source": "m54_enthusiast_measurements", "notes": "Forum measurements disagree on the lift point."},
+                      "intake_centerline_deg": {"type": "converted", "source": "bmw_vanos_repair_instruction", "method": "Park position = the fully retarded end of the quoted 74-134 deg ATDC range."},
+                      "intake_duration_deg": {"type": "converted", "source": "m54_enthusiast_measurements", "method": "Advertised 240 deg (seat to seat) to 1 mm duration by the model's harmonic lift profile: event = 1 mm duration + 50 deg."},
+                      "intake_lift_mm": {"type": "secondary", "source": "m54_enthusiast_measurements", "notes": "Forum measurements disagree on the lift point."},
+                      "intake_phaser_range_deg": {"type": "secondary", "source": "bmw_vanos_repair_instruction"}}
     }
   ]
 }
