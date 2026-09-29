@@ -270,7 +270,9 @@ public class EngineAgnosticTests
         var familyTokens = new Regex(@"(?<![A-Za-z0-9])(k20|m54|kestrel_k20|isar_m54|syn_[a-z0-9_]+)(?![A-Za-z0-9])", RegexOptions.IgnoreCase);
         // A comparison of an engine's size against a specific number (not a > 0 sanity check) would be a hidden special case.
         var countBranch = new Regex(@"\b(Cylinders|Displacement|DisplacementCc|BoreMm|StrokeMm)\s*(==|!=|<=|>=|<|>)\s*(0\.0*[1-9]|[2-9]|[1-9][0-9])");
-        var files = new[] { "src/CarSim.Core", "src/CarSim.Gameplay" }
+        // The simulation, the calibrators (src/CarSim.Core/Ecu) and gameplay; and the tune generator and the recalibration
+        // driver it runs (tools/CarSim.Verification/Calibration, Engine Authoring Factory 1.0 Phase 3): generation is generic.
+        var files = new[] { "src/CarSim.Core", "src/CarSim.Gameplay", "tools/CarSim.Verification/Calibration" }
             .SelectMany(d => Directory.EnumerateFiles(Path.Combine(TestContent.RepoRoot, d), "*.cs", SearchOption.AllDirectories))
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
             .ToList();

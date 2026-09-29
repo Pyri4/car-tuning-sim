@@ -13,7 +13,7 @@ namespace CarSim.Cli;
 
 public static class Program
 {
-    private const string Usage = """
+    private static readonly string Usage = $$"""
         carsim — Car Tuning Simulator command-line tools
 
         Usage:
@@ -26,7 +26,8 @@ public static class Program
                                                         Exit 0 = no errors (warnings allowed); 2 = errors; 3 = warnings under
                                                         --strict. --verbose also prints notes and unrecorded/defaulted fields.
           carsim inspect <engine-id> [--content <dir>]
-                                                        Show the stock build, derived geometry and compatibility report.
+                                                        Show the stock build, derived geometry, derived values and compatibility
+                                                        report.
           carsim sweep <engine-id> [--swap slot=part,...] [--fuel <id>] [--tune <id>] [--from 1000] [--to 8000] [--step 500]
                                                         Steady-state full-throttle dyno sweep of the stock build (with swaps).
           carsim hold <engine-id> [--rpm 6000] [--seconds 30] [--throttle 1] [--sump-g 0] [--air-speed <m/s>] [build options]
@@ -69,6 +70,7 @@ public static class Program
                                                         reports, table by table, whether the checked-in tables are reproduced;
                                                         audits hand-authored spark maps. --write 1 rewrites the calibrated tables
                                                         (never the hand-authored ones) in the tune files.
+        {{GenerateTuneCommand.Usage}}
         <engine-id> (kestrel_k20, isar_m54, ...) may be left out only when the content has a single engine family.
         Build options: --swap slot=part,...  --add slot=part,...  --fuel <id>  --tune <id>
         Content options (every command): --content <dir> (default content/base)  --mods <dir> (default content/mods;
@@ -101,6 +103,7 @@ public static class Program
                 "fingerprint" => Fingerprint(options),
                 "fingerprint-diff" => FingerprintDiff(options),
                 "regenerate-tunes" => RegenerateTunes(options),
+                "generate-tune" => GenerateTuneCommand.Run(options, ModsDir(options)),
                 _ => Fail($"Unknown command '{args[0]}'.\n\n{Usage}"),
             };
         }
@@ -643,6 +646,13 @@ public static class Program
                     if (banks[b] is { } bg)
                         Console.WriteLine($"  Bank {engine.Banks[b].Id,-14} CR {bg.CompressionRatio:F2}:1, piston-to-head {Units.MToMm(bg.PistonToHeadClearance):F2} mm");
         }
+
+        // Derived values (EngineDerivedValues): the inputs they rest on and what the model derives from them.
+        var stockTune = engine.StockTune.Length > 0 ? db.Tunes.GetValueOrDefault(engine.StockTune) : null;
+        Console.WriteLine();
+        Console.WriteLine("Derived values (authored inputs → derived; the stock tune's rev limit for the values at the limit):");
+        foreach (var line in EngineDerivedValues.Of(assembly, stockTune?.RevLimitRpm, $"stock tune {engine.StockTune}").Lines())
+            Console.WriteLine($"  {line}");
 
         var report = AssemblyValidator.Validate(assembly);
         // Intake gas dynamics: each bank's runner stages and the speed each tunes to (runner gas at the reference ambient).

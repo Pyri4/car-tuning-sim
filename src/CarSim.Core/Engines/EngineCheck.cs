@@ -28,6 +28,12 @@ public enum CheckSection
     /// <summary>Fits and clearances, compression, derived geometry and its plausibility.</summary>
     Geometry,
 
+    /// <summary>
+    /// The derived values (<see cref="EngineDerivedValues"/>): volumes, ratios, values at the rev limit, firing interval,
+    /// runner tuned speeds, and each authored claim about a derived property validated against it.
+    /// </summary>
+    Derived,
+
     /// <summary>Speed ratings against the rev limit, boost against sensors and springs.</summary>
     Limits,
     Features,
@@ -70,6 +76,12 @@ public sealed class EngineCheckReport
     /// <summary>Unrecorded provenance and defaulted fields, part by part (shown with --verbose).</summary>
     public IReadOnlyList<string> Details { get; init; } = Array.Empty<string>();
 
+    /// <summary>
+    /// The stock build's derived values, with the stock tune's beliefs validated against them; null when no assembly was
+    /// built (unknown or abstract engine). Shown under DERIVED: a summary, every entry with --verbose.
+    /// </summary>
+    public EngineDerivedValues? Derived { get; init; }
+
     public IEnumerable<CheckFinding> Errors => Findings.Where(f => f.Severity == IssueSeverity.Error);
     public IEnumerable<CheckFinding> Warnings => Findings.Where(f => f.Severity == IssueSeverity.Warning);
     public bool Passed => !Errors.Any();
@@ -97,6 +109,7 @@ public sealed class EngineCheckReport
         foreach (var section in Enum.GetValues<CheckSection>())
         {
             var facts = Facts.Where(f => f.Section == section).Select(f => f.Text).ToList();
+            if (section == CheckSection.Derived && Derived != null) facts.AddRange(verbose ? Derived.Lines() : Derived.Summary());
             var findings = Findings.Where(f => f.Section == section).ToList();
             var shown = findings.Where(f => verbose || f.Severity != IssueSeverity.Info).ToList();
             if (facts.Count == 0 && findings.Count == 0) continue;
@@ -269,12 +282,13 @@ public static class EngineCheck
         var features = FeatureReport.For(definition.Identity, capabilities);
         CheckFeatures(c, definition, features);
         var (coverage, details) = CheckProvenance(c, db, definition, assembly);
-        CheckCompleteness(c, assembly, tune, tuneDoc, capabilities);
-        return Finish(engineId, definition.Name, c, coverage, features, details);
+        var derived = EngineDerivedValues.Of(assembly, tune?.RevLimitRpm, tuneDoc != null ? $"stock tune {tuneDoc.Id}" : "the stock tune");
+        derived = CheckCompleteness(c, assembly, tune, tuneDoc, capabilities, derived);
+        return Finish(engineId, definition.Name, c, coverage, features, details, derived);
     }
 
     private static EngineCheckReport Finish(string id, string name, Collector c, ProvenanceCoverage? coverage,
-        IReadOnlyList<FeatureReportEntry> features, IReadOnlyList<string> details) => new()
+        IReadOnlyList<FeatureReportEntry> features, IReadOnlyList<string> details, EngineDerivedValues? derived = null) => new()
     {
         EngineId = id,
         EngineName = name,
@@ -285,6 +299,7 @@ public static class EngineCheck
         Provenance = coverage,
         Features = features,
         Details = details,
+        Derived = derived,
     };
 
     private static void CheckIdentity(Collector c, ContentDatabase db, EngineDefinition e, bool isAbstract)
@@ -445,47 +460,74 @@ public static class EngineCheck
         return (coverage, details);
     }
 
-    private static void CheckCompleteness(Collector c, EngineAssembly a, EcuTune? tune, TuneDocument? doc, EngineCapabilities caps)
+    /// <summary>The stock tune's rules (<see cref="CheckTune"/>); returns the derived values with its beliefs validated.</summary>
+    private static EngineDerivedValues CheckCompleteness(Collector c, EngineAssembly a, EcuTune? tune, TuneDocument? doc,
+        EngineCapabilities caps, EngineDerivedValues derived)
     {
         if (doc == null)
         {
             c.Add(CheckSection.Completeness, IssueSeverity.Info, "no_stock_tune",
                 "No stock tune yet: the engine cannot be started until one is calibrated (ENGINE_AUTHORING_GUIDE.md §6).");
-            return;
+            return derived;
         }
         c.Fact(CheckSection.Completeness, $"stock tune: {doc.Id}");
-        if (tune == null) return;
+        if (tune == null) return derived;
+        var consistency = new List<DerivedValue>();
+        c.Findings.AddRange(CheckTune(a, tune, doc, caps, derived, consistency));
+        return derived.With(consistency);
+    }
+
+    /// <summary>
+    /// The rules a tune must meet against the build it runs on, all in <see cref="CheckSection.Completeness"/>: its beliefs
+    /// against the build's derived displacement and its injectors, its rev limit against the ECU, tables and switch speeds
+    /// for the hardware the ECU controls, switch speeds within the rpm axis, the load axis against the boost target. The
+    /// check applies them to the stock tune; the tune generator to the tune it generated (<paramref name="subject"/> names
+    /// the tune in messages). Each authored claim about a derived property (today: <c>displacement_cc</c>) is added to
+    /// <paramref name="consistency"/> as validated or mismatched against <paramref name="derived"/>, the one source of the
+    /// value.
+    /// </summary>
+    public static IReadOnlyList<CheckFinding> CheckTune(EngineAssembly a, EcuTune tune, TuneDocument doc, EngineCapabilities caps,
+        EngineDerivedValues derived, ICollection<DerivedValue>? consistency = null, string subject = "stock tune")
+    {
+        var c = new Collector();
+        string The = "The " + subject;
         string Pct(double x) => x.ToString("P1", CultureInfo.InvariantCulture);
-        var g = EngineGeometry.TryCreate(a, out _);
-        if (g != null)
+        if (derived.DisplacementCc is double actual)
         {
-            double actual = Units.M3ToCc(g.Displacement);
+            string claim = string.Create(CultureInfo.InvariantCulture, $"{subject} displacement_cc {tune.DisplacementCc:0.#} cc against the derived {actual:0.#} cc");
             if (Math.Abs(tune.DisplacementCc / actual - 1) > TuneAgreementTolerance)
+            {
                 c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_displacement_mismatch", string.Create(CultureInfo.InvariantCulture,
-                    $"The stock tune assumes {tune.DisplacementCc:F0} cc; the stock build displaces {actual:F0} cc ({Pct(tune.DisplacementCc / actual - 1)})."));
+                    $"{The} assumes {tune.DisplacementCc:F0} cc; the {(subject == "stock tune" ? "stock build" : "build")} displaces {actual:F0} cc ({Pct(tune.DisplacementCc / actual - 1)})."));
+                consistency?.Add(new DerivedValue("tune_displacement_cc", "ECU displacement belief", DerivedValueStatus.Mismatch, tune.DisplacementCc, "cc",
+                    $"{claim}: {Pct(tune.DisplacementCc / actual - 1)}, outside {Pct(TuneAgreementTolerance)} (tune_displacement_mismatch)"));
+            }
+            else
+                consistency?.Add(new DerivedValue("tune_displacement_cc", "ECU displacement belief", DerivedValueStatus.Validated, tune.DisplacementCc, "cc",
+                    $"{claim}: within {Pct(TuneAgreementTolerance)}"));
         }
         if (a.SpecOf<InjectorSpec>(PartCategory.Injectors) is { } inj)
         {
             if (Math.Abs(tune.InjectorFlowCcMin / inj.FlowCcMin - 1) > TuneAgreementTolerance)
                 c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_injector_flow_mismatch", string.Create(CultureInfo.InvariantCulture,
-                    $"The stock tune assumes {tune.InjectorFlowCcMin:F0} cc/min injectors; the stock injectors flow {inj.FlowCcMin:F0} cc/min."));
+                    $"{The} assumes {tune.InjectorFlowCcMin:F0} cc/min injectors; the stock injectors flow {inj.FlowCcMin:F0} cc/min."));
             if (Math.Abs(tune.InjectorDeadTimeMs - inj.DeadTimeMs) > DeadTimeToleranceMs)
                 c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_dead_time_mismatch", string.Create(CultureInfo.InvariantCulture,
-                    $"The stock tune assumes a {tune.InjectorDeadTimeMs:F2} ms dead time; the stock injectors have {inj.DeadTimeMs:F2} ms."));
+                    $"{The} assumes a {tune.InjectorDeadTimeMs:F2} ms dead time; the stock injectors have {inj.DeadTimeMs:F2} ms."));
         }
         if (a.SpecOf<EcuSpec>(PartCategory.Ecu) is { } ecu && tune.RevLimitRpm > ecu.MaxRevLimitRpm)
             c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_rev_limit_above_ecu", string.Create(CultureInfo.InvariantCulture,
-                $"The stock tune's {tune.RevLimitRpm:F0} rpm limit is above the stock ECU's {ecu.MaxRevLimitRpm:F0} rpm ceiling."));
+                $"{The}'s {tune.RevLimitRpm:F0} rpm limit is above the stock ECU's {ecu.MaxRevLimitRpm:F0} rpm ceiling."));
         double axisTop = doc.RpmAxis.Length > 0 ? doc.RpmAxis[^1] : 0;
         if (caps.IntakeCamPhasing && doc.IntakeCamAdvanceDeg == null)
             c.Add(CheckSection.Completeness, IssueSeverity.Info, "tune_no_cam_table",
-                "The ECU drives an intake phaser but the stock tune has no intake_cam_advance_deg table: the phaser stays parked.");
+                $"The ECU drives an intake phaser but the {subject} has no intake_cam_advance_deg table: the phaser stays parked.");
         if (caps.VariableValveLift && doc.ValveLiftSwitchRpm == null)
             c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_no_switch_speed",
-                "The ECU switches two-stage cams but the stock tune has no valve_lift_switch_rpm.");
+                $"The ECU switches two-stage cams but the {subject} has no valve_lift_switch_rpm.");
         if (caps.VariableIntakeRunner && doc.IntakeRunnerSwitchRpm == null)
             c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_no_switch_speed",
-                "The ECU switches the intake runners but the stock tune has no intake_runner_switch_rpm.");
+                $"The ECU switches the intake runners but the {subject} has no intake_runner_switch_rpm.");
         foreach (var (name, rpm) in new[] { ("valve_lift_switch_rpm", doc.ValveLiftSwitchRpm), ("intake_runner_switch_rpm", doc.IntakeRunnerSwitchRpm) })
             if (rpm is double r && r > axisTop)
                 c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_switch_outside_axis", string.Create(CultureInfo.InvariantCulture,
@@ -493,5 +535,6 @@ public static class EngineCheck
         if (tune.MaxBoostTargetKpa is double boost && doc.LoadAxisKpa.Length > 0 && boost > doc.LoadAxisKpa[^1])
             c.Add(CheckSection.Completeness, IssueSeverity.Warning, "tune_load_axis_below_boost", string.Create(CultureInfo.InvariantCulture,
                 $"The boost target reaches {boost:F0} kPa but the tables stop at {doc.LoadAxisKpa[^1]:F0} kPa."));
+        return c.Findings;
     }
 }

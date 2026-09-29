@@ -25,8 +25,12 @@ public sealed record TuneManifest(IReadOnlyList<TuneRecipe> Tunes)
         JsonSerializer.Deserialize<TuneManifest>(File.ReadAllText(path), Options) ?? throw new InvalidDataException($"Empty manifest {path}.");
 }
 
+/// <summary>
+/// How a tune is (re)made. <paramref name="Generated"/> is set only on the record <c>carsim generate-tune</c> writes beside a
+/// generated tune (<see cref="TuneGenerator"/>); the hand-maintained manifest's recipes have none.
+/// </summary>
 public sealed record TuneRecipe(string Tune, string Engine, string Layer, string File, string Fuel, BuildRecipe? Build,
-    IReadOnlyList<CalibrationStep> Steps, IReadOnlyList<string> HandAuthored, string Provenance);
+    IReadOnlyList<CalibrationStep> Steps, IReadOnlyList<string> HandAuthored, string Provenance, GenerationRecord? Generated = null);
 
 /// <summary>Parts swapped into or added to the engine's stock build, as <c>[slot, part]</c> pairs.</summary>
 public sealed record BuildRecipe(IReadOnlyList<string[]>? Swap, IReadOnlyList<string[]>? Add);
@@ -50,6 +54,13 @@ public sealed record FieldRegeneration(string Field, double[][] CheckedIn, doubl
         .DefaultIfEmpty(0).Max();
 
     public bool Reproduced => Differing == 0;
+}
+
+/// <summary>A tune after its recipe ran on it (<see cref="TuneRegenerator.Settle"/>): the settled values, field by field.</summary>
+public sealed record SettledTune(TuneDocument Document, IReadOnlyList<FieldRegeneration> Fields)
+{
+    /// <summary>Every calibrated value came back unchanged (or in a rounding 2-cycle): the starting tune is a fixed point.</summary>
+    public bool Reproduced => Fields.All(f => f.Reproduced);
 }
 
 public sealed record TuneRegeneration(TuneRecipe Recipe, TuneDocument Regenerated, IReadOnlyList<FieldRegeneration> Fields,
@@ -93,25 +104,43 @@ public static class TuneRegenerator
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var db = Content(recipe, repoRoot);
-        var checkedIn = db.GetTune(recipe.Tune);
-        var names = recipe.Steps.Select(s => FieldOf(s.Calibrator)).Distinct().ToList();
-        foreach (var field in names)
-            if (recipe.HandAuthored.Contains(field)) throw new InvalidDataException($"{recipe.Tune}: '{field}' is listed as hand-authored and calibrated.");
-
-        var doc = RunSteps(db, recipe, checkedIn);
-        var again = names.Any(f => !SameValues(Values(checkedIn, f), Values(doc, f))) ? RunSteps(db, recipe, doc) : doc;
-        var fields = new List<FieldRegeneration>();
-        foreach (var field in names)
-        {
-            var kept = SettleTwoCycles(Values(checkedIn, field), Values(doc, field), Values(again, field), out int oscillating, out int unsettled);
-            doc = WithValues(doc, field, kept);
-            fields.Add(new FieldRegeneration(field, Values(checkedIn, field), kept, oscillating, unsettled));
-        }
+        var settled = Settle(db, recipe, db.GetTune(recipe.Tune));
+        var doc = settled.Document;
 
         var audit = new List<string>();
         if (recipe.HandAuthored.Contains(IgnitionAdvance)) audit.AddRange(AuditSpark(db, recipe, doc));
 
-        return new TuneRegeneration(recipe, doc, fields, audit, FileRoundTrips(recipe, repoRoot, db), watch.Elapsed.TotalSeconds);
+        return new TuneRegeneration(recipe, doc, settled.Fields, audit, FileRoundTrips(recipe, repoRoot, db), watch.Elapsed.TotalSeconds);
+    }
+
+    /// <summary>
+    /// The driver's core, shared by <see cref="Run"/> and the tune generator: the recipe's steps on <paramref name="start"/>
+    /// (with <paramref name="db"/>'s engine, the recipe's build and fuel); where that changes anything, a second pass on its own
+    /// output, and every cell that returns to its starting value (a rounding 2-cycle) keeps it. <see cref="SettledTune.Reproduced"/>
+    /// is what <c>carsim regenerate-tunes</c> reports: <paramref name="start"/> is a fixed point of its recipe.
+    /// </summary>
+    public static SettledTune Settle(ContentDatabase db, TuneRecipe recipe, TuneDocument start)
+    {
+        var names = CalibratedFields(recipe);
+        var doc = RunSteps(db, recipe, start);
+        var again = names.Any(f => !SameValues(Values(start, f), Values(doc, f))) ? RunSteps(db, recipe, doc) : doc;
+        var fields = new List<FieldRegeneration>();
+        foreach (var field in names)
+        {
+            var kept = SettleTwoCycles(Values(start, field), Values(doc, field), Values(again, field), out int oscillating, out int unsettled);
+            doc = WithValues(doc, field, kept);
+            fields.Add(new FieldRegeneration(field, Values(start, field), kept, oscillating, unsettled));
+        }
+        return new SettledTune(doc, fields);
+    }
+
+    /// <summary>The fields a recipe's steps write, in step order; a field also listed as hand-authored is a manifest error.</summary>
+    public static IReadOnlyList<string> CalibratedFields(TuneRecipe recipe)
+    {
+        var names = recipe.Steps.Select(s => FieldOf(s.Calibrator)).Distinct().ToList();
+        foreach (var field in names)
+            if (recipe.HandAuthored.Contains(field)) throw new InvalidDataException($"{recipe.Tune}: '{field}' is listed as hand-authored and calibrated.");
+        return names;
     }
 
     /// <summary>
@@ -222,12 +251,19 @@ public static class TuneRegenerator
 
     // ---- Calibration helpers ------------------------------------------------------------------------------------------
 
-    private static EngineSimulation Sim(ContentDatabase db, TuneRecipe recipe, TuneDocument doc)
+    /// <summary>The build a recipe calibrates: the engine's resolved stock assembly with the recipe's swaps and additions.</summary>
+    public static EngineAssembly BuildAssembly(ContentDatabase db, TuneRecipe recipe)
     {
         var assembly = EngineAssembly.CreateStock(db.GetEngine(recipe.Engine), db, new PartInstanceFactory());
         var factory = new PartInstanceFactory(1_000_000);
         foreach (var pair in recipe.Build?.Swap ?? Array.Empty<string[]>()) Swap(assembly, pair[0], db.GetPart(pair[1]), factory);
         foreach (var pair in recipe.Build?.Add ?? Array.Empty<string[]>()) Check(assembly.Install(pair[0], factory.Create(db.GetPart(pair[1]))));
+        return assembly;
+    }
+
+    private static EngineSimulation Sim(ContentDatabase db, TuneRecipe recipe, TuneDocument doc)
+    {
+        var assembly = BuildAssembly(db, recipe);
         var tune = EcuTune.FromDocument(doc);
         var config = EngineConfiguration.Build(assembly, db.GetFuel(recipe.Fuel), new ValidationContext(tune.RevLimitRpm, tune.MaxBoostTargetKpa)).GetOrThrow();
         return new EngineSimulation(config, tune, EngineState.Warm());
