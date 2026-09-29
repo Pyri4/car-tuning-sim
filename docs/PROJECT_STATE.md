@@ -8,7 +8,7 @@ A machine-readable summary lives beside it: [project-state.json](project-state.j
 |---|---|
 | **Snapshot date** | 2026-09-29 |
 | **`main` at snapshot** | `c07804a` (Merge pull request #8, Engine Authoring Factory 1.0 Phases 1 & 2) |
-| **This document written on** | branch `claude/jolly-mccarthy-ze2vps` (docs only, on top of `c07804a`; not merged when written) |
+| **This document written on** | branch `claude/jolly-mccarthy-ze2vps` (docs only, on top of `c07804a`); opened as [PR #9](https://github.com/Pyri4/car-tuning-sim/pull/9), not merged when written |
 | **Current milestone** | Engine Authoring Factory 1.0 — Phases 1 and 2 merged; **Phase 3 not started** |
 | **Next action** | §13 |
 
@@ -228,7 +228,8 @@ source file (working tree verified clean of non-doc changes afterwards).
 
 ## 9. Git and GitHub state at the snapshot
 - `main` = `c07804a` (PR #8 merged 2026-09-29). CI green.
-- Open PRs: **none**. Open issues: **none**.
+- Open PRs: only [PR #9](https://github.com/Pyri4/car-tuning-sim/pull/9) (this handoff: `docs/PROJECT_STATE.md`,
+  `docs/project-state.json`, an AGENTS.md pointer; docs only). Open issues: **none**.
 - Every remote branch (`claude/*`) is fully contained in `main`; none carries unmerged work.
 - Previous gate reports that say "nothing is merged / no PR open" describe the moment they were written.
 

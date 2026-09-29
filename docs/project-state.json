@@ -6,7 +6,8 @@
     "date": "2026-09-29",
     "main_commit": "c07804aded2031bea5e03007906cd27371a8df12",
     "main_commit_subject": "Merge pull request #8 from Pyri4/claude/busy-curie-dx4vz2",
-    "written_on_branch": "claude/jolly-mccarthy-ze2vps"
+    "written_on_branch": "claude/jolly-mccarthy-ze2vps",
+    "handoff_pr": 9
   },
   "project": {
     "name": "Car Tuning Sim",
@@ -80,7 +81,7 @@
     "ci_main": { "run": 79, "url": "https://github.com/Pyri4/car-tuning-sim/actions/runs/36545578490", "conclusion": "success", "mutation_job": "manual-only, skipped" },
     "skills_consistency": { "local": "not run", "ci": "success on main run 79" }
   },
-  "github": { "open_prs": [], "open_issues": [], "unmerged_branches": [] },
+  "github": { "open_prs": [ { "number": 9, "branch": "claude/jolly-mccarthy-ze2vps", "scope": "handoff docs only" } ], "open_issues": [], "unmerged_branches": [] },
   "intake_gas_dynamics_constants": {
     "source": "src/CarSim.Core/Simulation/IntakeGasDynamics.cs",
     "TunedFrequencyRatio_K": 2.1,
