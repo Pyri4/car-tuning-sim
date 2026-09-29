@@ -44,6 +44,11 @@ jobs:
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- check-engine kestrel_k20 --strict 1
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- check-engine isar_m54
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- check-engine syn_v6_tt --mods content/test
+      - name: Baseline tune generation (generate-tune; exit 0 = generated, 2 = refused) — ENGINE_AUTHORING_GUIDE.md §6b
+        run: |
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- generate-tune kestrel_k20 --fuel gasoline_95 --out "$RUNNER_TEMP/k20.json"
+          dotnet run --project tools/CarSim.Cli --no-build -c Release -- generate-tune kestrel_k20 --fuel gasoline_95 --out "$RUNNER_TEMP/k20.json" --check 1 | tee gen-check.log
+          grep -q "OUTPUT  UNCHANGED" gen-check.log
       - name: Verification tools (fingerprint from the CLI, tune-regeneration driver) — docs/VERIFICATION.md
         run: |
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- fingerprint --case k20_stock_95,m54_stock_98

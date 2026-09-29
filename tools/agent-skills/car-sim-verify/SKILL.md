@@ -35,9 +35,11 @@ A small model never re-baselines, skips, loosens or deletes a check to get green
    - `dotnet run --project tools/CarSim.Cli -c Release -- validate`
    - `dotnet run --project tools/CarSim.Cli -c Release -- validate --mods content/test`
 4. **CLI smoke** (what CI runs): sweeps of `kestrel_k20`, `isar_m54 --fuel gasoline_98`, and with `--mods content/test`
-   an `inspect syn_v8_ohv` and a `sweep syn_v6_tt --fuel gasoline_98`, and `check-engine` on `kestrel_k20 --strict 1`,
-   `isar_m54` and `syn_v6_tt --mods content/test` (see `.github/workflows/ci.yml`). For content changes, run
-   `check-engine` on every engine touched.
+   an `inspect syn_v8_ohv` and a `sweep syn_v6_tt --fuel gasoline_98`, `check-engine` on `kestrel_k20 --strict 1`,
+   `isar_m54` and `syn_v6_tt --mods content/test`, and `generate-tune kestrel_k20 --fuel gasoline_95` (see
+   `.github/workflows/ci.yml`). For content changes, run `check-engine` on every engine touched; for a change to the
+   generator, the calibrators or an engine's parts, `generate-tune <engine> --fuel <fuel>` too (exit 0; with `--out` and
+   again with `--check 1` it must say UNCHANGED).
 5. **Godot headless smoke tests** for engine, gameplay or UI changes (Godot 4.7.2 .NET; if `godot` is not installed,
    download the official build from the URL in `.github/workflows/ci.yml`, then `dotnet build game/CarTuningSim.csproj`
    and `godot --headless --path game --import` once):
@@ -51,7 +53,8 @@ A small model never re-baselines, skips, loosens or deletes a check to get green
    case, section and key numbers. For the full comparison: `carsim fingerprint --dump before/` in a worktree of the base
    commit, `--dump after/` on yours, `carsim fingerprint-diff before after`. If output moves on purpose, it is a
    documented generic correction: re-baseline with `carsim fingerprint --write tests/baselines/fingerprint.txt` and say
-   what moved and why. Tunes: `carsim regenerate-tunes` checks them against their recipes. A new invariant gets a
+   what moved and why. Tunes: `carsim regenerate-tunes` checks them against their recipes (expect every tune
+   reproduced); a generated tune is a fixed point of its recipe by construction (`TuneGeneratorV8*Tests`). A new invariant gets a
    mutant in `tools/CarSim.MutationCheck/mutations.json` (`dotnet run --project tools/CarSim.MutationCheck -c Release --
    --only <id>`). See docs/VERIFICATION.md.
 7. **CI** after pushing: read the run's jobs (core, CLI steps, Godot) and report the conclusion. A red run on a branch

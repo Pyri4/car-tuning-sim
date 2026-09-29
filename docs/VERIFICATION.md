@@ -8,6 +8,7 @@ None of them is used by the game.
 |---|---|---|
 | Regression fingerprint | Did any output of the K20, the M54 or a synthetic engine move, anywhere? | `dotnet test` (always); `carsim fingerprint` |
 | Tune regeneration driver | Are the shipped tables what their recipes produce? Regenerate them after a physics change. | `carsim regenerate-tunes` |
+| Tune generator | A deterministic baseline tune for an engine's stock build, from its content alone plus a policy tune (Engine Authoring Factory 1.0, Phase 3) | `carsim generate-tune <engine> --fuel <id>` |
 | Mutation harness | Does each guarding test fail on the bug it guards? | `dotnet run --project tools/CarSim.MutationCheck -c Release` |
 | Acceptance tests defined before the physics | The behaviour a physics change must deliver, written before the code (pending until it lands; none pending now — Intake Gas Dynamics 2.0's five are facts since Phase 1). | `dotnet test --filter Milestone=IntakeGasDynamics2`; pending ones with `CARSIM_RUN_PENDING_ACCEPTANCE=1` |
 | Stage derivation (A-D1) | The effective lower stage of a two-stage intake whose switch speed is sourced, from the gain functions alone | `carsim derive-stage <engine> --switch <rpm>` |
@@ -127,9 +128,35 @@ The Phase 0 table overstated some differences, for two reasons:
   on a second pass.
 - **Recipe order.** `syn.r6`'s VE looked reproduced only because the recipe measured it before moving the switch speed.
 
+## Tune generation
+`carsim generate-tune` (`TuneGenerator`, ENGINE_AUTHORING_GUIDE.md §6b) is built on the driver above: it runs
+`check-engine` (errors refuse), sets the ECU's beliefs from the build's derived values, its injectors and the explicit
+fuel, keeps a policy tune's hand-authored values, and runs the manifest's recipe (or the manifest's rule applied to the
+hardware) through `TuneRegenerator.Settle` — the driver's own core — until a pass reproduces every calibrated value. So
+a generated tune is a fixed point of its recipe by construction: regenerating it gives it back.
+
+Guarantees and how they are checked:
+- **Determinism:** the same content and request give the same bytes (tune file, `.recipe.jsonc` record, report); no
+  timestamp, path or machine value. `TuneGeneratorV8DeterminismTests` generates the synthetic V8 twice;
+  `generate-tune … --out <file> --check 1` exits 0 when the file already holds exactly this output, 4 when not.
+- **Regeneration:** `TuneGeneratorV8RegenerationTests` runs the recipe again on the generated tune, independently of the
+  generator's last pass, and requires every value reproduced.
+- **Validity:** the tune format's rules, beliefs equal to the build's and the fuel's, a rev limit the ECU honours, the
+  tune-dependent assembly rules and `check-engine`'s tune ↔ build rules, and a byte-exact round trip through the loader;
+  the generated V8 tune also passes `check-engine` as the engine's stock tune and holds its λ targets at full load.
+- **Safety:** the generator overwrites only its own untouched output (the record's SHA-256 must still match); never a
+  hand-authored tune. It never writes into `content/`: registering a generated tune as shipped content is a manual
+  step.
+- **Cost:** a generation runs the recipe 2–4 times (the synthetic V8: ≈ 85 s single-threaded; the three V8 test
+  classes ≈ 3.5 CPU-minutes, ≈ 2 minutes in parallel).
+
+The checked-in tunes are not generated tunes. Their beliefs were entered by hand (e.g. the matrix's fuel density 0.745,
+RON 91's, on tunes calibrated on RON 95 and 98), so generating their engines gives slightly different tables; the
+Phase 3 gate report lists the differences. `regenerate-tunes` still reproduces all 12 with their own beliefs.
+
 ## Mutation harness
 `tools/CarSim.MutationCheck/mutations.json` lists known bugs as exact text replacements and the tests that must fail
-on each (43 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
+on each (59 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
 floor, identity and cylinder-count branches, the dropped cam table, a phaser without effect, the engine-architecture
 hacks — first bank's air or geometry for all, unshared shared elements, four hard-coded cylinders, interfaces from any
 bank, one turbo state — and, for Intake Gas Dynamics 2.0, an inert runner, a runner that never switches, no switch
@@ -141,8 +168,14 @@ temperature ignored; from Engine Authoring Factory 1.0 Phase 1: any provenance t
 inheriting provenance for a value it changes, an engine variant replacing its family's stock parts, an unmodelled
 feature without its approximation; from Phase 2, check-engine: a required stock part, the interfaces, unrecorded
 provenance, an abstract base, a modelled feature without hardware and a tune/build displacement mismatch each ignored, an
-unknown feature accepted, a slot on a nonexistent bank accepted). Before Intake Gas Dynamics Phase 1: 26 of 26 caught; after: 31 of 31 (≈ 15 minutes);
-the four authoring-schema mutants: 4 of 4; the eight check-engine mutants: 8 of 8.
+unknown feature accepted, a slot on a nonexistent bank accepted; from Phase 3, derived values and generate-tune: a
+rounded second displacement, the first bank's chamber for every bank, and a generator that takes the displacement or
+the injector flow from the policy tune, builds the parent engine or reads the parent part instead of the resolved
+variant, bypasses check-engine, calibrates on the manifest's fuel or takes the fuel beliefs from the policy, ignores
+the manifest's recipe, drops the cam step from the hardware rule, skips validation, stops after one pass, overwrites a
+hand-authored or hand-edited file, or branches on an engine id). Before Intake Gas Dynamics Phase 1: 26 of 26 caught;
+after: 31 of 31 (≈ 15 minutes); the four authoring-schema mutants: 4 of 4; the eight check-engine mutants: 8 of 8; the
+sixteen Phase 3 mutants: 16 of 16 (all 59: 59 of 59, ≈ 21 minutes).
 
 For each entry the harness checks the `find` text still occurs exactly once (a stale entry is an error), proves the
 guarding tests pass unmutated, injects the mutant, rebuilds, requires at least one failure, and restores the file with

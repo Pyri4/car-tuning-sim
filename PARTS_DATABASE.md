@@ -119,7 +119,10 @@ field, a `target` on anything but `fitted`, an unknown `source`, and a key that 
 The model derives the rest deterministically at load or build time (displacement, compression ratio, clearance volume,
 runner tuned speeds), so derived quantities are not fields and cannot be authored. A *derived* provenance record is for
 an input the author computed outside the model (a bowl volume solved from a published CR, an A-D1 stage). Regenerating
-such inputs with tools is later work (docs/milestones/ENGINE_AUTHORING_FACTORY_1.md).
+such inputs with tools is later work (docs/milestones/ENGINE_AUTHORING_FACTORY_1.md). `carsim check-engine` (DERIVED) and
+`carsim inspect` list the derived values of the stock build and the inputs they rest on (authored or defaulted); a
+tune's `displacement_cc` is the ECU's belief, validated against the derived displacement, not a second source of it
+(`carsim generate-tune` sets it from the derived value).
 
 ### Set parts
 Pistons, connecting rods and injectors are sold and installed as a set (`count` must equal the

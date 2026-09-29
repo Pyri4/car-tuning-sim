@@ -11,8 +11,9 @@ checklist, not a replacement. Content scale is a first-class goal (GAME_VISION.m
 little unique work the engine needed — ideally zero code. Engine Authoring Factory 1.0
 (docs/milestones/ENGINE_AUTHORING_FACTORY_1.md) is turning these steps into commands, phase by phase. Available now:
 `provenance` and `sources`, `identity` with declared features, and `extends` for engine and part variants
-(PARTS_DATABASE.md), and `carsim check-engine` (guide §6a). Not yet: `slot_layout` and `generate-tune` (calibrate by
-hand with the calibrators, step 6). The loader rejects unknown fields.
+(PARTS_DATABASE.md), `carsim check-engine` with the derived values (guide §6a), and `carsim generate-tune` (guide §6b).
+Not yet: `slot_layout` (slot lists are written by hand) and registering a generated tune as shipped content (manual,
+step 6). The loader rejects unknown fields.
 
 The workflow:
 
@@ -24,7 +25,7 @@ The workflow:
       ↓
     PASS (exit 0)
       ↓
-    calibrate the tune (step 6; tune generation is a later phase)
+    write the policy tune; carsim generate-tune <id> --fuel <fuel> --out <file.json>   (step 6)
 
 ## Model tiers (AGENTS.md, "Model routing")
 Each step names the lowest tier that can do it reliably: **T1** small, **T2** medium, **T3** strongest. A small model
@@ -68,13 +69,28 @@ wish to change a constant, tolerance, test or regression baseline. Never invent 
    - Exit 0 means no errors. Fix every error and read every warning, including unmodelled features, provenance gaps,
      and a stock tune that disagrees with the build.
    - Record the number of check iterations in the cost report.
-   - `inspect <engine-id>` gives the detailed geometry and runner-stage view.
-6. **Calibrate the base tune with the dev calibrators** (T1 runs them in the guide's order) — never hand-fit a curve:
-   hardware schedule first (`calibrate-cams` with a phaser; switch speeds for switched hardware), then `calibrate-ve` →
-   `calibrate-spark` → `calibrate-ve`, each with `--fuel <fuel>`; paste the printed tables; say in the tune's
-   `description` how it was made, and add the recipe to `tools/CarSim.Verification/tune-manifest.json` (a test requires
-   one per tune; `carsim regenerate-tunes --tune <id>` then reproduces it). λ and boost targets are hand-authored and
-   listed as such; a boost target comes from a source or the owner, never a guess.
+   - `inspect <engine-id>` gives the detailed geometry and runner-stage view. The DERIVED section (every entry with
+     `--verbose 1`) shows what the model derives from your inputs — displacement, volumes and compression per bank,
+     piston speed and airflow at the limit, runner tuned speeds — and which inputs are model defaults. Check them
+     against the reference (T1 compares; **T3** decides what a disagreement means). Never author a derived value.
+6. **Generate the base tune** — never hand-fit a curve (guide §6b):
+   - **Policy tune** (T1 writes it from sources; **T3** decides any value no source gives): the values no calibrator
+     produces — rev limit and idle (reference data), table axes, λ targets, a boost target on a turbo build (from a
+     source or the owner, never a guess). Its VE and spark tables may be placeholders. Name it as the engine's
+     `stock_tune` (or pass `--policy <tune-id>`).
+   - **Generate** (T1): `dotnet run --project tools/CarSim.Cli -c Release -- generate-tune <engine-id> --fuel <fuel>
+     [--mods <dir>] --out <file.json>`. The fuel is always explicit. It refuses an engine that fails `check-engine`,
+     sets the ECU's beliefs from the build and the fuel, runs the recipe with the dev calibrators until it settles and
+     validates the result. Exit 0 = generated; 2 = refused (read RESULT: each refusal has a code and a reason —
+     **escalate** NOT GENERATABLE and `not_settled` to T3 rather than working around them); 4 = `--check 1` differs.
+   - Read FIELDS and NOT GENERATED: every value is *derived*, *calibrated* or *hand-authored*, and each NOT MODELLED
+     feature has no tune control. Run it again with `--check 1`: it must say UNCHANGED (determinism).
+   - **Register it** (T1, manual until a later phase): move the tune into the engine's content layer (it keeps the
+     policy tune's id, so replace the policy file or give `--id`), add its recipe to
+     `tools/CarSim.Verification/tune-manifest.json` from the `.recipe.jsonc` record (steps, fuel, hand-authored; a test
+     requires one recipe per tune), and check `carsim regenerate-tunes --tune <id>` reproduces it.
+   - A tune for a modified build (swaps, turbo kits) is still a manifest recipe with `build`, run with
+     `regenerate-tunes`; the manual calibrate-* route (guide §6 step 6) remains for it.
 7. **Measure** (T1 runs `sweep <engine-id> --fuel <fuel>`; **T3 classifies any miss**). For a real engine, compare
    against bands stated in advance. If it misses, classify why (content? missing capability? shared model
    simplification?) and document it. **Never change a shared model constant to hit one engine's numbers.**

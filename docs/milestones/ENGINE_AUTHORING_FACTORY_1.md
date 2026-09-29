@@ -1,13 +1,16 @@
 # Milestone: Engine Authoring Factory 1.0
 
 **Status: AUTHORIZED phase by phase.**
-- **Phase 1** (content schema + provenance foundation) passed its gate
+- **Phase 1** (content schema + provenance foundation) passed its gate and is merged (PR #8)
   ([PHASE1_GATE_REPORT.md](engine-authoring-factory-1/PHASE1_GATE_REPORT.md)). It covers the B1 schema below except
   slot layouts.
-- **Phase 2** (assembly-aware validation, `carsim check-engine`: the B2 check and part of B3) is implemented and at its
-  gate ([PHASE2_GATE_REPORT.md](engine-authoring-factory-1/PHASE2_GATE_REPORT.md)).
-- **Not started:** tune generation (C1), data-driven verification (C2), the rest of B3 (`list`, `schema`), the pilot (D)
-  and the milestone gate (E).
+- **Phase 2** (assembly-aware validation, `carsim check-engine`: the B2 check and part of B3) passed its gate and is
+  merged (PR #8) ([PHASE2_GATE_REPORT.md](engine-authoring-factory-1/PHASE2_GATE_REPORT.md)).
+- **Phase 3** (derived values — the B3 derived-value part — and deterministic baseline tune generation, C1) is
+  implemented and at its gate ([PHASE3_GATE_REPORT.md](engine-authoring-factory-1/PHASE3_GATE_REPORT.md)).
+- **Not started:** slot layouts (rest of B1), `validate --engines`, the rest of B3 (`list`, `schema`), data-driven
+  verification (C2), the anti-hack extension (C3, beyond the generator's audit scope), docs and skills as the full
+  pipeline (C4), the pilot (D) and the milestone gate (E).
 
 It was defined by the strategy reset of 2026-09-28 from the audit
 [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](../ENGINE_AUTHORING_FACTORY_AUDIT.md), which is its evidence base. Section
@@ -82,6 +85,10 @@ Each phase ends green (build, tests, both content validations, fingerprint) and 
 ### B3 — Derived values and discovery (audit §9.6, §9.10–9.11)
 - `inspect` gains derived values (mean piston speed at the limit, firing interval and bank phasing, theoretical
   airflow, per-cylinder volumes), the defaulted fields, features and a provenance summary.
+  - *Done in Phase 3* (`EngineDerivedValues`, `check-engine` DERIVED, `inspect`): every value but the banks' firing
+    phasing, which is reported **unavailable** (crank-pin phasing is not in the schema); the mean firing interval is
+    derived. Features and provenance were added to `inspect` in Phase 1; the defaulted fields are in `check-engine
+    --verbose` (Phase 2).
 - `carsim list` (the library) and `carsim schema <category>` (fields, units, required and defaults, from the spec
   types).
 - New commands live in their own files; this starts splitting `Program.cs`.
@@ -96,6 +103,17 @@ Each phase ends green (build, tests, both content validations, fingerprint) and 
   - the existing driver runs it.
 - **Proof:** regenerating a matrix tune from nothing but its engine reproduces its checked-in calibrated tables
   (hand-authored tables excepted, and listed); determinism across two runs.
+- *Phase 3 (the owner's brief supersedes the lines above where they differ):*
+  - `carsim generate-tune <engine> --fuel <id> [--policy <tune>] [--id] [--out <file.json>] [--check 1] [--strict 1]`;
+    `--out` replaces `--write 1` (a new file plus a `.recipe.jsonc` record; never over a file the generator did not
+    write), so no generated recipe is added to `tune-manifest.json` yet.
+  - **No skeleton is generated:** axes, rev limit, idle and λ come from a *policy tune* (the stock tune by default),
+    because no rule for them exists without inventing values (a named λ policy needs an owner decision). Beliefs are
+    derived; the recipe is the manifest's or the manifest's rule applied to the hardware.
+  - **Proof as delivered:** determinism across two runs (byte-identical tune and record), regeneration identical (the
+    recipe on the generated tune reproduces it), the synthetic V8 end to end. Regenerating a matrix tune does **not**
+    reproduce its checked-in tables exactly: the generator sets the ECU's beliefs from the build and the fuel, and the
+    checked-in tunes carry hand-entered beliefs that differ slightly (see the gate report, "K20 and M54 stability").
 
 ### C2 — Verification from data (audit §9.8)
 - Engine verification profiles: fuel, fingerprint profile, smoke scenarios, reference figures with provenance and

@@ -78,8 +78,10 @@ content/test/              test-only content layers (the synthetic engine matrix
 src/CarSim.Core/           game-engine-agnostic simulation + domain model (NO Godot references)
 src/CarSim.Gameplay/       garage, economy, scenarios, save/load (NO Godot references)
 tests/CarSim.Core.Tests/   xUnit tests for the core
-tools/CarSim.Cli/          headless command-line tool (inspect, validate, dyno, fingerprint, regenerate-tunes) built on the core
-tools/CarSim.Verification/ regression fingerprint and tune-regeneration driver (+ tune-manifest.json); CLI and tests only
+tools/CarSim.Cli/          headless command-line tool (inspect, validate, check-engine, dyno, fingerprint, regenerate-tunes,
+                           generate-tune) built on the core
+tools/CarSim.Verification/ regression fingerprint, tune-regeneration driver (+ tune-manifest.json) and tune generator;
+                           CLI and tests only
 tools/CarSim.MutationCheck/ mutation harness (mutations.json): injects known bugs, proves the guarding tests fail
 tests/baselines/           checked-in regression fingerprint
 game/                      Godot 4.7 project (presentation layer); references CarSim.Core
@@ -168,10 +170,13 @@ need Forward+.
 
 ### Tools
 - `tools/CarSim.Cli` – validate content, check an engine as an authorable whole (`check-engine`, built on
-  `EngineCheck` in the core: the stock assembly, topology, interfaces, geometry, features, provenance coverage, the stock
-  tune's agreement with the build), inspect assemblies, run a dyno sweep and print/CSV-export
-  results, generate base maps for a tune (`calibrate-cams`, `calibrate-ve`, `calibrate-spark`) and measure the step
-  cost of any family (`bench`). Commands take an engine-family id (required once more than one family is loaded).
+  `EngineCheck` in the core: the stock assembly, topology, interfaces, geometry, derived values
+  (`EngineDerivedValues`), features, provenance coverage, the stock tune's agreement with the build), inspect
+  assemblies, run a dyno sweep and print/CSV-export results, generate base maps for a tune (`calibrate-cams`,
+  `calibrate-ve`, `calibrate-spark`), generate a whole baseline tune for an engine's stock build (`generate-tune`,
+  `TuneGenerator` in `tools/CarSim.Verification`: check → derived beliefs → the manifest's or the hardware's recipe on
+  the regeneration driver until it settles → validation → the tune format plus a record; never over a file it did not
+  write) and measure the step cost of any family (`bench`). Commands take an engine-family id (required once more than one family is loaded).
   Used for development and as a regression harness; unlike the game UI it may print model internals (best-torque
   timing, knock limit).
 - Dyno, telemetry and debugging views in the game UI. *(in progress)*
@@ -403,3 +408,4 @@ an older tune gets the installed injectors' dead time and the save's fuel densit
 | 2026-09-28 | Model routing for agents: the least capable model that reliably does a task; small models gather evidence and enter data, stronger models decide; escalate instead of guessing (AGENTS.md, "Model routing"; per-step tiers in the skills) | Content authoring at scale is repetitive, schema-bound work that small models can do under a validator; architecture, physics and acceptance decisions are not |
 | 2026-09-28 | `check-engine` (Engine Authoring Factory 1.0, Phase 2): an assembly-aware report (`EngineCheck`) separate from content loading. It builds the stock assembly slot by slot, reuses `EngineTopology`, `AssemblyValidator` (its codes mapped to report sections), `EngineGeometry`, `EngineCapabilities` and `FeatureReport`, and adds only authoring rules: identity, provenance coverage, defaults, the stock tune against the build, plausibility heuristics, vehicle fit. Exit 0/2/3 | Loading must keep accepting isolated parts (a mod of parts, a test fixture), so whole-engine rules cannot live in the loader. Reusing the validator keeps one set of physical rules; the report is data so tests assert reasons, not exit codes. Placed in the core so the engine-agnostic source audit covers it |
 | 2026-09-28 | Authoring schema (Engine Authoring Factory 1.0, Phase 1): provenance as a map beside the spec (`provenance`, keyed by field; the value keeps its unit-suffixed field) with sources as their own document kind; `extends` for engines and parts, resolved after all layers into plain definitions (`stock_parts` and `identity` merged by entry, `spec` by field, anything else replaced; `abstract` never inherited); a variant inherits provenance only for values it does not restate; `identity.features` from a fixed vocabulary in code, unmodelled ones requiring an approximation | Nested `{value, provenance}` objects would have changed every spec's schema and every reader for no simulation benefit. Resolving variants in the loader keeps the physics, saves and game unaware of them, which the regression fingerprint confirms (identical). The feature vocabulary lives in code because what the physics models is a fact about the code |
+| 2026-09-29 | Derived values and baseline tune generation (Engine Authoring Factory 1.0, Phase 3). `EngineDerivedValues` (core) is a view over `EngineGeometry` and `RunnerStageConfiguration` — no equation restated — with a status per entry (authored, defaulted, derived, validated, mismatch, unavailable); `check-engine` shows it (DERIVED) and validates the stock tune's `displacement_cc` belief against it; the tune ↔ build rules became `EngineCheck.CheckTune`, shared with the generator. `carsim generate-tune` (`TuneGenerator`, verification tools) orchestrates what exists: check-engine gate, explicit fuel, beliefs from the build and the fuel, hand-authored policy from a policy tune, the manifest's recipe (else the manifest's rule applied to the hardware), `TuneRegenerator.Settle` until a pass reproduces the tune, validation, the tune format plus a `.recipe.jsonc` record (a one-recipe manifest with a `generated` block and the output's SHA-256); it overwrites only its own untouched output. The source audit now covers `tools/CarSim.Verification/Calibration` | One source per derived quantity keeps a tune belief a belief (validated, not a second displacement). Reusing the driver's core makes "regeneration reproduces it" true by construction and keeps one calibration code path. λ targets, rev limit, idle, axes and boost are policy with no calibrator, so they come from an authored tune and are reported NOT GENERATABLE rather than invented. The record sits beside the tune (not in the tune schema or the game's saves) and in the manifest's own format; its extension keeps content loaders from reading it. The generator lives beside the driver it runs, so the audit was extended to it |

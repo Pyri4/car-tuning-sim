@@ -22,8 +22,9 @@ engine cannot be expressed as data, the model is missing a *capability*, and the
 | Which physical features exist (capabilities) | Which features this engine has (its parts) |
 
 Content scale is a first-class goal (GAME_VISION.md): the measure of this guide is how little unique work the next
-engine needs. What makes that cheaper today, and what is proposed, is in docs/ENGINE_AUTHORING_FACTORY_AUDIT.md and
-docs/milestones/ENGINE_AUTHORING_FACTORY_1.md (proposed; not yet in the code).
+engine needs. What makes that cheaper, and what is still planned, is in docs/ENGINE_AUTHORING_FACTORY_AUDIT.md and
+docs/milestones/ENGINE_AUTHORING_FACTORY_1.md (authorized phase by phase; Phases 1–3 implemented: the authoring schema,
+`carsim check-engine`, derived values and `carsim generate-tune`).
 
 ---
 
@@ -205,6 +206,9 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
    **Authored vs derived:** author the physical inputs; the model derives the rest (displacement, compression ratio,
    clearance volume, runner tuned speeds), and those are not fields at all. Do not derive compression ratio: author the
    volumes and let the model compute it. A `derived` record is for an *input* you computed with a named method.
+   `check-engine` and `inspect` list the derived values and the inputs they rest on (§6a, DERIVED). A tune's
+   `displacement_cc` is not a second displacement: it is the ECU's *belief*, validated against the derived value (and
+   set from it by `generate-tune`).
 
    **Declare the real engine's hardware** in `identity.features`, including what the simulator does not model (direct
    injection, exhaust cam phasing, a hot-film MAF…). An unmodelled feature needs an `approximation` saying what stands
@@ -225,7 +229,12 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
    note by section. Fix every error; read every warning (valve float, coil bind, quench, compression, interfaces,
    unmodelled features, missing provenance). Continue to the tune only when it passes (exit 0). `carsim inspect <id>`
    remains the detailed view (runner stages, geometry).
-6. **Calibrate the base tune with the dev tools** — never by hand-fitting a curve:
+6. **Generate the base tune: `carsim generate-tune <id> --fuel <fuel> [--mods <dir>] --out <file.json>`** (§6b). It
+   runs this step's calibrators for you, on the resolved stock build, until the tune settles, and sets the ECU's beliefs
+   from the build and the fuel. What it cannot generate stays yours: write a **policy tune** first — the hand-authored
+   values no calibrator produces (λ targets, rev limit, idle, table axes, a boost target on a turbo build; its VE and
+   spark tables may be placeholders) — and name it as the engine's `stock_tune` or with `--policy`. The manual route
+   below is what it automates; it is still how a tune for a modified build (a recipe with `build`) is made:
    - start from a tune with sensible limits (rev limit, idle, λ targets, injector flow, displacement, fuel density)
      and any table axes you want;
    - first the hardware schedule the maps are measured on:
@@ -238,8 +247,8 @@ Hardware without the matching ECU output is a **warning**, not an error, and the
    - `calibrate-ve` again (spark changes exhaust temperature and residuals).
    A switch speed moved after the fuel map leaves the VE cells between the old and the new speed measured on the other
    stage (it happened to `syn_i6_vis`; `TuneRegenerationTests` now checks every recipe's order).
-   The tune's `description` should say how it was made. The synthetic matrix was calibrated this way (its switch speeds
-   were re-set in the schedule-first order by the 2026-09-27 regeneration).
+   The tune's `description` should say how it was made (`generate-tune` writes it). The synthetic matrix was calibrated
+   this way (its switch speeds were re-set in the schedule-first order by the 2026-09-27 regeneration).
    Record the recipe in `tools/CarSim.Verification/tune-manifest.json` (steps, fuel, build, hand-authored tables; a test
    requires one per tune) so `carsim regenerate-tunes` can reproduce and regenerate it (docs/VERIFICATION.md).
 7. **Measure.** `carsim sweep <id> --fuel <fuel>`; for a real engine compare against its published figures with
@@ -269,6 +278,7 @@ simulation, and it reuses the generic rules (`EngineTopology`, `AssemblyValidato
 | TOPOLOGY | Bank partition, slot scopes (one part per bank and category), slots on real banks, an acyclic assembly order |
 | INTERFACES | Mounting interfaces bank by bank, valvetrain types, ECU outputs for controllable hardware, which cars take the engine |
 | GEOMETRY | Journal, pin, bore and gasket fits; clearances; compression; derived displacement; plausibility heuristics (bore/stroke 0.6–1.5, rod/stroke 1.4–2.3, mean piston speed ≤ 25 m/s at the limit: warnings) |
+| DERIVED | The derived values (`EngineDerivedValues`): displacement, swept, clearance and cylinder volume and compression ratio per bank, rod and bore/stroke ratios, mean piston speed and theoretical airflow (volume and mass, VE 1, the model's reference ambient) at the stock tune's rev limit, the mean firing interval, each runner stage's tuned speed; the stock tune's `displacement_cc` belief **validated** against the derived displacement (or a **mismatch**). `--verbose` lists every entry with the inputs it rests on (**authored** or **defaulted**) and what is **unavailable** and why (e.g. the banks' firing phasing: crank-pin phasing is not in the schema) |
 | LIMITS | Valve float, crank and flywheel ratings against the rev limit; MAP sensor and boost |
 | FEATURES | Each declared feature: supported, not modelled (warning), missing data (error), undeclared (warning for a real engine) |
 | PROVENANCE | Authored values of the stock parts by type, unrecorded and defaulted counts; fitted values; missing records (warning for a real engine, note otherwise) |
@@ -288,7 +298,63 @@ Exit codes:
 An unmodelled feature declared with its approximation is a warning. Without an approximation it is a load error, and
 so blocking. `--strict` is for content that must be fully modelled and fully sourced.
 
-What stays manual: slot lists (no slot layouts yet), the tune (generation is the next phase), reference comparisons.
+What stays manual: slot lists (no slot layouts yet), the policy tune (λ, rev limit, idle, axes, boost), reference
+comparisons.
+
+**Derived values have one source.** Every derived value is read from the class the simulation itself builds
+(`EngineGeometry`, `RunnerStageConfiguration`) — no equation is restated for reporting — on the resolved assembly, so a
+variant or a swapped part changes them exactly as it changes the engine. The chain is *authored input → derived
+property → consistency check*: an authored claim about a derived property (today the tune's `displacement_cc` belief)
+is validated against it and never becomes a second source. Code: `src/CarSim.Core/Engines/EngineDerivedValues.cs`.
+
+### 6b. `carsim generate-tune`
+`carsim generate-tune <engine-id> --fuel <fuel-id> [--policy <tune-id>] [--id <tune-id>] [--out <file.json>]
+[--check 1] [--strict 1] [--verbose 1] [--manifest <file>] [--mods <dir>]` — a deterministic baseline tune for the
+engine's stock build. It adds no calibration mathematics: it orchestrates `check-engine`, the derived values, the tune
+manifest's recipes and the recalibration driver's core (`TuneRegenerator.Settle`, the same code `regenerate-tunes` runs).
+Code: `tools/CarSim.Verification/Calibration/TuneGenerator.cs`, `tools/CarSim.Cli/GenerateTuneCommand.cs`.
+
+1. **Check.** `check-engine` runs first; any error refuses generation (`--strict 1`: any warning too). So the engine
+   and its variants resolve, the stock parts resolve and install, and the assembly is valid before anything is tuned.
+2. **Fuel.** `--fuel` is required; nothing picks a default (content has no per-engine calibration fuel; the manifest's
+   fuel belongs to its recipe). The fuel sets the spark map's knock limit and the ECU's fuel beliefs.
+3. **Beliefs from the build and the fuel** (origin *derived*): `displacement_cc` = the derived displacement (full
+   precision, the one source), `injector_flow_cc_min` and `injector_dead_time_ms` = the installed injectors' spec,
+   `fuel_stoich_afr` and `fuel_density_kg_l` = the fuel's.
+4. **Policy** (origin *hand-authored*): everything no calibrator produces comes unchanged from the policy tune — the
+   engine's `stock_tune` or `--policy`: λ targets, rev limit, idle, knock control, table axes, a boost target, and any
+   table its manifest recipe lists as hand-authored (the K20's factory spark map). The report lists each as NOT
+   GENERATABLE with the reason. An engine without a policy tune is refused (`no_policy_tune`): these values are never
+   guessed and no named λ policy exists.
+5. **Recipe** (origin *calibrated*): the tune manifest's recipe for the policy tune when it calibrates this engine's
+   stock build, unchanged (steps and parameters). Otherwise one derived from the hardware by the rule every manifest
+   recipe follows (a test checks it reproduces all of them): `cams` for a phaser the ECU drives, `runner_switch` for a
+   switched intake, `lift_switch` for switched cams, then `ve`, and `spark` → `ve` when the spark map is calibrated.
+   Hardware the ECU cannot drive gets no step (NOT GENERATABLE); a declared feature the simulator does not model has no
+   control to generate (NOT MODELLED).
+6. **Calibration to a fixed point.** The recipe runs, as `regenerate-tunes` runs it, until a further pass reproduces every
+   calibrated value (at most 5 iterations; else `not_settled`). The calibrators run on the build the check validated
+   (`calibration_build_mismatch` otherwise). So regenerating a generated tune gives it back.
+7. **Validation** before and after calibration: the tune format's rules and ranges; the beliefs exactly the build's and
+   the fuel's (`belief_not_derived`); a rev limit the ECU honours (`calibration_rev_limit_above_ecu`: the calibrators
+   treat every column up to the tune's limit as running); the assembly rules that depend on the tune and the tune ↔ build
+   rules of `check-engine` (`EngineCheck.CheckTune`), with their own severities; the written file loads back identical.
+8. **Output.** Without `--out`, a dry run. `--out <file.json>` writes the tune in the existing content format (a layer
+   the loader reads; by default it keeps the policy tune's id, so a later layer replaces the stock tune) and a record
+   `<file>.recipe.jsonc` beside it: a one-recipe tune manifest with a `generated` block (generator and version, policy,
+   recipe source, the resolved assembly slot by slot, every field's origin, what was not generated, iterations, the
+   tune file's SHA-256). No timestamp or path: the same inputs give the same bytes.
+9. **Overwrite policy.** The generator writes over a file only when the record beside it says the generator wrote it and
+   the digest still matches (an untouched output: regeneration). A hand-authored tune, a content file holding a tune, or
+   a generated tune edited since is refused, whatever the options; move it yourself. `--check 1` writes nothing and exits
+   4 when regenerating would change the file.
+
+Exit codes: 0 generated (written, or unchanged); 2 refused; 4 `--check` differs; 1 usage error.
+
+**Not yet:** registering a generated tune as an engine's shipped stock tune (moving it into a content layer and adding
+its recipe to `tune-manifest.json`) is manual; a policy tune is still hand-written (skeleton generation needs owner
+decisions on axes and a named λ policy); only the stock build is generated (a tune for a modified build is a manifest
+recipe with `build`, run by `regenerate-tunes`).
 
 ## 7. Adding a capability (when an engine needs code)
 

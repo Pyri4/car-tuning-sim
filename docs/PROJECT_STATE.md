@@ -6,10 +6,10 @@ A machine-readable summary lives beside it: [project-state.json](project-state.j
 
 | | |
 |---|---|
-| **Snapshot date** | 2026-09-29 |
-| **`main` at snapshot** | `c07804a` (Merge pull request #8, Engine Authoring Factory 1.0 Phases 1 & 2) |
-| **This document written on** | branch `claude/jolly-mccarthy-ze2vps` (docs only, on top of `c07804a`); opened as [PR #9](https://github.com/Pyri4/car-tuning-sim/pull/9), not merged when written |
-| **Current milestone** | Engine Authoring Factory 1.0 — Phases 1 and 2 merged; **Phase 3 not started** |
+| **Snapshot date** | 2026-09-29 (Phase 3 gate) |
+| **`main` at snapshot** | `df9c987` (Merge pull request #9, this handoff document) on top of `c07804a` (PR #8, Phases 1 & 2) |
+| **This document written on** | branch `claude/gallant-gauss-jkbqvi` (Phase 3: implementation `74e7480` + the docs commit on top), **not merged, no PR opened** |
+| **Current milestone** | Engine Authoring Factory 1.0 — Phases 1 and 2 merged; **Phase 3 implemented, at its gate** ([report](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md)) |
 | **Next action** | §13 |
 
 Everything below is verified against the repository and GitHub at the snapshot unless marked **UNVERIFIED** or
@@ -66,15 +66,16 @@ files are authoritative.
 - `src/CarSim.Core` — simulation and domain: `Common`, `Content` (loader, database, provenance, tune documents),
   `Damage`, `Dyno`, `Ecu` (ECU plus the dev calibrators `VeCalibrator`, `SparkCalibrator`, `CamPhaseCalibrator`),
   `Engines` (definition, topology, geometry, capabilities, assembly, `AssemblyValidator`, `EngineFeatures`,
-  `EngineCheck`), `Fuels`, `Parts`, `Simulation` (air path, banks, `IntakeGasDynamics`, turbo, thermal…), `Vehicles`.
+  `EngineCheck`, `EngineDerivedValues`), `Fuels`, `Parts`, `Simulation` (air path, banks, `IntakeGasDynamics`, turbo, thermal…), `Vehicles`.
 - `src/CarSim.Gameplay` — garage, driving session, chassis bench, saves.
 - `game/` — Godot project (UI, scenes); consumes the core.
 - `tools/CarSim.Cli` (`carsim`) — commands: `validate`, `inspect`, `check-engine`, `sweep`, `hold`, `drive`,
   `calibrate-ve`, `calibrate-spark`, `calibrate-cams`, `derive-stage`, `bench`, `fingerprint`, `fingerprint-diff`,
-  `regenerate-tunes`. **There is no `generate-tune` yet.**
-- `tools/CarSim.Verification` — fingerprint recorder/runner/baseline, `TuneRegenerator`, `RunnerStageDerivation`,
-  `tune-manifest.json` (one recipe per tune: calibrator steps + `hand_authored` tables).
-- `tools/CarSim.MutationCheck` — mutation harness, `mutations.json` (43 entries).
+  `regenerate-tunes`, and (on the Phase 3 branch) `generate-tune` (`GenerateTuneCommand.cs`, its own file).
+- `tools/CarSim.Verification` — fingerprint recorder/runner/baseline, `TuneRegenerator` (core `Settle`, `BuildAssembly`),
+  `TuneGenerator` (Phase 3 branch), `RunnerStageDerivation`, `tune-manifest.json` (one recipe per tune: calibrator
+  steps + `hand_authored` tables).
+- `tools/CarSim.MutationCheck` — mutation harness, `mutations.json` (43 entries on `main`; 59 on the Phase 3 branch).
 - `tools/agent-skills/` — project skill sources.
 - `tests/CarSim.Core.Tests` — xUnit; `tests/baselines/fingerprint.txt` — regression baseline (35 cases, 100 sections).
 - `content/base/` — shipped content; `content/test/engine-matrix/` — synthetic engines (test-only, never shipped);
@@ -107,7 +108,12 @@ Details: [ARCHITECTURE.md](../ARCHITECTURE.md), [SIMULATION_SPEC.md](../SIMULATI
 - **Authoring layer (Engine Authoring Factory Phases 1–2):** `identity` (real/fictional/synthetic, features), `sources`
   documents, `provenance` maps on parts and engines, `extends` + `abstract` for engines and parts (resolved after all
   layers into plain definitions), feature vocabulary with modelled/not-modelled/missing-data statuses,
-  `carsim check-engine`.
+  `carsim check-engine`. **Phase 3 (branch, not merged):** `EngineDerivedValues` (a view over `EngineGeometry` and
+  `RunnerStageConfiguration`, one source per derived quantity, statuses authored/defaulted/derived/validated/mismatch/
+  unavailable; `check-engine` DERIVED, `inspect`) and `carsim generate-tune` (check gate → explicit fuel → beliefs from
+  build and fuel → hand-authored policy from a policy tune → the manifest's recipe or its rule applied to the hardware →
+  `TuneRegenerator.Settle` until the tune is a fixed point → validation → the tune format + a `.recipe.jsonc` record;
+  never over a file it did not write).
 
 **What is genuinely supported vs limited** is tabulated in ENGINE_AUTHORING_GUIDE.md §5 (capabilities) and §9
 (limitations). Rejected at load today: superchargers, dry sumps, direct injection, exhaust cam phasing. Inline engines
@@ -156,10 +162,19 @@ authorized phase by phase). Evidence: [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](E
 |---|---|---|
 | Phase 1 | B1 schema **except slot layouts** | Merged (PR #8) |
 | Phase 2 | B2 check + part of B3 | Merged (PR #8) |
-| Phase 3 | rest of B3 (derived values) + C1 (`generate-tune`) | **Not started** — brief in §7 |
-| later | slot layouts (rest of B1), `validate --engines`, `list`/`schema`, C2 verification from data, C3 anti-hack extension, C4 docs/skills, D pilot (LS3-type V8; B58 negative test), E gate | Not started; each needs owner authorization |
+| Phase 3 | the derived-value part of B3 + C1 (`generate-tune`) | **Implemented, at its gate** on `claude/gallant-gauss-jkbqvi`, not merged — [PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md); brief in §7 |
+| later | slot layouts (rest of B1), `validate --engines`, `list`/`schema` (rest of B3), C2 verification from data, C3 anti-hack extension (beyond the generator's audit scope, done in Phase 3), C4 docs/skills as the full pipeline, D pilot (LS3-type V8; B58 negative test), E gate | Not started; each needs owner authorization |
 
-## 7. Phase 3 brief (issued by the owner 2026-09-29; recorded here because it is not yet in the milestone doc)
+## 7. Phase 3 brief (issued by the owner 2026-09-29) and what was delivered
+**Delivered (2026-09-29, branch `claude/gallant-gauss-jkbqvi`, not merged):** every acceptance criterion below is met
+and evidenced in [PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md) (§13 of the
+report). Decisions taken inside the brief: no default fuel exists in content, so `--fuel` is required; λ, rev limit, idle,
+axes and boost come from a *policy tune* (the stock tune by default) and are reported NOT GENERATABLE, never invented; the
+ECU's `displacement_cc` belief is set from the derived value at full precision; the generator iterates the existing
+recipe until it is a fixed point (the documented "write, check, repeat" procedure, automated); output goes to an explicit
+`--out` file plus a `.recipe.jsonc` record, and only an untouched generator output is ever overwritten. The brief as
+issued:
+
 "Derived Values + Deterministic Baseline Tune Generation." Pipeline: ENGINE DATA → DERIVED VALUES → CHECK-ENGINE →
 BASELINE TUNE GENERATION → VALID STOCK BUILD. Orchestrate existing machinery; do not invent a new tuning system.
 
@@ -206,31 +221,34 @@ BASELINE TUNE GENERATION → VALID STOCK BUILD. Orchestrate existing machinery; 
   mutants catch generator failures; CI green.
 
 ## 8. Verification state at the snapshot
-Re-run in this session on `c07804a` (Ubuntu 24.04 container, .NET SDK 8.0.131 from the distro), unless stated.
+Re-run in this session (Ubuntu 24.04 container, .NET SDK 8.0.131 from the distro, 4 cores; Godot 4.7.2 .NET downloaded
+from the official release — it now works in the container).
 
-| Check | Result |
-|---|---|
-| `dotnet build CarTuningSim.sln -c Release` | 0 warnings, 0 errors |
-| `dotnet test CarTuningSim.sln -c Release` | **766 passed, 0 failed, 0 skipped** |
-| `carsim validate` / `validate --mods content/test` | OK / OK |
-| `carsim check-engine` on all 11 engines (K20, M54, 9 synthetic) | all exit 0; K20 `--strict 1` exit 0; M54 PASS with 6 warnings |
-| `carsim fingerprint` (35 cases, 100 sections) | **IDENTICAL** |
-| `carsim regenerate-tunes` (all 12 tunes) | **12 of 12 reproduced exactly** |
-| Mutation harness | **43 of 43 caught** (§8a) |
-| Skills consistency | CI step green on `main` (run 79); not re-run locally (needs Node + `npx skills`) |
-| Godot headless smoke | **not run locally** (no Godot in this container); **green in CI** on `main` run 79: K20 dyno + drive, M54 dyno + drive, synthetic pushrod V8 and twin-turbo V6 in the Isar C30 |
-| GitHub CI on `main` `c07804a` | [run 79](https://github.com/Pyri4/car-tuning-sim/actions/runs/36545578490): success (core, CLI, skills, check-engine, verification tools, Godot); mutation job is manual-only (skipped) |
+| Check | `main` `df9c987` (baseline, re-run) | Phase 3 branch |
+|---|---|---|
+| `dotnet build CarTuningSim.sln -c Release` | 0 warnings, 0 errors | 0 warnings, 0 errors |
+| `dotnet test CarTuningSim.sln -c Release` | 766 passed, 0 failed, 0 skipped (1 m 51 s) | **840 passed, 0 failed, 0 skipped** (2 m 45 s) |
+| `carsim validate` / `validate --mods content/test` | OK / OK | OK / OK |
+| `carsim check-engine` on all 11 engines | all exit 0; K20 `--strict 1` exit 0; M54 PASS with 6 warnings | same, plus DERIVED; every stock tune's displacement belief validated |
+| `carsim generate-tune` on all 11 engines (manifest fuels) | — | 11 of 11 generated, validated, 2 iterations each; re-run `--check 1`: UNCHANGED |
+| `carsim fingerprint` (35 cases, 100 sections) | **IDENTICAL** | **IDENTICAL** (no re-baseline) |
+| `carsim regenerate-tunes` (all 12 tunes) | **12 of 12 reproduced** | **12 of 12 reproduced** |
+| Mutation harness | **43 of 43 caught** | **59 of 59 caught** (on `aec1a2e`) |
+| Skills consistency | CI green | reinstalled; sources = installed copies; lock updated |
+| Godot headless smoke | not run locally before | **local: 8 of 8 passed, 0 ERROR lines** (K20, M54, `syn_v8_swap`, `syn_v6_tt_swap`; dyno + drive) |
+| GitHub CI | [run 84](https://github.com/Pyri4/car-tuning-sim/actions/runs/36556162699) on `df9c987`: success | [run 85](https://github.com/Pyri4/car-tuning-sim/actions/runs/36561845744) on `74e7480`: success (core + Godot); the documentation head: pending when this commit was written (recorded by the next commit) |
 
 ### 8a. Mutation harness
-Full harness (`dotnet run --project tools/CarSim.MutationCheck -c Release`) re-run in this session on `c07804a`:
-**43 of 43 mutants caught** (31 before the factory, 4 from Phase 1, 8 from Phase 2). The harness restored every
-source file (working tree verified clean of non-doc changes afterwards).
+Full harness (`dotnet run --project tools/CarSim.MutationCheck -c Release`) re-run in this session: **43 of 43** on the
+baseline `df9c987`; **59 of 59** on the Phase 3 code `aec1a2e` (31 before the factory, 4 from Phase 1, 8 from Phase 2, 16
+from Phase 3), 20 m 33 s, run in a separate `git worktree`. A first Phase 3 run found one entry INVALID (the mutant did
+not compile); the code was clarified and the entry updated, then it was caught (gate report §10).
 
 ## 9. Git and GitHub state at the snapshot
-- `main` = `c07804a` (PR #8 merged 2026-09-29). CI green.
-- Open PRs: only [PR #9](https://github.com/Pyri4/car-tuning-sim/pull/9) (this handoff: `docs/PROJECT_STATE.md`,
-  `docs/project-state.json`, an AGENTS.md pointer; docs only). Open issues: **none**.
-- Every remote branch (`claude/*`) is fully contained in `main`; none carries unmerged work.
+- `main` = `df9c987` (PR #9 merged 2026-09-29: this handoff document). CI green (run 84).
+- Phase 3 branch: `claude/gallant-gauss-jkbqvi`, based on `df9c987`, pushed: `74e7480` (implementation) and the
+  documentation commit on top. **Not merged; no PR opened** (none was asked for).
+- Open PRs: none. Open issues: none (at the start of this session).
 - Previous gate reports that say "nothing is merged / no PR open" describe the moment they were written.
 
 ## 10. Known limitations and open questions (do not conceal, do not "fix" by hacks)
@@ -279,19 +297,32 @@ commit), 409 `src/` (the cam-timing capability), 1,227 tests. Estimated today fo
 ≈ 1,000–1,150 lines, ≈ 450 of them C#/YAML. **Targets** (unmeasured until the pilot): ≈ 300–400 data lines, 0 C#,
 ≈ 5 commands; a variant ≈ 20–60 lines.
 
+**Found in Phase 3 (not fixed; owner decisions):**
+- **The checked-in tunes' ECU beliefs are hand-entered and differ slightly from the build and the fuel:** every matrix
+  tune believes fuel density 0.745 (RON 91's) though calibrated on RON 95 or 98; the K20 and M54 displacement beliefs
+  are rounded to the cc (1998 vs derived 1998.229; 2979 vs 2979.255). `generate-tune` sets beliefs from the build and the
+  fuel, so a generated tune differs slightly from the checked-in one (VE cells ±0.001, a few spark cells ≤ 1°, 2–3 cam
+  cells on flat optima; no switch speed moves). Correcting the checked-in tunes would move the fingerprint: owner
+  decision (gate report §7, §12 #1). Class B.
+- **No skeleton generation:** the policy tune (axes, λ, rev limit, idle, boost) stays hand-written; named λ policies or
+  axis rules would be invented values without an owner decision. Class B → D.
+- **Registering a generated tune as shipped content is manual** (move it into a content layer, copy its recipe into
+  `tune-manifest.json`). Class D (the pilot's "0 hand pastes").
+- Test-suite wall time +54 s (the synthetic V8 generated end to end). Class B, accepted and reported.
+
 ## 11. Documents that are stale or inconsistent (fix in the next phase that touches them)
-- **ROADMAP.md** and **docs/milestones/ENGINE_AUTHORING_FACTORY_1.md** still say Phase 2 is "implemented and at its
-  gate" and the owner's gate review is unchecked. PR #8 was merged on 2026-09-29, and the owner's handoff states Phases
-  1 and 2 passed their gates. ROADMAP's "Current state (2026-09-28)" header also predates the merge.
-- **PHASE1/PHASE2_GATE_REPORT.md** say "Nothing is merged and no PR is open" — true when written.
-- ROADMAP M54 figures (152 kW) vs the Intake Gas Dynamics gate report (153.9 kW): see §10.
-These were deliberately **not** edited in the handoff commit (docs-only scope limited to this file, its JSON and
-AGENTS.md).
+- Fixed in the Phase 3 docs commit: ROADMAP.md and the milestone doc now record Phases 1 and 2 as passed and merged;
+  ROADMAP's "Current state" is dated 2026-09-29; the guide no longer calls the milestone "proposed; not yet in the code".
+- **PHASE1/PHASE2_GATE_REPORT.md** say "Nothing is merged and no PR is open" — true when written (left as history).
+- ROADMAP M54 figures (152 kW) vs the Intake Gas Dynamics gate report (153.9 kW): see §10 — still **not reconciled**.
+- The milestone doc's C1 "proof" (a matrix tune regenerated from nothing reproduces its checked-in tables) is not met as
+  written; the doc now records what Phase 3 delivered instead and why (hand-entered beliefs, no skeleton generation).
 
 ## 12. Roadmap beyond Phase 3
 Status vocabulary: CONFIRMED (done, merged) / PLANNED (in an authorized milestone definition) / POSSIBLE (listed in
 ROADMAP "Next recommended tasks", not authorized) / NOT YET AUTHORIZED (explicitly excluded for now).
 
+- **IMPLEMENTED, AT ITS GATE:** Phase 3 (derived values, `generate-tune`) on `claude/gallant-gauss-jkbqvi`.
 - **PLANNED** (Engine Authoring Factory 1.0, authorized phase by phase — each phase still needs the owner's go):
   slot layouts; `validate --engines`; `list`, `schema`; verification from data (profiles, light fingerprint cases,
   conformance suite, `compare-engine`, `verify-engine`); anti-hack extension (content-derived audit tokens, calibrators
@@ -307,19 +338,18 @@ ROADMAP "Next recommended tasks", not authorized) / NOT YET AUTHORIZED (explicit
   UI ahead of capabilities, matching a single engine's dyno curve, B58 as supported content.
 
 ## 13. NEXT ACTION (exact)
-**Engine Authoring Factory 1.0 Phase 3 — Derived Values + Deterministic Baseline Tune Generation (brief in §7).**
-
-Status: the owner issued the brief on 2026-09-29 with the precondition "PR #8 merged". That precondition is now met
-(`c07804a`). In the handoff session the owner explicitly said *not* to start Phase 3 yet, so **the next agent confirms
-with the owner that Phase 3 may begin**, then:
-1. `git fetch origin`; confirm `main` still = `c07804a` (or re-verify whatever it now is) and no open PRs conflict.
-2. Base the Phase 3 branch on current `main` (never on an unmerged PR without authorization).
-3. Re-run the Phase 2 gate: Release build, `dotnet test` (expect 766), `validate` ± matrix, `check-engine` on all 11
-   engines, `fingerprint` (IDENTICAL), `regenerate-tunes` (12/12), mutation harness (expect 43/43).
-4. Inspect the systems listed in §7 before writing code; then implement per §7 with the `car-sim-verify` and
-   `car-sim-project-gate` skills; write `PHASE3_GATE_REPORT.md`; update this file; STOP for review.
-
-Also due when Phase 3 touches the docs: correct the stale statuses listed in §11.
+**The owner reviews Phase 3** ([PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md)).
+Nothing is merged; the LS3 pilot and every later phase are not started. The next agent does **not** start new work
+until the owner decides:
+1. Accept Phase 3 → open a PR from `claude/gallant-gauss-jkbqvi` to `main` (only when the owner asks), merge after CI.
+   Before relying on the branch: `git fetch origin`; confirm `main` is still `df9c987` (else re-verify the branch
+   against the new `main`).
+2. Owner decisions pending: (a) correct the checked-in tunes' hand-entered beliefs (a content change with a fingerprint
+   re-baseline, its own commit) or leave them; (b) whether a later phase may define named λ policies and axis rules for
+   skeleton generation; (c) the older open items in §10 (T35 as a hard fingerprint case; the M54 figure in ROADMAP).
+3. Then the next phase, **only when authorized**, from the milestone's remaining work (§6): slot layouts,
+   `validate --engines`, `list`/`schema`, verification from data (C2), the anti-hack extension (C3), then the pilot (D).
+   Start with the fresh-agent procedure (§14) and re-run the Phase 3 gate checks (§8) first.
 
 ## 14. Fresh-agent bootstrap procedure
 1. Read [AGENTS.md](../AGENTS.md), then this file.
@@ -331,8 +361,12 @@ Also due when Phase 3 touches the docs: correct the stale statuses listed in §1
 7. Continue from §13. Do not start unauthorized work; stop at gates.
 
 Environment notes: this cloud container had no .NET SDK preinstalled; `apt-get install dotnet-sdk-8.0` worked
-(dot.net install script was blocked by the network policy). Godot is not available locally; rely on CI for Godot
-smoke tests. The full test suite takes ≈ 2 minutes, full tune regeneration ≈ 4.5 minutes, the fingerprint ≈ 35 s.
+(dot.net install script was blocked by the network policy). Godot 4.7.2 .NET **can** be downloaded from the official
+release URL in `.github/workflows/ci.yml` (it worked on 2026-09-29): unzip, `dotnet build game/CarTuningSim.csproj`,
+`godot --headless --path game --import`, then the smoke tests. The full test suite takes ≈ 2 m 45 s (the synthetic V8
+tune generation ≈ 2 min of it, in parallel), full tune regeneration ≈ 4.5 minutes, the fingerprint ≈ 35 s, one
+`generate-tune` 15 s (K20) to ≈ 4 min (twin-turbo V6), the mutation harness (59 entries) ≈ 21 minutes. The mutation
+harness mutates source files: run it in a separate `git worktree` when you keep editing.
 
 ## 15. Maintaining this document
 Update it (and `project-state.json`) at every milestone or phase gate, merge, or major decision: snapshot date and
