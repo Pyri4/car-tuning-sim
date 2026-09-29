@@ -8,7 +8,7 @@ was asked for). The LS3 pilot and every later phase are **not started**.
 | **Branch** | `claude/gallant-gauss-jkbqvi` |
 | **Base** | `main` at `df9c987` (Merge PR #9; PRs #8 and #9 merged, no open PR at the start) — no divergence |
 | **Implementation commits** | `74e7480` — code, tests, mutation entries; `aec1a2e` — the selected fuel bound as a non-null local after the refusals (so the fuel mutant compiles, §10) and a report-text fix (no doubled full stop after an approximation) |
-| **Documentation commit** | on top of `aec1a2e`: this report, the docs, the skills, the CI step; the branch head (no code) |
+| **Documentation commits** | `aed05e8` (on top of `aec1a2e`): this report, the docs, the skills, the CI step; then one commit recording CI run 86 in the docs — the branch head. No code after `aec1a2e` |
 | **Verified on** | `74e7480`: CLI, generation sweep, Godot smoke, CI run 85, a first mutation run. `aec1a2e`: build, the full test suite (its `Fingerprint*Tests` are the fingerprint), the full mutation harness; `carsim fingerprint` and `carsim regenerate-tunes` ran on the same code without the fuel binding (neither uses the generator). The head: CI — §9 |
 
 Pipeline delivered (the owner's brief):
@@ -225,7 +225,7 @@ official release (the URL CI uses).
 | Mutation harness | 43 of 43 caught | **59 of 59 caught** on `aec1a2e` (20 m 33 s); a first run on `74e7480`: 58 caught, 1 INVALID, fixed (§10) |
 | Skills | CI step green | reinstalled with `npx skills add ./tools/agent-skills -a claude-code -a codex -y`; sources and installed copies identical (`diff -r`); lock hashes updated |
 | Godot headless smoke, **local** | not run before (no Godot) | **8 of 8 passed, 0 `ERROR` lines**: K20 dyno (134.1 hp) and drive; M54 dyno (203.2 hp) and drive; `syn_v8_swap` dyno (263.0 hp) and drive; `syn_v6_tt_swap` dyno (441.5 hp) and drive |
-| GitHub CI | run 84 on `main`: success | [run 85](https://github.com/Pyri4/car-tuning-sim/actions/runs/36561845744) on `74e7480`: **success** (core: build, tests, CLI, skills, check-engine, verification tools; Godot smoke); the mutation job is manual-only (skipped). The documentation head: pending when this commit was written (recorded by the next commit) |
+| GitHub CI | run 84 on `main`: success | [run 85](https://github.com/Pyri4/car-tuning-sim/actions/runs/36561845744) on `74e7480`: **success** (core: build, tests, CLI, skills, check-engine, verification tools; Godot smoke); the mutation job is manual-only (skipped). The documentation head: [run 86](https://github.com/Pyri4/car-tuning-sim/actions/runs/36566315580) on `aed05e8`: **success** (core: build, tests, CLI, skills, check-engine, the new generate-tune step — generated, then `--check 1` UNCHANGED — verification tools; Godot smoke) |
 
 ## 10. Mutation results
 16 new entries, one per new invariant (the brief's seven are the first seven rows):
@@ -312,7 +312,7 @@ physics.
 | mutation tests cover the new failure modes | yes: 16 new mutants, all caught; 59 of 59 in total |
 | existing tests pass; fingerprint unchanged; tune regeneration unchanged | yes (840/840) / yes (IDENTICAL) / yes (12 of 12) |
 | content validation passes | yes |
-| CI passes | run 85 on `74e7480`: success; the head: pending when this commit was written (recorded by the next commit) |
+| CI passes | run 85 on `74e7480`: success; the head: [run 86](https://github.com/Pyri4/car-tuning-sim/actions/runs/36566315580) on `aed05e8`: **success** (core: build, tests, CLI, skills, check-engine, the new generate-tune step — generated, then `--check 1` UNCHANGED — verification tools; Godot smoke) |
 | documentation reflects the implementation | yes (§1) |
 | this report exists | yes |
 

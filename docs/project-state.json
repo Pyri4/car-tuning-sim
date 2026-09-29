@@ -8,7 +8,13 @@
     "main_commit_subject": "Merge pull request #9 from Pyri4/claude/jolly-mccarthy-ze2vps",
     "written_on_branch": "claude/gallant-gauss-jkbqvi",
     "branch_implementation_commit": "74e74803796efc2c76ac7c8acf05c484976ad1b0",
-    "branch_state": "Phase 3 implemented, at its gate; pushed; not merged; no PR opened"
+    "branch_state": "Phase 3 implemented, at its gate; pushed; not merged; no PR opened",
+    "branch_commits": [
+      "74e7480 implementation",
+      "aec1a2e fuel binding + report text",
+      "aed05e8 docs, skills, CI step, gate report",
+      "(head) CI run 86 recorded"
+    ]
   },
   "project": {
     "name": "Car Tuning Sim",
@@ -204,8 +210,17 @@
       "sections": 100,
       "result": "IDENTICAL"
     },
-    "regenerate_tunes": {"reproduced": 12, "total": 12},
-    "mutation_harness": {"caught": 59, "total": 59, "commit": "aec1a2e", "baseline": "43 of 43 on df9c987", "note": "first run on 74e7480: 58 caught, 1 invalid (did not compile), fixed in aec1a2e"},
+    "regenerate_tunes": {
+      "reproduced": 12,
+      "total": 12
+    },
+    "mutation_harness": {
+      "caught": 59,
+      "total": 59,
+      "commit": "aec1a2e",
+      "baseline": "43 of 43 on df9c987",
+      "note": "first run on 74e7480: 58 caught, 1 invalid (did not compile), fixed in aec1a2e"
+    },
     "godot_smoke": {
       "local": "8 of 8 passed, 0 ERROR lines (K20, M54, syn_v8_swap, syn_v6_tt_swap; dyno + drive)",
       "ci": "success on run 85 (74e7480)"
@@ -216,7 +231,7 @@
       "branch_run": 85,
       "branch_commit": "74e7480",
       "branch_conclusion": "success",
-      "head": "pending when this commit was written (recorded by the next commit)"
+      "head": "run 86 on aed05e8: success (core incl. generate-tune step, Godot)"
     },
     "skills_consistency": {
       "local": "reinstalled with npx skills; sources identical to installed copies; lock updated",

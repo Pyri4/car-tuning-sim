@@ -8,7 +8,7 @@ A machine-readable summary lives beside it: [project-state.json](project-state.j
 |---|---|
 | **Snapshot date** | 2026-09-29 (Phase 3 gate) |
 | **`main` at snapshot** | `df9c987` (Merge pull request #9, this handoff document) on top of `c07804a` (PR #8, Phases 1 & 2) |
-| **This document written on** | branch `claude/gallant-gauss-jkbqvi` (Phase 3: implementation `74e7480` + the docs commit on top), **not merged, no PR opened** |
+| **This document written on** | branch `claude/gallant-gauss-jkbqvi` (Phase 3: code `74e7480`, `aec1a2e`; docs `aed05e8` and a CI-record commit on top), **not merged, no PR opened** |
 | **Current milestone** | Engine Authoring Factory 1.0 — Phases 1 and 2 merged; **Phase 3 implemented, at its gate** ([report](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md)) |
 | **Next action** | §13 |
 
@@ -236,7 +236,7 @@ from the official release — it now works in the container).
 | Mutation harness | **43 of 43 caught** | **59 of 59 caught** (on `aec1a2e`) |
 | Skills consistency | CI green | reinstalled; sources = installed copies; lock updated |
 | Godot headless smoke | not run locally before | **local: 8 of 8 passed, 0 ERROR lines** (K20, M54, `syn_v8_swap`, `syn_v6_tt_swap`; dyno + drive) |
-| GitHub CI | [run 84](https://github.com/Pyri4/car-tuning-sim/actions/runs/36556162699) on `df9c987`: success | [run 85](https://github.com/Pyri4/car-tuning-sim/actions/runs/36561845744) on `74e7480`: success (core + Godot); the documentation head: pending when this commit was written (recorded by the next commit) |
+| GitHub CI | [run 84](https://github.com/Pyri4/car-tuning-sim/actions/runs/36556162699) on `df9c987`: success | [run 85](https://github.com/Pyri4/car-tuning-sim/actions/runs/36561845744) on `74e7480`: success (core + Godot); the documentation head: [run 86](https://github.com/Pyri4/car-tuning-sim/actions/runs/36566315580) on `aed05e8`: **success** (core: build, tests, CLI, skills, check-engine, the new generate-tune step — generated, then `--check 1` UNCHANGED — verification tools; Godot smoke) |
 
 ### 8a. Mutation harness
 Full harness (`dotnet run --project tools/CarSim.MutationCheck -c Release`) re-run in this session: **43 of 43** on the
@@ -246,8 +246,9 @@ not compile); the code was clarified and the entry updated, then it was caught (
 
 ## 9. Git and GitHub state at the snapshot
 - `main` = `df9c987` (PR #9 merged 2026-09-29: this handoff document). CI green (run 84).
-- Phase 3 branch: `claude/gallant-gauss-jkbqvi`, based on `df9c987`, pushed: `74e7480` (implementation) and the
-  documentation commit on top. **Not merged; no PR opened** (none was asked for).
+- Phase 3 branch: `claude/gallant-gauss-jkbqvi`, based on `df9c987`, pushed: `74e7480` (implementation), `aec1a2e`
+  (fuel binding for a valid mutant; report text), `aed05e8` (docs, skills, CI step, gate report) and a commit recording
+  CI run 86. **Not merged; no PR opened** (none was asked for).
 - Open PRs: none. Open issues: none (at the start of this session).
 - Previous gate reports that say "nothing is merged / no PR open" describe the moment they were written.
 
