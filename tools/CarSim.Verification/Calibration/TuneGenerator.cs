@@ -45,10 +45,19 @@ public sealed record GenerationNote(string Subject, string Status, string Reason
 /// <summary>
 /// The generation block of the record written beside a generated tune (<see cref="TuneRecipe.Generated"/>): what made it,
 /// from what, and the digest of the tune file as written. No timestamp and no path: the same inputs give the same record.
+/// <paramref name="Manifest"/> is <see cref="TuneGenerator.ManifestLoaded"/> or <see cref="TuneGenerator.ManifestNone"/>
+/// (no manifest: no table was known to be hand-authored).
 /// </summary>
-public sealed record GenerationRecord(string Generator, int Version, string PolicyTune, string RecipeSource,
+public sealed record GenerationRecord(string Generator, int Version, string PolicyTune, string RecipeSource, string Manifest,
     IReadOnlyList<string[]> Assembly, IReadOnlyList<GeneratedField> Fields, IReadOnlyList<GenerationNote> NotGenerated,
     int Iterations, string OutputSha256);
+
+/// <summary>
+/// The tune manifest a generation uses (<see cref="TuneGenerator.FindManifest"/>): the manifest and where it was read from,
+/// none (<see cref="Manifest"/> and <see cref="Path"/> null), or why the one named or found cannot be used
+/// (<see cref="Error"/>: generation must not run).
+/// </summary>
+public sealed record ManifestLookup(TuneManifest? Manifest, string? Path, string? Error);
 
 /// <summary>Why a generation stopped. <paramref name="Code"/> is stable (tests and tools read it).</summary>
 public sealed record GenerationRefusal(string Code, string Message)
@@ -73,6 +82,12 @@ public sealed class TunePlan
     /// <summary>The recipe the calibration runs: engine, fuel (the requested one), steps and hand-authored tables.</summary>
     public required TuneRecipe Recipe { get; init; }
     public required string RecipeSource { get; init; }
+
+    /// <summary>
+    /// <see cref="TuneGenerator.ManifestLoaded"/>, or <see cref="TuneGenerator.ManifestNone"/>: no tune manifest, so no table
+    /// is known to be hand-authored (the report warns; the record says so).
+    /// </summary>
+    public required string Manifest { get; init; }
 
     /// <summary>The policy tune with the derived beliefs set: where calibration starts.</summary>
     public required TuneDocument Skeleton { get; init; }
@@ -124,6 +139,7 @@ public sealed class TuneGeneration
         {
             sb.Append("\nCHECK  ").Append(Check.Verdict(Request.Strict)).Append(" (carsim check-engine ").Append(Request.EngineId).Append(")\n");
             foreach (var e in Check.Errors) sb.Append("  ").Append(e).Append('\n');
+            foreach (var w in Check.Warnings) sb.Append("  ").Append(w).Append('\n');
         }
         if (Plan is { } p)
         {
@@ -141,6 +157,8 @@ public sealed class TuneGeneration
             sb.Append("\nRECIPE  ").Append(string.Join(" → ", p.Recipe.Steps.Select(TuneGenerator.Describe))).Append('\n');
             sb.Append("  ").Append(p.RecipeSource).Append('\n');
             sb.Append("  hand-authored: ").Append(p.Recipe.HandAuthored.Count == 0 ? "none" : string.Join(", ", p.Recipe.HandAuthored)).Append('\n');
+            sb.Append("  manifest: ").Append(p.Manifest).Append('\n');
+            if (p.Manifest == TuneGenerator.ManifestNone) sb.Append("  ").Append(TuneGenerator.NoManifestWarning).Append('\n');
             sb.Append("\nFIELDS\n");
             foreach (var f in p.Fields) sb.Append("  ").Append(f.Field.PadRight(32)).Append(f.Origin.PadRight(15)).Append(f.Basis).Append('\n');
             if (p.Notes.Count > 0)
@@ -213,7 +231,77 @@ public static class TuneGenerator
     /// <summary>Extension of the record written beside a generated tune file (not *.json, so a content loader never reads it).</summary>
     public const string RecordExtension = ".recipe.jsonc";
 
+    /// <summary>What the report and the record say about the tune manifest (<see cref="TunePlan.Manifest"/>).</summary>
+    public const string ManifestLoaded = "loaded", ManifestNone = "none";
+
+    /// <summary>The report's line when a generation runs without a tune manifest (review finding P3-001).</summary>
+    public const string NoManifestWarning =
+        "WARNING: no tune manifest was found; no table is known to be hand-authored and all calibratable tables will be " +
+        "regenerated (a table a manifest lists as hand-authored, such as a factory spark map, is replaced).";
+
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+
+    // ---- The tune manifest ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The tune manifest for a generation. The manifest says which tables are hand-authored, so it is never silently
+    /// dropped (review finding P3-001): a manifest named explicitly (<paramref name="explicitPath"/>, <c>--manifest</c>) must
+    /// exist and load, and so must one discovered in the repository (<paramref name="discoveredPath"/>) — otherwise
+    /// <see cref="ManifestLookup.Error"/> says why and generation must not run. Only when none is named and none is found
+    /// does generation run without one, reported as <see cref="ManifestNone"/> with <see cref="NoManifestWarning"/>.
+    /// </summary>
+    public static ManifestLookup FindManifest(string? explicitPath, string? discoveredPath)
+    {
+        if (explicitPath != null)
+        {
+            if (!File.Exists(explicitPath))
+                return new ManifestLookup(null, explicitPath, $"--manifest {explicitPath}: no such file. A manifest named explicitly must load " +
+                                                               "(it says which tables are hand-authored); nothing was generated.");
+            return Read(explicitPath, $"--manifest {explicitPath}");
+        }
+        if (discoveredPath != null && File.Exists(discoveredPath)) return Read(discoveredPath, $"the tune manifest {discoveredPath}");
+        return new ManifestLookup(null, null, null);
+
+        static ManifestLookup Read(string path, string what)
+        {
+            try
+            {
+                var manifest = TuneManifest.Load(path);
+                var problems = ManifestProblems(manifest);
+                return problems.Count == 0
+                    ? new ManifestLookup(manifest, path, null)
+                    : new ManifestLookup(null, path, $"{what} is not a valid tune manifest: {string.Join("; ", problems)}. Nothing was generated.");
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidDataException or NotSupportedException or IOException or UnauthorizedAccessException)
+            {
+                return new ManifestLookup(null, path, $"{what} could not be loaded: {ex.Message} Nothing was generated.");
+            }
+        }
+    }
+
+    /// <summary>What a recipe of a tune manifest lacks for the generator to read it (every field it reads, and known calibrators).</summary>
+    public static IReadOnlyList<string> ManifestProblems(TuneManifest manifest)
+    {
+        if (manifest.Tunes == null) return new[] { "it has no \"tunes\" list" };
+        var problems = new List<string>();
+        for (int i = 0; i < manifest.Tunes.Count; i++)
+        {
+            var r = manifest.Tunes[i];
+            string at = $"tunes[{i}]";
+            if (r == null) { problems.Add($"{at} is empty"); continue; }
+            foreach (var (name, value) in new[] { ("tune", r.Tune), ("engine", r.Engine), ("fuel", r.Fuel) })
+                if (string.IsNullOrWhiteSpace(value)) problems.Add($"{at} has no \"{name}\"");
+            if (r.Steps == null) problems.Add($"{at} has no \"steps\"");
+            else
+                foreach (var step in r.Steps)
+                {
+                    try { TuneRegenerator.FieldOf(step?.Calibrator ?? ""); }
+                    catch (InvalidDataException) { problems.Add($"{at} has an unknown calibrator step '{step?.Calibrator}'"); }
+                }
+            if (r.HandAuthored == null) problems.Add($"{at} has no \"hand_authored\" list");
+        }
+        return problems;
+    }
 
     // ---- Plan ---------------------------------------------------------------------------------------------------------
 
@@ -325,7 +413,7 @@ public static class TuneGenerator
         var plan = new TunePlan
         {
             Engine = engine, Fuel = fuel, Policy = policy, Assembly = assembly, Capabilities = capabilities, Derived = derived,
-            Recipe = recipe, RecipeSource = recipeSource, Skeleton = skeleton,
+            Recipe = recipe, RecipeSource = recipeSource, Manifest = manifest == null ? ManifestNone : ManifestLoaded, Skeleton = skeleton,
             Fields = Fields(skeleton, calibrated, recipe, policy, injectorPart.Definition.Id, fuel),
             Notes = Notes(check, capabilities, handAuthored, calibrated, policy),
         };
@@ -674,7 +762,7 @@ public static class TuneGenerator
     {
         var plan = g.Plan ?? throw new InvalidOperationException("Nothing was generated.");
         var text = g.Text ?? throw new InvalidOperationException("Nothing was generated.");
-        var record = new GenerationRecord(Name, Version, plan.Policy.Id, plan.RecipeSource,
+        var record = new GenerationRecord(Name, Version, plan.Policy.Id, plan.RecipeSource, plan.Manifest,
             plan.Engine.Slots.Where(s => plan.Assembly.IsInstalled(s.Id)).Select(s => new[] { s.Id, plan.Assembly.PartIn(s.Id)!.Definition.Id }).ToList(),
             plan.Fields, plan.Notes, g.Iterations, Sha256(text));
         var recipe = plan.Recipe with { File = fileName, Generated = record };
@@ -691,8 +779,9 @@ public static class TuneGenerator
 
     /// <summary>
     /// Writes the generated tune to <paramref name="tunePath"/> and its record beside it — never over a file the generator did
-    /// not write: an existing tune file is replaced only when the record beside it says the generator wrote it and its digest
-    /// still matches (an untouched generator output). A hand-authored or hand-edited file is refused, whatever is asked.
+    /// not write: an existing tune file is replaced only when the record beside it says the generator wrote it, its digest
+    /// still matches (an untouched generator output) and it records the same request — engine, fuel, tune id and policy tune
+    /// (<see cref="AnotherRequest"/>). A hand-authored or hand-edited file, or another request's output, is refused.
     /// With <paramref name="check"/> nothing is written: exit 0 when the files already hold exactly this output, 4 when not.
     /// </summary>
     public static WriteOutcome Write(TuneGeneration g, string tunePath, bool check = false)
@@ -707,6 +796,10 @@ public static class TuneGenerator
         {
             if (!GeneratorOwns(path, recordPath, out string why))
                 return new WriteOutcome(2, $"REFUSED: {tunePath} {why}. The generator never overwrites a hand-authored or hand-edited tune: " +
+                                           "choose another --out, or move the file away yourself.");
+            if (AnotherRequest(recordPath, g.Plan!) is { } other)
+                return new WriteOutcome(2, $"REFUSED: {tunePath} is an untouched generator output, but of another generation request ({other}). " +
+                                           "The generator replaces only its own output for the same engine, fuel, tune id and policy tune: " +
                                            "choose another --out, or move the file away yourself.");
             if (File.ReadAllText(path) == g.Text && File.ReadAllText(recordPath) == record)
                 return new WriteOutcome(0, $"UNCHANGED: {tunePath} already holds exactly this generated tune (regeneration is identical).");
@@ -744,6 +837,29 @@ public static class TuneGenerator
         }
         why = "";
         return true;
+    }
+
+    /// <summary>
+    /// How the generation request recorded in <paramref name="recordPath"/> differs from <paramref name="plan"/>'s — engine,
+    /// fuel, tune id, policy tune — or null when it is the same request (review finding P3-002: the digest proves the generator
+    /// wrote the file, not that it is this request's output). A record that lacks any of them (older or damaged) is never
+    /// assumed to match.
+    /// </summary>
+    public static string? AnotherRequest(string recordPath, TunePlan plan)
+    {
+        TuneRecipe? recorded;
+        try { recorded = TuneManifest.Load(recordPath).Tunes is { Count: 1 } tunes ? tunes[0] : null; }
+        catch (Exception ex) when (ex is JsonException or InvalidDataException or NotSupportedException or IOException) { recorded = null; }
+        if (recorded?.Generated == null) return "its record cannot be read";
+        var differences = new[]
+            {
+                ("engine", recorded.Engine, plan.Engine.Id), ("fuel", recorded.Fuel, plan.Fuel.Id), ("tune id", recorded.Tune, plan.Recipe.Tune),
+                ("policy tune", recorded.Generated.PolicyTune, plan.Policy.Id),
+            }
+            .Where(x => !string.Equals(x.Item2, x.Item3, StringComparison.Ordinal))
+            .Select(x => $"{x.Item1} {(string.IsNullOrEmpty(x.Item2) ? "(not recorded)" : x.Item2)}, not {x.Item3}")
+            .ToList();
+        return differences.Count == 0 ? null : "it was generated for " + string.Join(", ", differences);
     }
 
     private static TuneGeneration Refuse(GenerationRequest request, EngineCheckReport check, string code, string message) =>

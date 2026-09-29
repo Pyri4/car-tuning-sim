@@ -2,6 +2,7 @@ using CarSim.Core.Content;
 using CarSim.Core.Engines;
 using CarSim.Core.Parts;
 using CarSim.Core.Parts.Specs;
+using CarSim.Verification;
 using CarSim.Verification.Calibration;
 
 namespace CarSim.Core.Tests.Verification;
@@ -343,19 +344,26 @@ public class TuneGeneratorTests
             Assert.StartsWith("UNCHANGED", TuneGenerator.Write(g, path).Message);
             Assert.Equal(0, TuneGenerator.Write(g, path, check: true).ExitCode);
 
-            // Another fuel: an untouched generator output may be regenerated; --check reports the difference first.
-            var e85 = GeneratorFixtures.Uncalibrated(Plan("syn_v8_ohv", "e85"));
-            Assert.Equal(4, TuneGenerator.Write(e85, path, check: true).ExitCode);
+            // The same request after its inputs changed (here the policy tune's idle speed, overridden by a later layer): an
+            // untouched generator output is regenerated; --check reports the difference first.
+            string changedPolicy = GeneratorFixtures.TuneCopy("content/test/engine-matrix/syn_v8_ohv.json", "syn.v8.stock", "syn.v8.stock",
+                t => t["idle_rpm"] = 720);
+            var changed = GeneratorFixtures.Uncalibrated(Plan("syn_v8_ohv", "gasoline_95", layers: changedPolicy));
+            Assert.NotEqual(g.Text, changed.Text);
+            Assert.Equal(4, TuneGenerator.Write(changed, path, check: true).ExitCode);
             Assert.Equal(g.Text, File.ReadAllText(path));
-            Assert.StartsWith("REGENERATED", TuneGenerator.Write(e85, path).Message);
-            Assert.Equal(e85.Text, File.ReadAllText(path));
+            Assert.StartsWith("REGENERATED", TuneGenerator.Write(changed, path).Message);
+            Assert.Equal(changed.Text, File.ReadAllText(path));
 
-            // Edited by hand after generation: it is hand-authored now, and never overwritten.
-            File.WriteAllText(path, e85.Text!.Replace("\"idle_rpm\": 700", "\"idle_rpm\": 750"));
+            // Edited by hand after generation: it is hand-authored now, and never overwritten — by the same request either.
+            File.WriteAllText(path, changed.Text!.Replace("\"idle_rpm\": 720", "\"idle_rpm\": 750"));
             string edited = File.ReadAllText(path);
-            var refused = TuneGenerator.Write(g, path);
-            Assert.Equal(2, refused.ExitCode);
-            Assert.Contains("edited after it was generated", refused.Message);
+            foreach (bool check in new[] { false, true })
+            {
+                var refused = TuneGenerator.Write(g, path, check);
+                Assert.Equal(2, refused.ExitCode);
+                Assert.Contains("edited after it was generated", refused.Message);
+            }
             Assert.Equal(edited, File.ReadAllText(path));
         }
         finally { Directory.Delete(dir, recursive: true); }
@@ -389,6 +397,206 @@ public class TuneGeneratorTests
             Assert.Equal(before, File.ReadAllText(path));
         }
         finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void AnotherRequestsOutputIsNeverReplaced()
+    {
+        // Review finding P3-002: the record's digest proves the generator wrote the file, not that it is this request's
+        // output. Each request below differs from the written one in one identity field only; the file stays untouched.
+        string dir = GeneratorFixtures.TempDirectory();
+        try
+        {
+            var v8 = GeneratorFixtures.Load(GeneratorFixtures.Variants,
+                GeneratorFixtures.TuneCopy("content/test/engine-matrix/syn_v8_ohv.json", "syn.v8.stock", "fixture.v8.policy2", _ => { }));
+            TuneGeneration Request(string engine, string fuel, string? policy = null, string? tuneId = null) =>
+                GeneratorFixtures.Uncalibrated(TuneGenerator.Plan(v8, new GenerationRequest(engine, fuel, policy, tuneId), GeneratorFixtures.Manifest));
+            var g = Request("syn_v8_ohv", "gasoline_95");
+            string path = Path.Combine(dir, "v8.json"), record = TuneGenerator.RecordPathFor(path);
+            Assert.StartsWith("WRITTEN", TuneGenerator.Write(g, path).Message);
+            string tune = File.ReadAllText(path), recordText = File.ReadAllText(record);
+
+            foreach (var (other, recorded) in new[]
+                     {
+                         (Request("fixture_v8_stroker", "gasoline_95"), "engine syn_v8_ohv, not fixture_v8_stroker"), // same policy and tune id
+                         (Request("syn_v8_ohv", "e85"), "fuel gasoline_95, not e85"),
+                         (Request("syn_v8_ohv", "gasoline_95", tuneId: "fixture.v8.other"), "tune id syn.v8.stock, not fixture.v8.other"),
+                         (Request("syn_v8_ohv", "gasoline_95", "fixture.v8.policy2", "syn.v8.stock"), "policy tune syn.v8.stock, not fixture.v8.policy2"),
+                     })
+            {
+                Assert.False(other.Refused, other.ToText());
+                // The file is an untouched generator output: only the identity check stands in the way.
+                Assert.True(TuneGenerator.GeneratorOwns(path, record, out _));
+                foreach (bool check in new[] { false, true })
+                {
+                    var outcome = TuneGenerator.Write(other, path, check);
+                    Assert.Equal(2, outcome.ExitCode);
+                    Assert.Contains("another generation request", outcome.Message);
+                    Assert.Contains(recorded, outcome.Message);
+                }
+                Assert.Equal((tune, recordText), (File.ReadAllText(path), File.ReadAllText(record)));
+            }
+
+            // The same request is still the generator's to rewrite; its own output is unchanged.
+            Assert.StartsWith("UNCHANGED", TuneGenerator.Write(g, path).Message);
+            Assert.Equal(0, TuneGenerator.Write(g, path, check: true).ExitCode);
+
+            // A record that does not state the request (older or damaged) is never assumed to match: here without its engine.
+            File.WriteAllText(record, System.Text.RegularExpressions.Regex.Replace(recordText, "\n *\"engine\": \"syn_v8_ohv\",", ""));
+            Assert.True(TuneGenerator.GeneratorOwns(path, record, out _));
+            var unstated = TuneGenerator.Write(g, path);
+            Assert.Equal(2, unstated.ExitCode);
+            Assert.Contains("engine (not recorded), not syn_v8_ohv", unstated.Message);
+
+            // A record that does not parse: not the generator's.
+            File.WriteAllText(record, "{ \"tunes\": [ ");
+            var unreadable = TuneGenerator.Write(g, path);
+            Assert.Equal(2, unreadable.ExitCode);
+            Assert.Contains("not this generator's record", unreadable.Message);
+            Assert.Equal(tune, File.ReadAllText(path));
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    // ---- The tune manifest (review finding P3-001) -------------------------------------------------------------------------
+
+    [Fact]
+    public void AnExplicitManifestThatCannotBeLoadedStopsGeneration()
+    {
+        string dir = GeneratorFixtures.TempDirectory();
+        try
+        {
+            string Save(string name, string text)
+            {
+                string path = Path.Combine(dir, name);
+                File.WriteAllText(path, text);
+                return path;
+            }
+            const string Recipe = "\"tune\": \"k20.stock\", \"engine\": \"kestrel_k20\", \"layer\": \"base\", \"file\": \"k20_stock.json\", \"fuel\": \"gasoline_95\", \"provenance\": \"\"";
+            foreach (var (path, says) in new[]
+                     {
+                         (Path.Combine(dir, "missing.json"), "no such file"),
+                         (Save("truncated.json", "{ \"tunes\": [ { \"tune\": \"k20.stock\", "), "could not be loaded"),
+                         (Save("no-tunes.json", "{ }"), "no \"tunes\" list"),
+                         (Save("no-hand.json", $"{{ \"tunes\": [ {{ {Recipe}, \"steps\": [ {{ \"calibrator\": \"ve\" }} ] }} ] }}"), "no \"hand_authored\" list"),
+                         (Save("bad-step.json", $"{{ \"tunes\": [ {{ {Recipe}, \"steps\": [ {{ \"calibrator\": \"vee\" }} ], \"hand_authored\": [] }} ] }}"), "unknown calibrator step 'vee'"),
+                     })
+            {
+                // Named explicitly: an error, whatever the repository's manifest — never a silent fallback to it or to none.
+                var lookup = TuneGenerator.FindManifest(path, RepoPaths.TuneManifest);
+                Assert.Null(lookup.Manifest);
+                Assert.NotNull(lookup.Error);
+                Assert.StartsWith("--manifest " + path, lookup.Error);
+                Assert.Contains(says, lookup.Error);
+                // Found in the repository but broken: an error too (only a manifest that is not there is "none").
+                if (says != "no such file") Assert.NotNull(TuneGenerator.FindManifest(null, path).Error);
+            }
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void AValidManifestIsUsedAndKeepsItsHandAuthoredTables()
+    {
+        Assert.Empty(TuneGenerator.ManifestProblems(GeneratorFixtures.Manifest));
+        var found = TuneGenerator.FindManifest(null, RepoPaths.TuneManifest);
+        Assert.Null(found.Error);
+        Assert.Equal(GeneratorFixtures.Manifest.Tunes.Count, found.Manifest!.Tunes.Count);
+        var named = TuneGenerator.FindManifest(RepoPaths.TuneManifest, "/no/such/manifest.json");
+        Assert.Null(named.Error);
+        Assert.Equal((RepoPaths.TuneManifest, GeneratorFixtures.Manifest.Tunes.Count), (named.Path, named.Manifest!.Tunes.Count));
+
+        var g = TuneGenerator.Plan(GeneratorFixtures.Load(), new GenerationRequest("kestrel_k20", "gasoline_95"), found.Manifest);
+        Assert.Equal(TuneGenerator.ManifestLoaded, g.Plan!.Manifest);
+        Assert.Equal(FieldOrigins.HandAuthored, g.Plan.Fields.Single(f => f.Field == "ignition_advance_deg").Origin);
+        Assert.Contains("  manifest: loaded\n", g.ToText());
+        Assert.DoesNotContain("WARNING", g.ToText());
+        Assert.Equal(TuneGenerator.ManifestLoaded, RecordOf(g).Manifest);
+    }
+
+    [Fact]
+    public void WithoutAManifestTheReportWarnsAndTheRecordSaysNone()
+    {
+        // The review's case: the K20 with no manifest to find. Generation may run, but never as if the manifest were there:
+        // the factory spark map is not known to be hand-authored, so it is calibrated — and the report and record say why.
+        var lookup = TuneGenerator.FindManifest(null, Path.Combine(Path.GetTempPath(), "carsim-no-such-dir-" + Guid.NewGuid().ToString("N"), "tune-manifest.json"));
+        Assert.Equal(new ManifestLookup(null, null, null), lookup);
+        var g = TuneGenerator.Plan(GeneratorFixtures.Load(), new GenerationRequest("kestrel_k20", "gasoline_95"), lookup.Manifest);
+        Assert.False(g.Refused, g.ToText());
+        Assert.Equal(TuneGenerator.ManifestNone, g.Plan!.Manifest);
+        Assert.Equal(new[] { "ve", "spark", "ve" }, g.Plan.Recipe.Steps.Select(s => s.Calibrator));
+        Assert.Equal(FieldOrigins.Calibrated, g.Plan.Fields.Single(f => f.Field == "ignition_advance_deg").Origin);
+        string text = g.ToText();
+        Assert.Contains("  manifest: none\n", text);
+        Assert.Contains(TuneGenerator.NoManifestWarning, text);
+        Assert.StartsWith("WARNING: no tune manifest was found", TuneGenerator.NoManifestWarning);
+        Assert.Equal(TuneGenerator.ManifestNone, RecordOf(g).Manifest);
+        Assert.Contains("\"manifest\": \"none\"", TuneGenerator.WriteRecord(GeneratorFixtures.Uncalibrated(g), "k20.json"));
+    }
+
+    private static GenerationRecord RecordOf(TuneGeneration planned)
+    {
+        string dir = GeneratorFixtures.TempDirectory();
+        try
+        {
+            string path = Path.Combine(dir, "x.recipe.jsonc");
+            File.WriteAllText(path, TuneGenerator.WriteRecord(GeneratorFixtures.Uncalibrated(planned), "x.json"));
+            return Assert.Single(CarSim.Verification.Calibration.TuneManifest.Load(path).Tunes).Generated!;
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    // ---- The report lists check-engine's warnings (review finding P3-007) --------------------------------------------------
+
+    private static string CheckSection(TuneGeneration g)
+    {
+        string text = g.ToText();
+        int start = text.IndexOf("\nCHECK  ", StringComparison.Ordinal);
+        int end = text.IndexOf("\n\n", start + 1, StringComparison.Ordinal);
+        return text[start..end];
+    }
+
+    [Fact]
+    public void TheReportListsEveryCheckWarning()
+    {
+        foreach (var (engine, fuel, count) in new[] { ("fixture_i4t_b58_like", "gasoline_98", 2), ("fixture_v8_stroker", "gasoline_95", 3) })
+        {
+            var g = Plan(engine, fuel, layers: GeneratorFixtures.Variants);
+            Assert.False(g.Refused, g.ToText());
+            Assert.Equal(count, g.Check!.Warnings.Count());
+            string section = CheckSection(g);
+            Assert.Contains($"PASS with {count} warning(s)", section);
+            foreach (var w in g.Check.Warnings) Assert.Contains("  " + w, section); // as check-engine prints it
+        }
+        var b58 = CheckSection(Plan("fixture_i4t_b58_like", "gasoline_98", layers: GeneratorFixtures.Variants));
+        Assert.Contains("[warning] feature_not_modelled: direct_injection", b58);
+        Assert.Contains("[warning] feature_not_modelled: exhaust_cam_phasing", b58);
+    }
+
+    [Fact]
+    public void ErrorsStillShowAndStrictStillRefusesOnWarnings()
+    {
+        // Errors and warnings together: every one listed, generation refused.
+        var both = Plan("fixture_v8_stroker_bad", "gasoline_95", layers: new[] { GeneratorFixtures.Variants, """
+            { "engines": [ { "id": "fixture_v8_stroker_bad", "extends": "fixture_v8_stroker", "name": "Stroker with oversize pistons (fixture)",
+                             "stock_parts": { "pistons": "fixture.v8.pistons.oversize" } } ] }
+            """ });
+        Assert.True(both.Has("check_failed"));
+        Assert.NotEmpty(both.Check!.Errors);
+        Assert.NotEmpty(both.Check.Warnings);
+        string section = CheckSection(both);
+        foreach (var f in both.Check.Errors.Concat(both.Check.Warnings)) Assert.Contains("  " + f, section);
+        Assert.Contains("[error] piston_bore_mismatch", section);
+
+        // --strict: refused on warnings, as before, and the warnings are listed.
+        var strict = Plan("fixture_i4t_b58_like", "gasoline_98", strict: true, layers: GeneratorFixtures.Variants);
+        Assert.Equal("check_warnings", Assert.Single(strict.Refusals).Code);
+        foreach (var w in strict.Check!.Warnings) Assert.Contains("  " + w, CheckSection(strict));
+
+        // A clean check reports cleanly.
+        var clean = Plan("syn_v8_ohv", "gasoline_95");
+        Assert.Empty(clean.Check!.Warnings);
+        Assert.Equal("\nCHECK  PASS (carsim check-engine syn_v8_ohv)", CheckSection(clean));
     }
 
     [Fact]

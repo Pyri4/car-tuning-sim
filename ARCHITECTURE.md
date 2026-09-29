@@ -173,10 +173,11 @@ need Forward+.
   `EngineCheck` in the core: the stock assembly, topology, interfaces, geometry, derived values
   (`EngineDerivedValues`), features, provenance coverage, the stock tune's agreement with the build), inspect
   assemblies, run a dyno sweep and print/CSV-export results, generate base maps for a tune (`calibrate-cams`,
-  `calibrate-ve`, `calibrate-spark`), generate a whole baseline tune for an engine's stock build (`generate-tune`,
-  `TuneGenerator` in `tools/CarSim.Verification`: check → derived beliefs → the manifest's or the hardware's recipe on
-  the regeneration driver until it settles → validation → the tune format plus a record; never over a file it did not
-  write) and measure the step cost of any family (`bench`). Commands take an engine-family id (required once more than one family is loaded).
+  `calibrate-ve`, `calibrate-spark`), generate a baseline tune for an engine's stock build from a hand-written policy
+  tune (λ targets, axes, rev limit, idle, boost; `generate-tune`, `TuneGenerator` in `tools/CarSim.Verification`:
+  check → derived beliefs → the manifest's or the hardware's recipe on the regeneration driver until it settles →
+  validation → the tune format plus a record; a tune manifest that cannot be loaded stops it, none found is warned
+  about; never over a file it did not write or another request's output) and measure the step cost of any family (`bench`). Commands take an engine-family id (required once more than one family is loaded).
   Used for development and as a regression harness; unlike the game UI it may print model internals (best-torque
   timing, knock limit).
 - Dyno, telemetry and debugging views in the game UI. *(in progress)*

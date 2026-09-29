@@ -87,8 +87,11 @@ The pipeline (`TuneGenerator.Plan` then `Generate`):
 5. The **policy tune** (the engine's `stock_tune`, or `--policy`) supplies what no calibrator produces; without one:
    `no_policy_tune` (NOT GENERATABLE).
 6. **Beliefs** are set from the build and the fuel (§4).
-7. The **recipe** is chosen (§6), and the calibrators' build (`TuneRegenerator.BuildAssembly` from the recipe) must be
-   the checked build slot for slot (`calibration_build_mismatch`).
+7. The **recipe** is chosen (§6), and the calibrators' build (`TuneRegenerator.BuildAssembly` from the recipe) must equal
+   the generator's own resolved stock assembly slot for slot (`calibration_build_mismatch`). *Corrected after the
+   adversarial review:* this is an internal consistency guard between two construction paths (both
+   `EngineAssembly.CreateStock` of the same resolved engine), not a comparison with the assembly object `check-engine`
+   validated, as an earlier wording ("the checked build") implied.
 8. The starting tune is **validated** before any calibrator runs (§8).
 9. The recipe runs through `TuneRegenerator.Settle` — the regeneration driver's own core — until a pass reproduces every
    calibrated value (≤ 5 iterations, else `not_settled`).
@@ -156,7 +159,8 @@ the SHA-256 of the tune file. No timestamp, no path, no machine value. The recor
 - Planning is deterministic for three engines (report, tune text, record); derived values for all 11.
 - The record carries no time or path (tested).
 
-**The K20 and M54 tunes stayed stable.** Nothing writes into `content/`; `regenerate-tunes` reproduces all 12
+**The K20 and M54 tunes stayed stable.** Nothing in Phase 3 wrote into `content/` (the generator writes only where
+`--out` points; see §16 for what protects existing files); `regenerate-tunes` reproduces all 12
 checked-in tunes (§9) and the fingerprint is identical.
 
 **Generating the existing engines (all 11, each on its manifest fuel):** every one generates, settles in 2 iterations
@@ -290,8 +294,18 @@ Classes: **A** generic, **B** documented limitation, **C** must fix before the n
 | 9 | M54 figures: ROADMAP says 152 kW, the Intake Gas Dynamics gate report 153.9 kW (PROJECT_STATE §10) | documentation, not reconciled | Outside this phase; unchanged |
 | 10 | `k20_t35_98` is a hard fingerprint case while the owner's handoff calls T35 diagnostic (PROJECT_STATE §10) | open owner decision | Verification change; not touched |
 
-No class C item was found: nothing blocks the next phase. No missing physical capability was met: generation needed no
-physics.
+Added after the adversarial review of Phase 3 (P3 numbers are the review's findings):
+
+| # | Item | Class | Status |
+|---|---|---|---|
+| 11 | P3-001: a missing or mistyped tune manifest failed open — `--manifest` naming a missing file was ignored and, with no manifest, a table the manifest lists as hand-authored (the K20's factory spark map: 164 of 180 cells, up to 17.5°) was recalibrated with exit 0 and no warning | **C** | **Fixed** (§16): a named manifest that is missing, unreadable or incomplete, or a found one that does not load, stops generation (exit 1); none found → the report warns and the record says `manifest: none` |
+| 12 | P3-002: the overwrite check proved the generator wrote a file (record + SHA-256) but not that it was this request's output — an untouched output of another engine, fuel or tune id was replaced ("REGENERATED") | C (safety) | **Fixed** (§16): the record's engine, fuel, tune id and policy tune must match the request; otherwise refused, `--check 1` included |
+| 13 | P3-003: nothing checks that a policy tune suits the build (load axis against the build's reachable MAP, a boost target on a boost-controlled build); a variant inherits its parent's stock tune and the parent recipe's hand-authored list | B → D | Open: a design limitation; warnings proposed for a later phase |
+| 14 | P3-012: format defaults (`idle_rpm` 850, `knock_control_enabled` true) are reported, and written, as hand-authored values of the policy tune when the policy omits them (the nine matrix tunes omit `knock_control_enabled`) | B | Open: provenance wording; not a behaviour change |
+
+The first gate found no class C item; the adversarial review found one (P3-001), fixed with P3-002 and P3-007 (the
+report now lists `check-engine`'s warnings, not only their count) in the required-fixes pass (§16). No class C item
+remains open. No missing physical capability was met: generation needed no physics.
 
 ## 13. Acceptance criteria (the owner's list)
 
@@ -304,7 +318,7 @@ physics.
 | existing generic calibrators reused | yes: `TuneRegenerator.Settle` and the manifest's recipes |
 | generated tunes deterministic; regenerated tunes identical | yes (§7) |
 | generated tunes validate | yes (§8) |
-| hand-authored tunes cannot be silently overwritten | yes (§4, tests, mutants) |
+| hand-authored tunes cannot be silently overwritten | yes (§4, tests, mutants); since §16 also another request's output, and a hand-authored table is never recalibrated silently for want of a manifest |
 | variants respected | yes (engine and part variants; mutants) |
 | derived values deterministic, one source of truth, reflect resolved content | yes (§2) |
 | synthetic V8 baseline tune generates | yes (§7, §8) |
@@ -324,7 +338,8 @@ work done inline** (cheaper than delegating): fixtures, repetitive tests, mutati
 sweeps.
 
 ## 15. Next action
-**STOP for the owner's review of Phase 3.** Nothing is merged; the LS3 pilot is not started.
+**STOP for the owner's review of Phase 3** — now including the required fixes after the adversarial review (§16).
+Nothing is merged; the LS3 pilot is not started.
 1. Owner reviews this report and the branch; if accepted, a PR from `claude/gallant-gauss-jkbqvi` to `main` (not opened
    here), merged after CI.
 2. Owner decisions recorded in PROJECT_STATE §13: (a) whether to correct the checked-in tunes' hand-entered beliefs
@@ -332,3 +347,44 @@ sweeps.
    axis rules for skeleton generation (§12 #2).
 3. The next phase (not started, needs authorization) is chosen from the milestone's remaining work: slot layouts,
    `validate --engines`, `list`/`schema`, verification from data (C2), the anti-hack extension (C3), then the pilot (D).
+
+## 16. Required fixes after the adversarial review (2026-09-29)
+An adversarial review of this phase, before any merge, concluded **READY AFTER SPECIFIC FIXES**: three code findings
+(P3-001, P3-002, P3-007) and documentation drift. This pass implements only those. The review's other findings are
+not addressed and stay open: P3-003 and P3-012 (§12 #13–14); P3-004 (no generation from engine data alone: §12 #2);
+P3-005 (the hand-entered fuel-density beliefs: §12 #1); P3-006 (a generated tune's displacement belief equals the
+geometry by construction, so its check against the geometry proves nothing new; no sourced nominal displacement);
+P3-009 (the name suffix compounds on regeneration); P3-010 (the skeleton's placeholder cam table and upper switch
+list are untested); P3-011 (the source audit's scope and patterns); P3-013 (the calibrators' rev-limit boundary,
+pre-existing); P3-014 and P3-016 (observations).
+
+| Finding | Before | After | Tests and mutants |
+|---|---|---|---|
+| **P3-001** (C) the tune manifest failed open | `--manifest <missing file>` was silently ignored; without a manifest, a table it lists as hand-authored was recalibrated (K20: 164 of 180 spark cells, up to 17.5°), exit 0, no warning | `TuneGenerator.FindManifest`: a `--manifest` that is missing, unreadable or incomplete (no `tunes` list; a recipe without `tune`, `engine`, `fuel`, `steps` or `hand_authored`; an unknown calibrator step) — or a repository manifest that is found but does not load — stops generation: exit 1, the reason on stderr, nothing generated. None found (the CLI outside the repository): generation runs, the report's RECIPE says `manifest: none` with a WARNING, the record's `generated.manifest` is `none` (`loaded` otherwise); the CLI prints the manifest's path on stderr | `AnExplicitManifestThatCannotBeLoadedStopsGeneration`, `AValidManifestIsUsedAndKeepsItsHandAuthoredTables`, `WithoutAManifestTheReportWarnsAndTheRecordSaysNone` (the review's K20 case); CI: `--manifest missing-manifest.json` must exit 1; mutants `generate-explicit-manifest-ignored`, `generate-accepts-invalid-manifest`, `generate-no-manifest-recorded-as-loaded`, `generate-no-manifest-silent` |
+| **P3-002** ownership not bound to the request | the record and SHA-256 proved the generator wrote the file; an untouched output of another engine, fuel or tune id was replaced ("REGENERATED") | `TuneGenerator.AnotherRequest`: the record's engine, fuel, tune id and policy tune must equal the request's; otherwise REFUSED (exit 2), `--check 1` too, naming what differs. A record that does not state them (older or damaged) is never assumed to match | `AnotherRequestsOutputIsNeverReplaced` (each identity field alone, with the digest intact; a record without its engine; an unparseable record); `AGeneratedTuneIsWrittenOnceAndRegeneratedOnlyWhileUntouched` now regenerates the *same* request after its policy changed, and refuses a hand edit with and without `--check`; mutants `generate-owns-ignores-request`, `generate-owns-ignores-fuel` (the existing overwrite mutants are still caught) |
+| **P3-007** warnings hidden | CHECK listed errors; warnings only as a count | CHECK lists every error, then every warning, as `check-engine` prints them (`[warning] code: message`); `--strict` unchanged | `TheReportListsEveryCheckWarning` (2 and 3 warnings), `ErrorsStillShowAndStrictStillRefusesOnWarnings` (error + 3 warnings; `--strict`; a clean check); mutant `generate-hides-check-warnings` |
+| Documentation | "the checked build slot for slot"; "never writes into `content/`"; "a byte-exact round trip"; no class C item; README/ARCHITECTURE "a whole baseline tune" without the policy tune | corrected in the guide (§6b), docs/VERIFICATION.md, this report (§3, §7, §12, §13), ARCHITECTURE.md and README.md; `car-sim-add-engine` states exit 1 and says to escalate `manifest: none` (reinstalled; lock updated) | — |
+
+**Record format.** `generated` gains one field, `manifest` (`loaded` | `none`). No identity field was added: the record's
+recipe already carried `tune`, `engine` and `fuel`, and `generated.policy_tune` the policy. A record written before
+this pass states the request, so it is compared, not assumed; it lacks `manifest`, so the next generation of the same
+request rewrites it (`REGENERATED`; `--check 1`: `DIFFERENT`, "its record"). The generator's version stays 1: for the
+same inputs the tune files are byte-identical (below).
+
+**Verification of this pass** (same container; numbers seen):
+
+| Check | Result |
+|---|---|
+| `dotnet build CarTuningSim.sln -c Release` | 0 warnings, 0 errors |
+| `dotnet test CarTuningSim.sln -c Release` | **846 passed**, 0 failed, 0 skipped (3 m 26 s; +6 tests, `TuneGeneratorTests` 29 → 35) |
+| `carsim validate --mods content/test` | OK (247 parts, 11 engines, 5 fuels, 12 tunes) |
+| `carsim check-engine` on all 11 engines | 11 PASS (M54 with 6 warnings) |
+| `carsim generate-tune` on all 11 engines (manifest fuels), then `--check 1` | 11 of 11 generated (exit 0); every tune file **byte-identical** to the Phase 3 sweep; every record the same plus `"manifest": "loaded"`; 11 of 11 `--check 1`: UNCHANGED |
+| `carsim fingerprint` (35 cases, 100 sections) | **IDENTICAL** |
+| `carsim regenerate-tunes` | **12 of 12 reproduced** |
+| Mutation harness | **66 of 66 caught** (59 + 7 new; 22 m 9 s) |
+| Godot headless smoke | **8 of 8 passed, 0 `ERROR` lines** (K20 134.1 hp, M54 203.2 hp, `syn_v8_swap` 263.0 hp, `syn_v6_tt_swap` 441.5 hp; dyno + drive) |
+
+Not changed: physics, ECU behaviour, calibrator mathematics, tolerances, content (no tune, fuel, scenario or engine
+file), the fingerprint baseline, the synthetic tunes' fuel-density beliefs, and the fuel, policy and rev-limit
+architecture.

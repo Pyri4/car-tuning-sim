@@ -21,8 +21,12 @@ internal static class GenerateTuneCommand
                                                         tune), runs the manifest's recipe for it (else one derived from the
                                                         hardware) with the dev calibrators until it settles, validates the result.
                                                         --out writes the tune (content format) and a .recipe.jsonc record beside
-                                                        it, never over a file it did not write; --check 1 compares instead.
-                                                        Exit 0 = generated (written or unchanged); 2 = refused; 4 = --check differs.
+                                                        it, never over a file it did not write nor over another engine's, fuel's,
+                                                        tune id's or policy's output; --check 1 compares instead. --manifest (or
+                                                        the repository's) must load; with none found the report warns and every
+                                                        calibratable table is calibrated.
+                                                        Exit 0 = generated (written or unchanged); 1 = usage or manifest error;
+                                                        2 = refused; 4 = --check differs.
         """;
 
     public static int Run(CliOptions o, string modsDir)
@@ -46,8 +50,16 @@ internal static class GenerateTuneCommand
                                     string.Join(", ", load.Database.Fuels.Keys.OrderBy(k => k, StringComparer.Ordinal)) + ".");
             return 1;
         }
-        string? manifestPath = o.Named.GetValueOrDefault("manifest") ?? DefaultManifest();
-        var manifest = manifestPath != null && File.Exists(manifestPath) ? TuneManifest.Load(manifestPath) : null;
+        // The manifest says which tables are hand-authored: one named with --manifest (or found in the repository) must load,
+        // or nothing is generated; none found is reported (manifest: none) and warned about.
+        var lookup = TuneGenerator.FindManifest(o.Named.GetValueOrDefault("manifest"), DefaultManifest());
+        if (lookup.Error != null)
+        {
+            Console.Error.WriteLine(lookup.Error);
+            return 1;
+        }
+        Console.Error.WriteLine(lookup.Path != null ? $"manifest: {lookup.Path}" : "manifest: none found");
+        var manifest = lookup.Manifest;
         var request = new GenerationRequest(engineId, fuel, o.Named.GetValueOrDefault("policy"), o.Named.GetValueOrDefault("id"),
             Strict: o.Named.GetValueOrDefault("strict") is "1" or "true");
 
@@ -66,7 +78,7 @@ internal static class GenerateTuneCommand
         return outcome.ExitCode;
     }
 
-    /// <summary>The repository's tune manifest when the CLI runs inside the repository; none elsewhere.</summary>
+    /// <summary>The repository's tune manifest path when the CLI runs inside the repository; none elsewhere.</summary>
     private static string? DefaultManifest()
     {
         try { return RepoPaths.TuneManifest; }

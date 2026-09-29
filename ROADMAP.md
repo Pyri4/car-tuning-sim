@@ -308,6 +308,10 @@ verification or its honesty about sources? ([docs/ENGINE_AUTHORING_FACTORY_AUDIT
       again byte-identically). K20, M54 and matrix tunes and the fingerprint unchanged; `regenerate-tunes` 12 of 12.
 - [x] 74 new tests (840 in all); 16 new mutants, all caught (59 of 59); the source audit covers the generator; local Godot
       smoke tests 8 of 8.
+- [x] Required fixes after the adversarial review (gate report §16): a `--manifest` or repository manifest that cannot
+      be loaded stops generation, none found is warned about and recorded (`manifest: none`); a generated output is
+      replaced only by the same request (engine, fuel, tune id, policy tune); the report lists check-engine's warnings.
+      846 tests; 66 of 66 mutants; fingerprint identical; generated tunes byte-identical.
 - [ ] The gate review (owner).
 
 ### Phase 6 (early) — Modding ✅

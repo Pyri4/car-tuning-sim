@@ -79,7 +79,7 @@ dotnet run --project tools/CarSim.Cli -- inspect isar_m54              # archite
 dotnet run --project tools/CarSim.Cli -- check-engine isar_m54 [--verbose 1] [--strict 1]
                                                                        # is this an authorable engine? (exit 0 ok, 2 errors, 3 strict warnings)
 dotnet run --project tools/CarSim.Cli -- generate-tune syn_v8_ohv --mods content/test --fuel gasoline_95 [--out v8.json]
-                                                                       # baseline tune for the stock build (explicit fuel; refuses a failing engine)
+                                                                       # baseline tune for the stock build from its policy tune (explicit fuel; refuses a failing engine)
 dotnet run --project tools/CarSim.Cli -- validate --mods content/test  # base content plus the synthetic engine matrix
 dotnet run --project tools/CarSim.Cli -- sweep syn_v6_tt --mods content/test --fuel gasoline_98   # per-bank/per-turbo columns
 dotnet run --project tools/CarSim.Cli -- drive syn_v8_ohv --mods content/test --vehicle isar_c30   # an engine swap

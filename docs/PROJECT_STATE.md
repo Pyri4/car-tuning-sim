@@ -6,10 +6,10 @@ A machine-readable summary lives beside it: [project-state.json](project-state.j
 
 | | |
 |---|---|
-| **Snapshot date** | 2026-09-29 (Phase 3 gate) |
+| **Snapshot date** | 2026-09-29 (Phase 3 gate; required fixes after its adversarial review) |
 | **`main` at snapshot** | `df9c987` (Merge pull request #9, this handoff document) on top of `c07804a` (PR #8, Phases 1 & 2) |
-| **This document written on** | branch `claude/gallant-gauss-jkbqvi` (Phase 3: code `74e7480`, `aec1a2e`; docs `aed05e8` and a CI-record commit on top), **not merged, no PR opened** |
-| **Current milestone** | Engine Authoring Factory 1.0 — Phases 1 and 2 merged; **Phase 3 implemented, at its gate** ([report](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md)) |
+| **This document written on** | branch `claude/gallant-gauss-jkbqvi` (Phase 3: code `74e7480`, `aec1a2e`; docs `aed05e8`; CI record `69582a9`; the review's required fixes in one commit on top), **not merged, no PR opened** |
+| **Current milestone** | Engine Authoring Factory 1.0 — Phases 1 and 2 merged; **Phase 3 implemented, reviewed adversarially, required fixes applied — at its gate** ([report](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md), §16 for the fixes) |
 | **Next action** | §13 |
 
 Everything below is verified against the repository and GitHub at the snapshot unless marked **UNVERIFIED** or
@@ -162,10 +162,17 @@ authorized phase by phase). Evidence: [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](E
 |---|---|---|
 | Phase 1 | B1 schema **except slot layouts** | Merged (PR #8) |
 | Phase 2 | B2 check + part of B3 | Merged (PR #8) |
-| Phase 3 | the derived-value part of B3 + C1 (`generate-tune`) | **Implemented, at its gate** on `claude/gallant-gauss-jkbqvi`, not merged — [PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md); brief in §7 |
+| Phase 3 | the derived-value part of B3 + C1 (`generate-tune`) | **Implemented; adversarial review → required fixes applied; at its gate** on `claude/gallant-gauss-jkbqvi`, not merged — [PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md) (§16: the fixes); brief in §7 |
 | later | slot layouts (rest of B1), `validate --engines`, `list`/`schema` (rest of B3), C2 verification from data, C3 anti-hack extension (beyond the generator's audit scope, done in Phase 3), C4 docs/skills as the full pipeline, D pilot (LS3-type V8; B58 negative test), E gate | Not started; each needs owner authorization |
 
 ## 7. Phase 3 brief (issued by the owner 2026-09-29) and what was delivered
+**Adversarial review and required fixes (2026-09-29):** before any merge the owner asked for an adversarial review; it
+concluded READY AFTER SPECIFIC FIXES. The fixes, and only they, are applied (gate report §16): **P3-001** — a
+`--manifest` or repository manifest that cannot be loaded stops generation (exit 1); none found → `manifest: none`, a
+WARNING in the report, `"manifest": "none"` in the record; **P3-002** — a generated output is replaced only by the same
+request (engine, fuel, tune id, policy tune); **P3-007** — the report lists every check-engine warning; plus the
+documentation drift the review found. Every other review finding stays open (§10).
+
 **Delivered (2026-09-29, branch `claude/gallant-gauss-jkbqvi`, not merged):** every acceptance criterion below is met
 and evidenced in [PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md) (§13 of the
 report). Decisions taken inside the brief: no default fuel exists in content, so `--fuel` is required; λ, rev limit, idle,
@@ -288,7 +295,8 @@ phasing, continuous VVL (Valvetronic-type), twin-scroll turbines, cylinder deact
 both lobes, inline cylinder groups (parallel twin-turbo inline engines).
 
 **Authoring-factory gaps still open:** slot layouts (V/flat slot lists hand-written, ≈ 104–138 lines per multi-bank
-engine); tune skeletons and recipes hand-written; no `generate-tune`; fuel-system capacity not checked (needs a sweep,
+engine); tune skeletons (policy tunes) hand-written, and a generated tune's recipe copied into the manifest by hand
+(`generate-tune` exists since Phase 3); fuel-system capacity not checked (needs a sweep,
 not a static check); per-engine C# still needed in the verification layer (fingerprint cases, reference tests, family
 lists) until C2; `--strict` is all-or-nothing; tunes and reference figures have no provenance home; `Program.cs`
 monolithic.
@@ -311,6 +319,19 @@ commit), 409 `src/` (the cam-timing capability), 1,227 tests. Estimated today fo
   `tune-manifest.json`). Class D (the pilot's "0 hand pastes").
 - Test-suite wall time +54 s (the synthetic V8 generated end to end). Class B, accepted and reported.
 
+**Open findings of the Phase 3 adversarial review (not fixed; the required ones — P3-001, P3-002, P3-007 — are, gate
+report §16):** P3-003 no check that a policy tune suits the build (axis coverage, boost target; a variant inherits its
+parent's policy and hand-authored list); P3-004 no generation from engine data alone (the policy tune, placeholder
+tables and beliefs included, is hand-written); P3-005 the tune does not record its calibration fuel and check-engine
+has no fuel-belief rule (the 0.745 beliefs above); P3-006 a generated tune's displacement belief equals the geometry by
+construction (no sourced nominal displacement to check the geometry against); P3-009 the generated name's suffix
+compounds when a generated tune becomes the policy; P3-010 the skeleton's placeholder cam table and upper switch list
+have no test (the cam path was shown to work); P3-011 the source audit does not scan `tools/CarSim.Cli` nor catch
+`Banks`/`Layout` comparisons; P3-012 format defaults (`idle_rpm`, `knock_control_enabled`) reported as hand-authored;
+P3-013 the calibrators treat the tune's rev limit, not the ECU's effective limit, as the boundary (VE `<=`, spark and
+cams `<`; pre-existing); P3-014, P3-016 observations (derived values are a reporting view; end-to-end generation is
+tested on one engine).
+
 ## 11. Documents that are stale or inconsistent (fix in the next phase that touches them)
 - Fixed in the Phase 3 docs commit: ROADMAP.md and the milestone doc now record Phases 1 and 2 as passed and merged;
   ROADMAP's "Current state" is dated 2026-09-29; the guide no longer calls the milestone "proposed; not yet in the code".
@@ -318,12 +339,17 @@ commit), 409 `src/` (the cam-timing capability), 1,227 tests. Estimated today fo
 - ROADMAP M54 figures (152 kW) vs the Intake Gas Dynamics gate report (153.9 kW): see §10 — still **not reconciled**.
 - The milestone doc's C1 "proof" (a matrix tune regenerated from nothing reproduces its checked-in tables) is not met as
   written; the doc now records what Phase 3 delivered instead and why (hand-entered beliefs, no skeleton generation).
+- Fixed in the review-fix pass: the guide §6b and the gate report called `calibration_build_mismatch` a check against
+  "the checked build" (it compares two constructions of the same resolved stock assembly); docs/VERIFICATION.md said
+  the generator "never writes into `content/`" (it writes where `--out` points) and verified "a byte-exact round trip"
+  (field by field); ARCHITECTURE.md and README.md described `generate-tune` without its policy tune.
 
 ## 12. Roadmap beyond Phase 3
 Status vocabulary: CONFIRMED (done, merged) / PLANNED (in an authorized milestone definition) / POSSIBLE (listed in
 ROADMAP "Next recommended tasks", not authorized) / NOT YET AUTHORIZED (explicitly excluded for now).
 
-- **IMPLEMENTED, AT ITS GATE:** Phase 3 (derived values, `generate-tune`) on `claude/gallant-gauss-jkbqvi`.
+- **IMPLEMENTED, AT ITS GATE:** Phase 3 (derived values, `generate-tune`) on `claude/gallant-gauss-jkbqvi`, with the
+  adversarial review's required fixes applied.
 - **PLANNED** (Engine Authoring Factory 1.0, authorized phase by phase — each phase still needs the owner's go):
   slot layouts; `validate --engines`; `list`, `schema`; verification from data (profiles, light fingerprint cases,
   conformance suite, `compare-engine`, `verify-engine`); anti-hack extension (content-derived audit tokens, calibrators
@@ -339,7 +365,7 @@ ROADMAP "Next recommended tasks", not authorized) / NOT YET AUTHORIZED (explicit
   UI ahead of capabilities, matching a single engine's dyno curve, B58 as supported content.
 
 ## 13. NEXT ACTION (exact)
-**The owner reviews Phase 3** ([PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md)).
+**The owner reviews Phase 3 and the required fixes** ([PHASE3_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md), §16 for the fixes).
 Nothing is merged; the LS3 pilot and every later phase are not started. The next agent does **not** start new work
 until the owner decides:
 1. Accept Phase 3 → open a PR from `claude/gallant-gauss-jkbqvi` to `main` (only when the owner asks), merge after CI.
@@ -347,7 +373,9 @@ until the owner decides:
    against the new `main`).
 2. Owner decisions pending: (a) correct the checked-in tunes' hand-entered beliefs (a content change with a fingerprint
    re-baseline, its own commit) or leave them; (b) whether a later phase may define named λ policies and axis rules for
-   skeleton generation; (c) the older open items in §10 (T35 as a hard fingerprint case; the M54 figure in ROADMAP).
+   skeleton generation; (c) the older open items in §10 (T35 as a hard fingerprint case; the M54 figure in ROADMAP);
+   (d) the review's open findings (§10): whether hand-authored status and the calibration fuel belong in content
+   (P3-001's root, P3-005), policy-suitability warnings (P3-003), and the generic rev-limit correction (P3-013).
 3. Then the next phase, **only when authorized**, from the milestone's remaining work (§6): slot layouts,
    `validate --engines`, `list`/`schema`, verification from data (C2), the anti-hack extension (C3), then the pilot (D).
    Start with the fresh-agent procedure (§14) and re-run the Phase 3 gate checks (§8) first.
@@ -366,7 +394,7 @@ Environment notes: this cloud container had no .NET SDK preinstalled; `apt-get i
 release URL in `.github/workflows/ci.yml` (it worked on 2026-09-29): unzip, `dotnet build game/CarTuningSim.csproj`,
 `godot --headless --path game --import`, then the smoke tests. The full test suite takes ≈ 2 m 45 s (the synthetic V8
 tune generation ≈ 2 min of it, in parallel), full tune regeneration ≈ 4.5 minutes, the fingerprint ≈ 35 s, one
-`generate-tune` 15 s (K20) to ≈ 4 min (twin-turbo V6), the mutation harness (59 entries) ≈ 21 minutes. The mutation
+`generate-tune` 15 s (K20) to ≈ 4 min (twin-turbo V6), the mutation harness (66 entries) ≈ 22 minutes. The mutation
 harness mutates source files: run it in a separate `git worktree` when you keep editing.
 
 ## 15. Maintaining this document

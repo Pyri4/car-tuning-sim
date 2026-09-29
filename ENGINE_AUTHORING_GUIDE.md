@@ -316,6 +316,7 @@ Code: `tools/CarSim.Verification/Calibration/TuneGenerator.cs`, `tools/CarSim.Cl
 
 1. **Check.** `check-engine` runs first; any error refuses generation (`--strict 1`: any warning too). So the engine
    and its variants resolve, the stock parts resolve and install, and the assembly is valid before anything is tuned.
+   The report lists every error and warning the check found, as `check-engine` prints them.
 2. **Fuel.** `--fuel` is required; nothing picks a default (content has no per-engine calibration fuel; the manifest's
    fuel belongs to its recipe). The fuel sets the spark map's knock limit and the ECU's fuel beliefs.
 3. **Beliefs from the build and the fuel** (origin *derived*): `displacement_cc` = the derived displacement (full
@@ -331,25 +332,39 @@ Code: `tools/CarSim.Verification/Calibration/TuneGenerator.cs`, `tools/CarSim.Cl
    recipe follows (a test checks it reproduces all of them): `cams` for a phaser the ECU drives, `runner_switch` for a
    switched intake, `lift_switch` for switched cams, then `ve`, and `spark` → `ve` when the spark map is calibrated.
    Hardware the ECU cannot drive gets no step (NOT GENERATABLE); a declared feature the simulator does not model has no
-   control to generate (NOT MODELLED).
+   control to generate (NOT MODELLED). The manifest is `--manifest <file>` or, by default, the repository's
+   `tools/CarSim.Verification/tune-manifest.json` (found from the working directory, then the CLI's location). It is
+   the only record of which tables are hand-authored, so it is never silently dropped: a named manifest that is missing,
+   unreadable or incomplete, or a found one that does not load, stops generation (exit 1). With none found, generation
+   runs, but the report says `manifest: none` with a WARNING and the record `"manifest": "none"` — no table is known
+   to be hand-authored, so every calibratable table is calibrated (the K20's factory spark map included).
 6. **Calibration to a fixed point.** The recipe runs, as `regenerate-tunes` runs it, until a further pass reproduces every
-   calibrated value (at most 5 iterations; else `not_settled`). The calibrators run on the build the check validated
-   (`calibration_build_mismatch` otherwise). So regenerating a generated tune gives it back.
+   calibrated value (at most 5 iterations; else `not_settled`). So regenerating a generated tune gives it back. The
+   calibrators build their engine from the recipe (`TuneRegenerator.BuildAssembly`); `calibration_build_mismatch`
+   compares that build slot for slot with the generator's own resolved stock assembly — an internal consistency guard
+   between the two construction paths (both `EngineAssembly.CreateStock` of the same resolved engine), not a comparison
+   with the assembly object `check-engine` validated.
 7. **Validation** before and after calibration: the tune format's rules and ranges; the beliefs exactly the build's and
    the fuel's (`belief_not_derived`); a rev limit the ECU honours (`calibration_rev_limit_above_ecu`: the calibrators
    treat every column up to the tune's limit as running); the assembly rules that depend on the tune and the tune ↔ build
-   rules of `check-engine` (`EngineCheck.CheckTune`), with their own severities; the written file loads back identical.
+   rules of `check-engine` (`EngineCheck.CheckTune`), with their own severities; the written file loads back to the same
+   tune, compared field by field (`DifferingFields`: tables and lists value by value, not the file's bytes).
 8. **Output.** Without `--out`, a dry run. `--out <file.json>` writes the tune in the existing content format (a layer
    the loader reads; by default it keeps the policy tune's id, so a later layer replaces the stock tune) and a record
-   `<file>.recipe.jsonc` beside it: a one-recipe tune manifest with a `generated` block (generator and version, policy,
-   recipe source, the resolved assembly slot by slot, every field's origin, what was not generated, iterations, the
-   tune file's SHA-256). No timestamp or path: the same inputs give the same bytes.
-9. **Overwrite policy.** The generator writes over a file only when the record beside it says the generator wrote it and
-   the digest still matches (an untouched output: regeneration). A hand-authored tune, a content file holding a tune, or
-   a generated tune edited since is refused, whatever the options; move it yourself. `--check 1` writes nothing and exits
-   4 when regenerating would change the file.
+   `<file>.recipe.jsonc` beside it: a one-recipe tune manifest (its tune id, engine and fuel) with a `generated` block
+   (generator and version, policy, recipe source, `manifest` — `loaded` or `none` — the resolved assembly slot by slot,
+   every field's origin, what was not generated, iterations, the tune file's SHA-256). No timestamp or path: the same
+   inputs give the same bytes. `--out` may name any `.json` path, a content layer included: nothing keeps it out of
+   `content/`; the overwrite policy below is what protects existing files.
+9. **Overwrite policy.** The generator writes over a file only when the record beside it says the generator wrote it,
+   the digest still matches (an untouched output) and it records the same request — engine, fuel, tune id and policy
+   tune (regeneration). A hand-authored tune, a content file holding a tune, a generated tune edited since, or another
+   request's untouched output (another engine, fuel, tune id or policy) is refused, whatever the options; move it
+   yourself. A record that does not state the request is never assumed to match. `--check 1` writes nothing and exits 4
+   when regenerating the same request would change the file.
 
-Exit codes: 0 generated (written, or unchanged); 2 refused; 4 `--check` differs; 1 usage error.
+Exit codes: 0 generated (written, or unchanged); 2 refused; 4 `--check` differs; 1 usage error or a manifest that cannot
+be used.
 
 **Not yet:** registering a generated tune as an engine's shipped stock tune (moving it into a content layer and adding
 its recipe to `tune-manifest.json`) is manual; a policy tune is still hand-written (skeleton generation needs owner

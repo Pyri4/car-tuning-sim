@@ -81,8 +81,10 @@ wish to change a constant, tolerance, test or regression baseline. Never invent 
    - **Generate** (T1): `dotnet run --project tools/CarSim.Cli -c Release -- generate-tune <engine-id> --fuel <fuel>
      [--mods <dir>] --out <file.json>`. The fuel is always explicit. It refuses an engine that fails `check-engine`,
      sets the ECU's beliefs from the build and the fuel, runs the recipe with the dev calibrators until it settles and
-     validates the result. Exit 0 = generated; 2 = refused (read RESULT: each refusal has a code and a reason —
-     **escalate** NOT GENERATABLE and `not_settled` to T3 rather than working around them); 4 = `--check 1` differs.
+     validates the result. Exit 0 = generated; 1 = usage or a tune manifest that cannot be loaded; 2 = refused (read
+     RESULT: each refusal has a code and a reason — **escalate** NOT GENERATABLE and `not_settled` to T3 rather than
+     working around them); 4 = `--check 1` differs. Run it inside the repository: if RECIPE says `manifest: none` (with
+     a WARNING), no table was known to be hand-authored — stop and escalate rather than use the tune.
    - Read FIELDS and NOT GENERATED: every value is *derived*, *calibrated* or *hand-authored*, and each NOT MODELLED
      feature has no tune control. Run it again with `--check 1`: it must say UNCHANGED (determinism).
    - **Register it** (T1, manual until a later phase): move the tune into the engine's content layer (it keeps the

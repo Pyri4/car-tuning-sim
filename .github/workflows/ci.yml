@@ -49,6 +49,9 @@ jobs:
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- generate-tune kestrel_k20 --fuel gasoline_95 --out "$RUNNER_TEMP/k20.json"
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- generate-tune kestrel_k20 --fuel gasoline_95 --out "$RUNNER_TEMP/k20.json" --check 1 | tee gen-check.log
           grep -q "OUTPUT  UNCHANGED" gen-check.log
+          # A --manifest that cannot be loaded stops generation with exit 1, never a silent fallback (review P3-001).
+          code=0; dotnet run --project tools/CarSim.Cli --no-build -c Release -- generate-tune kestrel_k20 --fuel gasoline_95 --manifest missing-manifest.json || code=$?
+          test "$code" -eq 1
       - name: Verification tools (fingerprint from the CLI, tune-regeneration driver) — docs/VERIFICATION.md
         run: |
           dotnet run --project tools/CarSim.Cli --no-build -c Release -- fingerprint --case k20_stock_95,m54_stock_98

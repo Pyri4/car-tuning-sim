@@ -4,7 +4,7 @@
     "car-sim-add-engine": {
       "source": "./tools/agent-skills",
       "sourceType": "local",
-      "computedHash": "71ba261303669e73364008ba3fd3010ab9ba759af64994efaa5b42a521ee7b33"
+      "computedHash": "361d946c6404c73806a3187901ee757c31c619a814fae5a52a8a95772f1b22dd"
     },
     "car-sim-project-gate": {
       "source": "./tools/agent-skills",

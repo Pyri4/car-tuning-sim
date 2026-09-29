@@ -8,12 +8,13 @@
     "main_commit_subject": "Merge pull request #9 from Pyri4/claude/jolly-mccarthy-ze2vps",
     "written_on_branch": "claude/gallant-gauss-jkbqvi",
     "branch_implementation_commit": "74e74803796efc2c76ac7c8acf05c484976ad1b0",
-    "branch_state": "Phase 3 implemented, at its gate; pushed; not merged; no PR opened",
+    "branch_state": "Phase 3 implemented; adversarial review -> required fixes applied (gate report section 16); at its gate; pushed; not merged; no PR opened",
     "branch_commits": [
       "74e7480 implementation",
       "aec1a2e fuel binding + report text",
       "aed05e8 docs, skills, CI step, gate report",
-      "(head) CI run 86 recorded"
+      "69582a9 CI run 86 recorded",
+      "(head) required fixes after the adversarial review: P3-001, P3-002, P3-007, docs"
     ]
   },
   "project": {
@@ -136,7 +137,7 @@
       },
       "phase_3": {
         "work_packages": "derived-value part of B3 + C1 (generate-tune)",
-        "status": "implemented_at_gate",
+        "status": "implemented_reviewed_fixed_at_gate",
         "branch": "claude/gallant-gauss-jkbqvi",
         "implementation_commit": "74e7480",
         "merged": false,
@@ -148,7 +149,29 @@
           "check-engine DERIVED section; stock tune displacement belief validated; EngineCheck.CheckTune shared",
           "carsim generate-tune: check gate, explicit fuel, beliefs from build and fuel, policy tune, manifest recipe or hardware rule, TuneRegenerator.Settle to a fixed point, validation, tune format + .recipe.jsonc record, overwrite only own untouched output",
           "synthetic V8 end-to-end demonstration; 74 tests; 16 mutants; source audit extended to tools/CarSim.Verification/Calibration"
-        ]
+        ],
+        "review": {
+          "verdict": "READY AFTER SPECIFIC FIXES",
+          "fixed": {
+            "P3-001": "a --manifest or repository manifest that cannot be loaded stops generation (exit 1); none found: report 'manifest: none' + WARNING, record generated.manifest = none",
+            "P3-002": "a generated output is replaced only by the same request: record engine, fuel, tune id and policy tune must match (else REFUSED, --check too)",
+            "P3-007": "the report lists every check-engine warning",
+            "docs": "guide 6b, VERIFICATION.md, gate report 3/7/12/13/16, ARCHITECTURE.md, README.md; car-sim-add-engine skill"
+          },
+          "open": [
+            "P3-003 policy suitability unchecked",
+            "P3-004 no generation from engine data alone",
+            "P3-005 no calibration fuel in content; 0.745 beliefs",
+            "P3-006 generated displacement belief = geometry by construction",
+            "P3-009 name suffix compounds",
+            "P3-010 skeleton placeholders untested",
+            "P3-011 audit scope/patterns",
+            "P3-012 format defaults reported as hand-authored",
+            "P3-013 calibrator rev-limit boundary (pre-existing)",
+            "P3-014 derived values are a reporting view",
+            "P3-016 end-to-end generation tested on one engine"
+          ]
+        }
       },
       "later": {
         "work_packages": "slot layouts, validate --engines, list/schema, C2, C3 (beyond generator audit scope), C4, D pilot (LS3-type V8, B58 negative), E gate",
@@ -157,11 +180,11 @@
     }
   },
   "next_action": {
-    "summary": "Owner reviews Phase 3 (PHASE3_GATE_REPORT.md). Do not start new work until the owner decides; do not merge or open a PR unless asked.",
+    "summary": "Owner reviews Phase 3 and its required fixes (PHASE3_GATE_REPORT.md, section 16). Do not start new work until the owner decides; do not merge or open a PR unless asked.",
     "steps": [
       "git fetch origin; confirm main is still df9c987, else re-verify the branch against the new main",
       "if the owner accepts: PR from claude/gallant-gauss-jkbqvi to main (only when asked), merge after CI",
-      "owner decisions pending: correct the checked-in tunes' hand-entered beliefs (fingerprint re-baseline) or leave them; named lambda policies/axis rules for skeleton generation; T35 hard case; ROADMAP M54 figure",
+      "owner decisions pending: correct the checked-in tunes' hand-entered beliefs (fingerprint re-baseline) or leave them; named lambda policies/axis rules for skeleton generation; T35 hard case; ROADMAP M54 figure; the review's open findings (content home for hand-authored status and calibration fuel, policy-suitability warnings, generic rev-limit correction)",
       "then the next phase only when authorized: slot layouts, validate --engines, list/schema, C2, C3, pilot"
     ],
     "must_not": [
@@ -175,7 +198,8 @@
   "verification": {
     "run_in_session_on": [
       "df9c987 (baseline)",
-      "74e7480 (Phase 3)"
+      "74e7480 (Phase 3)",
+      "working tree of the review-fix commit (on 69582a9)"
     ],
     "build_release": {
       "warnings": 0,
@@ -186,7 +210,13 @@
       "failed": 0,
       "skipped": 0,
       "baseline_passed": 766,
-      "wall_time": "2m45s (baseline 1m51s)"
+      "wall_time": "2m45s (baseline 1m51s)",
+      "after_review_fixes": {
+        "passed": 846,
+        "failed": 0,
+        "skipped": 0,
+        "wall_time": "3m26s"
+      }
     },
     "content_validation": {
       "base": "OK (105 parts, 2 engines, 5 fuels, 3 tunes)",
@@ -197,33 +227,44 @@
       "all_exit_0": true,
       "k20_strict_exit": 0,
       "m54": "PASS with 6 warnings; --strict exit 3",
-      "derived_section": true
+      "derived_section": true,
+      "after_review_fixes": "11 PASS (M54 with 6 warnings)"
     },
     "generate_tune": {
       "engines": 11,
       "generated": 11,
       "iterations_each": 2,
-      "v8_check_mode": "UNCHANGED (byte-identical)"
+      "v8_check_mode": "UNCHANGED (byte-identical)",
+      "after_review_fixes": "11 of 11 generated (exit 0); tune files byte-identical to the Phase 3 sweep; records + manifest: loaded; 11 of 11 --check 1 UNCHANGED"
     },
     "fingerprint": {
       "cases": 35,
       "sections": 100,
-      "result": "IDENTICAL"
+      "result": "IDENTICAL",
+      "after_review_fixes": "IDENTICAL (35 cases, 100 sections)"
     },
     "regenerate_tunes": {
       "reproduced": 12,
-      "total": 12
+      "total": 12,
+      "after_review_fixes": "12 of 12 reproduced"
     },
     "mutation_harness": {
       "caught": 59,
       "total": 59,
       "commit": "aec1a2e",
       "baseline": "43 of 43 on df9c987",
-      "note": "first run on 74e7480: 58 caught, 1 invalid (did not compile), fixed in aec1a2e"
+      "note": "first run on 74e7480: 58 caught, 1 invalid (did not compile), fixed in aec1a2e",
+      "after_review_fixes": {
+        "caught": 66,
+        "total": 66,
+        "new": 7,
+        "wall_time": "22m9s"
+      }
     },
     "godot_smoke": {
       "local": "8 of 8 passed, 0 ERROR lines (K20, M54, syn_v8_swap, syn_v6_tt_swap; dyno + drive)",
-      "ci": "success on run 85 (74e7480)"
+      "ci": "success on run 85 (74e7480)",
+      "after_review_fixes": "local: 8 of 8 passed, 0 ERROR lines"
     },
     "ci": {
       "main_run": 84,
@@ -242,7 +283,7 @@
     "open_prs": [],
     "open_issues": [],
     "unmerged_branches": [
-      "claude/gallant-gauss-jkbqvi (Phase 3, at its gate)"
+      "claude/gallant-gauss-jkbqvi (Phase 3 + required review fixes, at its gate)"
     ]
   },
   "intake_gas_dynamics_constants": {

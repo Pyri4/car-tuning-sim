@@ -142,11 +142,22 @@ Guarantees and how they are checked:
 - **Regeneration:** `TuneGeneratorV8RegenerationTests` runs the recipe again on the generated tune, independently of the
   generator's last pass, and requires every value reproduced.
 - **Validity:** the tune format's rules, beliefs equal to the build's and the fuel's, a rev limit the ECU honours, the
-  tune-dependent assembly rules and `check-engine`'s tune ↔ build rules, and a byte-exact round trip through the loader;
-  the generated V8 tune also passes `check-engine` as the engine's stock tune and holds its λ targets at full load.
-- **Safety:** the generator overwrites only its own untouched output (the record's SHA-256 must still match); never a
-  hand-authored tune. It never writes into `content/`: registering a generated tune as shipped content is a manual
-  step.
+  tune-dependent assembly rules and `check-engine`'s tune ↔ build rules, and a round trip through the loader: the
+  written text is loaded back and compared with the generated tune field by field (`TuneGenerator.DifferingFields`;
+  tables and lists value by value), not byte by byte; the generated V8 tune also passes `check-engine` as the engine's
+  stock tune and holds its λ targets at full load.
+- **Safety:** the generator overwrites only its own untouched output of the same request: the record beside the file
+  must say the generator wrote it, its SHA-256 must still match, and it must record the same engine, fuel, tune id and
+  policy tune (another request's output is refused, `--check 1` included). Never a hand-authored or hand-edited tune.
+  It writes only where `--out` points (nothing without `--out`); it does not stop `--out` from naming a file inside
+  `content/`, it only refuses to overwrite one it did not write. Registering a generated tune as shipped content
+  (moving it into a content layer, adding its recipe to the manifest) is a manual step.
+- **The tune manifest:** it says which tables are hand-authored, so it is never silently dropped. A `--manifest` that is
+  missing, unreadable or incomplete — or a repository manifest that is found but does not load — stops generation
+  (exit 1). With no manifest found (the CLI outside the repository), generation runs, but the report prints `manifest:
+  none` and a WARNING, and the record says `"manifest": "none"`: no table is known to be hand-authored, so every
+  calibratable table is calibrated (the K20's factory spark map included). The report also lists every `check-engine`
+  warning, not only their count.
 - **Cost:** a generation runs the recipe 2–4 times (the synthetic V8: ≈ 85 s single-threaded; the three V8 test
   classes ≈ 3.5 CPU-minutes, ≈ 2 minutes in parallel).
 
@@ -156,7 +167,7 @@ Phase 3 gate report lists the differences. `regenerate-tunes` still reproduces a
 
 ## Mutation harness
 `tools/CarSim.MutationCheck/mutations.json` lists known bugs as exact text replacements and the tests that must fail
-on each (59 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
+on each (66 entries: the validation pass's ECU and boost oracles, the choke-collapse and anti-windup bugs, a raised VE
 floor, identity and cylinder-count branches, the dropped cam table, a phaser without effect, the engine-architecture
 hacks — first bank's air or geometry for all, unshared shared elements, four hard-coded cylinders, interfaces from any
 bank, one turbo state — and, for Intake Gas Dynamics 2.0, an inert runner, a runner that never switches, no switch
@@ -173,9 +184,12 @@ rounded second displacement, the first bank's chamber for every bank, and a gene
 the injector flow from the policy tune, builds the parent engine or reads the parent part instead of the resolved
 variant, bypasses check-engine, calibrates on the manifest's fuel or takes the fuel beliefs from the policy, ignores
 the manifest's recipe, drops the cam step from the hardware rule, skips validation, stops after one pass, overwrites a
-hand-authored or hand-edited file, or branches on an engine id). Before Intake Gas Dynamics Phase 1: 26 of 26 caught;
-after: 31 of 31 (≈ 15 minutes); the four authoring-schema mutants: 4 of 4; the eight check-engine mutants: 8 of 8; the
-sixteen Phase 3 mutants: 16 of 16 (all 59: 59 of 59, ≈ 21 minutes).
+hand-authored or hand-edited file, or branches on an engine id; from the fixes after Phase 3's adversarial review: a
+`--manifest` that is missing silently ignored, an incomplete manifest accepted, a missing manifest recorded as loaded
+or not warned about, another request's (or another fuel's) untouched output replaced, and check-engine's warnings
+hidden in the report). Before Intake Gas Dynamics Phase 1: 26 of 26 caught; after: 31 of 31 (≈ 15 minutes); the four
+authoring-schema mutants: 4 of 4; the eight check-engine mutants: 8 of 8; the sixteen Phase 3 mutants: 16 of 16 (all
+59: 59 of 59, ≈ 21 minutes); the seven review-fix mutants: 7 of 7 (all 66: 66 of 66, ≈ 22 minutes).
 
 For each entry the harness checks the `find` text still occurs exactly once (a stale entry is an error), proves the
 guarding tests pass unmutated, injects the mutant, rebuilds, requires at least one failure, and restores the file with
