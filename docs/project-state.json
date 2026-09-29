@@ -14,7 +14,8 @@
       "aec1a2e fuel binding + report text",
       "aed05e8 docs, skills, CI step, gate report",
       "69582a9 CI run 86 recorded",
-      "(head) required fixes after the adversarial review: P3-001, P3-002, P3-007, docs"
+      "a7df7ab required fixes after the adversarial review: P3-001, P3-002, P3-007, docs",
+      "(head) CI run 88 recorded"
     ]
   },
   "project": {
@@ -199,7 +200,7 @@
     "run_in_session_on": [
       "df9c987 (baseline)",
       "74e7480 (Phase 3)",
-      "working tree of the review-fix commit (on 69582a9)"
+      "a7df7ab (required review fixes)"
     ],
     "build_release": {
       "warnings": 0,
@@ -272,7 +273,8 @@
       "branch_run": 85,
       "branch_commit": "74e7480",
       "branch_conclusion": "success",
-      "head": "run 86 on aed05e8: success (core incl. generate-tune step, Godot)"
+      "head": "run 86 on aed05e8: success (core incl. generate-tune step, Godot)",
+      "after_review_fixes": "run 88 on a7df7ab: success (core incl. generate-tune and the --manifest exit-1 step; Godot)"
     },
     "skills_consistency": {
       "local": "reinstalled with npx skills; sources identical to installed copies; lock updated",

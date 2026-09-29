@@ -384,6 +384,7 @@ same inputs the tune files are byte-identical (below).
 | `carsim regenerate-tunes` | **12 of 12 reproduced** |
 | Mutation harness | **66 of 66 caught** (59 + 7 new; 22 m 9 s) |
 | Godot headless smoke | **8 of 8 passed, 0 `ERROR` lines** (K20 134.1 hp, M54 203.2 hp, `syn_v8_swap` 263.0 hp, `syn_v6_tt_swap` 441.5 hp; dyno + drive) |
+| GitHub CI | [run 88](https://github.com/Pyri4/car-tuning-sim/actions/runs/36597586085) on `a7df7ab` (the fix commit): **success** — core (build, tests, CLI, skills, check-engine, generate-tune: generated, `--check 1` UNCHANGED, `--manifest missing-manifest.json` exit 1; verification tools) and Godot smoke |
 
 Not changed: physics, ECU behaviour, calibrator mathematics, tolerances, content (no tune, fuel, scenario or engine
 file), the fingerprint baseline, the synthetic tunes' fuel-density beliefs, and the fuel, policy and rev-limit

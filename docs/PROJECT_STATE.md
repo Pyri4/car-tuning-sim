@@ -245,6 +245,16 @@ from the official release — it now works in the container).
 | Godot headless smoke | not run locally before | **local: 8 of 8 passed, 0 ERROR lines** (K20, M54, `syn_v8_swap`, `syn_v6_tt_swap`; dyno + drive) |
 | GitHub CI | [run 84](https://github.com/Pyri4/car-tuning-sim/actions/runs/36556162699) on `df9c987`: success | [run 85](https://github.com/Pyri4/car-tuning-sim/actions/runs/36561845744) on `74e7480`: success (core + Godot); the documentation head: [run 86](https://github.com/Pyri4/car-tuning-sim/actions/runs/36566315580) on `aed05e8`: **success** (core: build, tests, CLI, skills, check-engine, the new generate-tune step — generated, then `--check 1` UNCHANGED — verification tools; Godot smoke) |
 
+### 8b. After the adversarial review's required fixes (`a7df7ab`)
+Re-run in the same container on the fix commit's tree (gate report §16): Release build 0 warnings, 0 errors; **846
+passed**, 0 failed, 0 skipped; `validate --mods content/test` OK; `check-engine` 11 PASS (M54 with 6 warnings);
+`generate-tune` 11 of 11, every tune file **byte-identical** to the Phase 3 sweep (records gain `"manifest":
+"loaded"`), 11 of 11 `--check 1` UNCHANGED; fingerprint **IDENTICAL** (35 cases, 100 sections); `regenerate-tunes` **12
+of 12**; mutation harness **66 of 66** (22 m 9 s, in the working tree); Godot **8 of 8**, 0 `ERROR` lines. GitHub CI:
+[run 88](https://github.com/Pyri4/car-tuning-sim/actions/runs/36597586085) on `a7df7ab`: **success** (core — build,
+tests, CLI, skills, check-engine, generate-tune with the new `--manifest` exit-1 step, verification tools — and Godot
+smoke).
+
 ### 8a. Mutation harness
 Full harness (`dotnet run --project tools/CarSim.MutationCheck -c Release`) re-run in this session: **43 of 43** on the
 baseline `df9c987`; **59 of 59** on the Phase 3 code `aec1a2e` (31 before the factory, 4 from Phase 1, 8 from Phase 2, 16
@@ -254,8 +264,9 @@ not compile); the code was clarified and the entry updated, then it was caught (
 ## 9. Git and GitHub state at the snapshot
 - `main` = `df9c987` (PR #9 merged 2026-09-29: this handoff document). CI green (run 84).
 - Phase 3 branch: `claude/gallant-gauss-jkbqvi`, based on `df9c987`, pushed: `74e7480` (implementation), `aec1a2e`
-  (fuel binding for a valid mutant; report text), `aed05e8` (docs, skills, CI step, gate report) and a commit recording
-  CI run 86. **Not merged; no PR opened** (none was asked for).
+  (fuel binding for a valid mutant; report text), `aed05e8` (docs, skills, CI step, gate report), `69582a9` (CI run 86
+  recorded), `a7df7ab` (the adversarial review's required fixes: P3-001, P3-002, P3-007, docs; CI run 88 green) and a
+  docs commit recording run 88. **Not merged; no PR opened** (none was asked for).
 - Open PRs: none. Open issues: none (at the start of this session).
 - Previous gate reports that say "nothing is merged / no PR open" describe the moment they were written.
 
