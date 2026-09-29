@@ -1,5 +1,10 @@
 # Car Tuning Simulator — Agent Instructions
 
+**Cross-conversation handoff: read [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) before substantial work.** It is
+the canonical record of the current milestone, Git/PR state, verification state, known discrepancies and the exact next
+action ([docs/project-state.json](docs/project-state.json) is its machine-readable summary). Re-verify it against the
+repository and GitHub; update both at every gate, merge or major decision.
+
 ## Read this first: the North Star
 **[GAME_VISION.md](GAME_VISION.md) is the canonical statement of what this project is.** In short:
 

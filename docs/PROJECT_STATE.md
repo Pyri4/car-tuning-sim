@@ -1,0 +1,339 @@
+# Project State — canonical cross-conversation handoff
+
+**Read this before substantial work.** It is the project's memory between AI conversations. It summarizes and links;
+the documents it links stay authoritative for their own subjects (vision, architecture, physics, schema, verification).
+A machine-readable summary lives beside it: [project-state.json](project-state.json).
+
+| | |
+|---|---|
+| **Snapshot date** | 2026-09-29 |
+| **`main` at snapshot** | `c07804a` (Merge pull request #8, Engine Authoring Factory 1.0 Phases 1 & 2) |
+| **This document written on** | branch `claude/jolly-mccarthy-ze2vps` (docs only, on top of `c07804a`; not merged when written) |
+| **Current milestone** | Engine Authoring Factory 1.0 — Phases 1 and 2 merged; **Phase 3 not started** |
+| **Next action** | §13 |
+
+Everything below is verified against the repository and GitHub at the snapshot unless marked **UNVERIFIED** or
+**STALE ELSEWHERE**. When this document and the repository disagree, the repository wins: re-verify and update this file.
+
+---
+
+## 1. What the project is
+A deep car building, repair, tuning and simulation game (inspired by Car Mechanic Simulator, Street Legal Racing:
+Redline, Automation and BeamNG.drive) whose emphasis is mechanical construction, part compatibility, diagnostics,
+realistic failure, the dyno, telemetry and rebuilding — not arcade racing. Canonical statement:
+[GAME_VISION.md](../GAME_VISION.md).
+
+- Long-term loop: BUY → INSPECT → DISASSEMBLE → DIAGNOSE → REPAIR → BUILD → MODIFY → SWAP → TUNE → DYNO → DRIVE →
+  BREAK → DIAGNOSE → REBUILD. The prototype implements inspect, disassemble, replace, reassemble, start, tune, dyno,
+  drive, break, read the report and repair. Buying/market, machining repairs, customer jobs and full swap flows are
+  later.
+- Scale goal: hundreds of engine families, thousands of parts, many cars, engine swaps. **"Adding the 100th engine
+  should be almost as easy as adding the 2nd."**
+- Current strategic direction (since 2026-09-28): **content scale is a first-class goal** — make a new engine a
+  data-entry + validation task with zero new C#, without weakening physics, verification or provenance.
+
+## 2. Rules every agent must follow
+These restate [AGENTS.md](../AGENTS.md) and [ENGINE_AUTHORING_GUIDE.md](../ENGINE_AUTHORING_GUIDE.md) §8/§11; those
+files are authoritative.
+
+1. **Never branch on identity** in simulation, damage, ECU, calibration, tune-generation or gameplay code: no
+   `engine.Id ==`, `part.Id ==`, family names, cylinder-count or layout special cases, no `specialCaseM54()`, no
+   `power += …` / `torque *= …` corrections. `EngineAgnosticTests` audits `src/`; mutants `family-id-branch` and
+   `cylinder-count-branch` prove the audit bites.
+2. **Physics is code, engines are content.** A missing physical feature becomes a generic, data-driven, tested
+   capability (guide §7), bit-identical for engines without the hardware.
+3. **Reference data is evidence, never a target.** Do not re-fit shared constants, loosen tolerances or add per-engine
+   curves to make one engine match. Document and classify the miss (A generic / B documented limitation / C must fix
+   before the next milestone / D future).
+4. **Parts change the engine only through their specifications** (no "Stage 1/2/3", no percentage bonuses). Parts fit
+   through bank-aware `provides`/`requires` interfaces; cars and engines fit through interfaces (bellhousing today).
+5. **Provenance:** never present an estimated or fitted value as published or measured; never invent a source; a
+   value of unknown origin has no record. Facts with citations only; nothing copied from other games or mods.
+6. **Regression:** the K20, M54 and synthetic-matrix outputs are pinned by `tests/baselines/fingerprint.txt`. Do not
+   re-baseline unless a change is deliberate, approved and reported with its diff (docs/VERIFICATION.md).
+7. **Milestones:** start only when the owner authorizes; *proposed* is not authorized. Each ends with a project gate
+   (`car-sim-project-gate`). Dependent phases are based on the merged previous phase; stacking on an unmerged PR needs
+   explicit owner authorization.
+8. **Git:** never merge, close, or force-push without explicit authorization; never rewrite unrelated history.
+9. **When a gate fails, stop and investigate.** Do not weaken tests or tolerances to pass it.
+10. **Model routing** (AGENTS.md table): small models gather evidence and do patterned content/docs/tests; they never
+    decide abstractions, tolerances, regressions or physical validity. Escalate instead of guessing. Fable is not in
+    the small-model pool.
+
+## 3. Technology and layout (verified)
+- Godot **4.7.2 .NET** for presentation; simulation in pure **C# / .NET 8** with zero Godot references
+  ([ARCHITECTURE.md](../ARCHITECTURE.md) §1–2). `global.json` pins SDK 8.0.100, `rollForward: latestFeature`.
+- `src/CarSim.Core` — simulation and domain: `Common`, `Content` (loader, database, provenance, tune documents),
+  `Damage`, `Dyno`, `Ecu` (ECU plus the dev calibrators `VeCalibrator`, `SparkCalibrator`, `CamPhaseCalibrator`),
+  `Engines` (definition, topology, geometry, capabilities, assembly, `AssemblyValidator`, `EngineFeatures`,
+  `EngineCheck`), `Fuels`, `Parts`, `Simulation` (air path, banks, `IntakeGasDynamics`, turbo, thermal…), `Vehicles`.
+- `src/CarSim.Gameplay` — garage, driving session, chassis bench, saves.
+- `game/` — Godot project (UI, scenes); consumes the core.
+- `tools/CarSim.Cli` (`carsim`) — commands: `validate`, `inspect`, `check-engine`, `sweep`, `hold`, `drive`,
+  `calibrate-ve`, `calibrate-spark`, `calibrate-cams`, `derive-stage`, `bench`, `fingerprint`, `fingerprint-diff`,
+  `regenerate-tunes`. **There is no `generate-tune` yet.**
+- `tools/CarSim.Verification` — fingerprint recorder/runner/baseline, `TuneRegenerator`, `RunnerStageDerivation`,
+  `tune-manifest.json` (one recipe per tune: calibrator steps + `hand_authored` tables).
+- `tools/CarSim.MutationCheck` — mutation harness, `mutations.json` (43 entries).
+- `tools/agent-skills/` — project skill sources.
+- `tests/CarSim.Core.Tests` — xUnit; `tests/baselines/fingerprint.txt` — regression baseline (35 cases, 100 sections).
+- `content/base/` — shipped content; `content/test/engine-matrix/` — synthetic engines (test-only, never shipped);
+  `content/mods/` — mod layers; `docs/example-mod/`.
+
+Content at snapshot (`carsim validate`): base **105 parts, 2 engines, 5 fuels, 3 tunes**; with the matrix
+(`--mods content/test`) **247 parts, 11 engines, 5 fuels, 12 tunes**. Two vehicles (Kestrel S2, Isar C30); scenarios
+for both real engines plus 18 matrix scenarios.
+
+## 4. Architecture summary
+Details: [ARCHITECTURE.md](../ARCHITECTURE.md), [SIMULATION_SPEC.md](../SIMULATION_SPEC.md),
+[ENGINE_AUTHORING_GUIDE.md](../ENGINE_AUTHORING_GUIDE.md), [docs/ENGINE_ARCHITECTURE_AUDIT.md](ENGINE_ARCHITECTURE_AUDIT.md).
+
+- **Engine = architecture + parts + interfaces + assembly.** An engine definition declares layout, cylinders, banks,
+  bank angle, firing order and slots; parts fill slots through interfaces; `AssemblyValidator` enforces physical rules
+  (bore, pins, journals, clearances, compression, coil bind, valve float, ratings vs rev limit, turbo/MAP/boost).
+- **Mean-value engine model**, per bank: compressible-orifice air path, VE from cams/runners/headers, residuals,
+  speed-density ECU with a VE table, fuel system (pump, regulator, injectors with dead time), combustion with MBT,
+  end-gas knock, FMEP/PMEP, thermal and lubrication, damage with fatigue and explanatory failure reports.
+- **Generic architecture (Architecture 2.0, PR #5):** inline/V/flat layouts, multiple banks with per-bank air path,
+  geometry, combustion, knock limit, heat; any number of turbos each with its own shaft/wastegate/boost state;
+  OHV/SOHC/DOHC; intake cam phasing; two-stage VVL; N-stage variable intake runners; engine↔car fit by interfaces.
+  Proven by a nine-engine synthetic matrix.
+- **Intake Gas Dynamics 2.0 Phase 1 (PR #7):** runner wave gain separated from valve-event filling; one
+  runner–cylinder mode per stage and bank. Shared constants in `src/CarSim.Core/Simulation/IntakeGasDynamics.cs`
+  (verified): `TunedFrequencyRatio` K = **2.1** (empirical, band 2.0–2.2), `Damping` ζ = **0.35**, `AmplitudePerMach`
+  κ = **0.5** (unsourced, pre-registered). Solved via the distributed model (x·tan x = β form, see SIMULATION_SPEC.md).
+- **Vehicle:** planar model, combined-slip tyres with temperature and wear, gearbox with automated clutch,
+  differentials, brakes, suspension set-up with ride over roughness; test-track scene in Godot.
+- **Authoring layer (Engine Authoring Factory Phases 1–2):** `identity` (real/fictional/synthetic, features), `sources`
+  documents, `provenance` maps on parts and engines, `extends` + `abstract` for engines and parts (resolved after all
+  layers into plain definitions), feature vocabulary with modelled/not-modelled/missing-data statuses,
+  `carsim check-engine`.
+
+**What is genuinely supported vs limited** is tabulated in ENGINE_AUTHORING_GUIDE.md §5 (capabilities) and §9
+(limitations). Rejected at load today: superchargers, dry sumps, direct injection, exhaust cam phasing. Inline engines
+have one bank (no parallel twin-turbo inline yet: "cylinder groups" is a roadmap item).
+
+## 5. Completed milestones (all merged into `main`)
+Verified from `git log --first-parent origin/main` and GitHub PR data.
+
+| # | Milestone | PR / merge | Result (from its report; key numbers re-checked where noted) |
+|---|---|---|---|
+| 1 | Prototype (Phases 0–4, set-up, modding) | PRs #1–#3 (`5ed22f4`, 2026-09-26) | Full loop playable for one car/engine |
+| 2 | Simulation-correction phase + validation pass | PR #2 | 21 review issues classified (ROADMAP "Validation pass") |
+| 3 | Second engine family (Isar M54 = BMW M54B30 reference) | PR #4 (`0970bbe`, 2026-09-27) | Families are data; one generic capability added (cam timing); cost measured: 2,568 lines total, 380 engine content |
+| 4 | Engine Architecture 2.0 | PR #5 (`b3322ef`, 2026-09-27) | Banks, per-bank air paths, N turbos, capabilities as data, nine-engine synthetic matrix; K20/M54 bit-identical |
+| 5 | Agent skills | PR #6 (`ea63265`, 2026-09-27) | `car-sim-verify`, `car-sim-add-engine`, `car-sim-project-gate`, `find-skills` |
+| 6 | Intake Gas Dynamics 2.0 Phase 0 + design resolution + authorization gate + Phase 1 | PR #7 (`af0b289`, 2026-09-28) | Fingerprint, tune driver and mutation harness added; generic runner resonance + DISA; reports in `docs/milestones/intake-gas-dynamics-2/` |
+| 7 | Engine Authoring Factory audit | in PR #8 | Authoring cost measured; milestone defined |
+| 8 | Engine Authoring Factory 1.0 **Phase 1** (schema + provenance) | PR #8 (`c07804a`, 2026-09-29) | 728 tests, 35/35 mutants; [PHASE1_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE1_GATE_REPORT.md) |
+| 9 | Engine Authoring Factory 1.0 **Phase 2** (`check-engine`) | PR #8 (`c07804a`, 2026-09-29) | 766 tests, 43/43 mutants; [PHASE2_GATE_REPORT.md](milestones/engine-authoring-factory-1/PHASE2_GATE_REPORT.md) |
+
+Phase 2 details worth knowing without opening the report:
+- `carsim check-engine <id> [--verbose 1] [--strict 1] [--content/--mods]`. Exit codes: **0** no errors (warnings
+  allowed), **2** errors, **3** warnings under `--strict`, **1** usage error.
+- Sections: CONTENT, IDENTITY, ARCHITECTURE, PARTS, TOPOLOGY, INTERFACES, GEOMETRY, LIMITS, FEATURES, PROVENANCE,
+  COMPLETENESS. Reuses `EngineTopology`, `AssemblyValidator`, `EngineGeometry`, `EngineCapabilities`, `FeatureReport`,
+  `VehicleCompatibility`. Static only (no simulation run).
+- Severity: unmodelled feature *with* an approximation → warning; declared unmodelled feature *without* one → load
+  error (blocks); modelled feature declared without providing hardware → error (`feature_missing_data`); estimated data
+  alone → never an error.
+- Stock tune ↔ build checks exist already: displacement, injector flow, dead time, rev limit vs ECU, cam table and
+  switch speeds for controlled hardware, switch speeds inside the rpm axis, load axis vs boost target.
+- B58-style fixture (test-only): direct injection, Valvetronic-type VVL, exhaust VANOS and twin scroll reported as
+  not modelled. **No B58 content exists or should be added** until those capabilities exist.
+- LS3-style fixture (test-only, synthetic pushrod V8 under a real identity) passes. Findings for a future LS3 pilot:
+  no loaded gearbox takes a GM LS bellhousing (content fix); L99 cylinder deactivation not modelled; cam-in-block
+  phaser moves intake and exhaust together, the model's phaser moves intake only (generic limitation); V8 slot lists
+  are hand-written (~104 lines); fuel-system capacity is not checked.
+
+## 6. Current milestone: Engine Authoring Factory 1.0
+Definition: [docs/milestones/ENGINE_AUTHORING_FACTORY_1.md](milestones/ENGINE_AUTHORING_FACTORY_1.md) (status:
+authorized phase by phase). Evidence: [docs/ENGINE_AUTHORING_FACTORY_AUDIT.md](ENGINE_AUTHORING_FACTORY_AUDIT.md).
+
+**Phase numbering vs the milestone's work packages** (the milestone doc uses B1…E; the owner's briefs use Phase N):
+
+| Owner phase | Work packages | Status |
+|---|---|---|
+| Phase 1 | B1 schema **except slot layouts** | Merged (PR #8) |
+| Phase 2 | B2 check + part of B3 | Merged (PR #8) |
+| Phase 3 | rest of B3 (derived values) + C1 (`generate-tune`) | **Not started** — brief in §7 |
+| later | slot layouts (rest of B1), `validate --engines`, `list`/`schema`, C2 verification from data, C3 anti-hack extension, C4 docs/skills, D pilot (LS3-type V8; B58 negative test), E gate | Not started; each needs owner authorization |
+
+## 7. Phase 3 brief (issued by the owner 2026-09-29; recorded here because it is not yet in the milestone doc)
+"Derived Values + Deterministic Baseline Tune Generation." Pipeline: ENGINE DATA → DERIVED VALUES → CHECK-ENGINE →
+BASELINE TUNE GENERATION → VALID STOCK BUILD. Orchestrate existing machinery; do not invent a new tuning system.
+
+- **No physics change** of any kind; no K20/M54 parameter, tolerance or fingerprint change. A missing physical
+  capability found on the way is stopped, classified and documented — never hacked.
+- **Inspect first:** calibrators (`src/CarSim.Core/Ecu/*Calibrator.cs`), `TuneRegenerator`, `tune-manifest.json`,
+  `TuneDocument`, `EngineGeometry`, `ContentLoader`, `EngineCheck`, fingerprint, matrix, skills. Do not duplicate.
+- **Derived values:** only what is derivable from resolved inputs (displacement, swept/clearance/cylinder volume,
+  firing interval, mean piston speed, runner tuned speed, theoretical airflow, …); deterministic, unit-safe,
+  identity-free, computed on the **resolved assembly** (variants included). Make authoritative vs derived explicit —
+  no duplicate sources of truth (e.g. an authored displacement disagreeing with bore × stroke × cylinders). Report
+  authored / derived / validated / unavailable (extend `check-engine` or `inspect`). Note: `EngineGeometry` already
+  derives displacement, CR, clearance volume, rod ratio, mean piston speed; the tune carries an ECU *belief* of
+  displacement that `check-engine` compares (`tune_displacement_mismatch`).
+- **`carsim generate-tune <engine> [--fuel <id>]`:** resolve engine → resolve stock parts → assemble → run
+  `check-engine` → refuse on errors → run existing calibrators/recipes → validate → write the **existing** tune format
+  → report. Fuel selection explicit, using the existing fuel system. Only automate what calibrators already support
+  (cams, runner/lift switch, VE, spark; λ/boost only from a named policy or explicit input). Unsupported → reported as
+  NOT MODELLED / NOT GENERATABLE.
+- **Generated vs hand-authored:** distinguishable; never silently overwrite a hand-authored tune (explicit replace
+  mode or a generated location). Manifest records engine, assembly, fuel, generator + version, recipe, inputs; no
+  timestamp in deterministic identity.
+- **Regeneration:** generated → regenerate → identical. Existing K20/M54 tunes must stay stable; if they change, STOP
+  and investigate.
+- **Clear failures:** missing data, unsupported feature (warning, left unchanged), invalid assembly, conflicting
+  authoritative values.
+- **Tests:** derived determinism, displacement derivation, geometry consistency, derived values change with a relevant
+  part, generation, regeneration, determinism, validation, refusal on invalid engine, unsupported features, multiple
+  fuels, engine and part variants, stock-assembly dependency, no engine-specific generator branches.
+- **Mutants:** e.g. skip derived displacement, parent part instead of resolved variant, ignore injector flow, bypass
+  `check-engine`, ignore fuel, change recipe, skip tune validation.
+- **Synthetic V8 demonstration** (existing `syn_v8_ohv` or `syn_v8_dohc_vvt`): V8 assembly, bank resolution, derived
+  values, tune generation, determinism. **No LS3 content.**
+- **Do not build:** LS3 production content, bulk import, GUI editor, reference-data verification, dyno fitting, new
+  physics, DI, Valvetronic, turbo or intake models, slot-layout generation (unless strictly required).
+- **Docs:** ENGINE_AUTHORING_GUIDE.md, ARCHITECTURE.md, ROADMAP.md, the milestone doc, `car-sim-add-engine`
+  (`car-sim-verify` if needed), and this file.
+- **Gate:** `docs/milestones/engine-authoring-factory-1/PHASE3_GATE_REPORT.md` (clean Release build, tests, content
+  validation, `check-engine` sweep, generation + regeneration, fingerprint, mutation harness, skills, CLI, CI, Godot
+  smoke; exact branch/commit; limitations; next action). Then **STOP**; do not merge; do not start the LS3 pilot.
+- Acceptance (owner's list): `generate-tune` exists; uses the resolved stock assembly; refuses invalid assemblies;
+  derived values deterministic; generated tunes deterministic and regenerable and validated; fuel explicit; K20/M54
+  tunes unchanged; a synthetic V8 generates a valid baseline tune; variants respected; no engine-specific branches;
+  mutants catch generator failures; CI green.
+
+## 8. Verification state at the snapshot
+Re-run in this session on `c07804a` (Ubuntu 24.04 container, .NET SDK 8.0.131 from the distro), unless stated.
+
+| Check | Result |
+|---|---|
+| `dotnet build CarTuningSim.sln -c Release` | 0 warnings, 0 errors |
+| `dotnet test CarTuningSim.sln -c Release` | **766 passed, 0 failed, 0 skipped** |
+| `carsim validate` / `validate --mods content/test` | OK / OK |
+| `carsim check-engine` on all 11 engines (K20, M54, 9 synthetic) | all exit 0; K20 `--strict 1` exit 0; M54 PASS with 6 warnings |
+| `carsim fingerprint` (35 cases, 100 sections) | **IDENTICAL** |
+| `carsim regenerate-tunes` (all 12 tunes) | **12 of 12 reproduced exactly** |
+| Mutation harness | **43 of 43 caught** (§8a) |
+| Skills consistency | CI step green on `main` (run 79); not re-run locally (needs Node + `npx skills`) |
+| Godot headless smoke | **not run locally** (no Godot in this container); **green in CI** on `main` run 79: K20 dyno + drive, M54 dyno + drive, synthetic pushrod V8 and twin-turbo V6 in the Isar C30 |
+| GitHub CI on `main` `c07804a` | [run 79](https://github.com/Pyri4/car-tuning-sim/actions/runs/36545578490): success (core, CLI, skills, check-engine, verification tools, Godot); mutation job is manual-only (skipped) |
+
+### 8a. Mutation harness
+Full harness (`dotnet run --project tools/CarSim.MutationCheck -c Release`) re-run in this session on `c07804a`:
+**43 of 43 mutants caught** (31 before the factory, 4 from Phase 1, 8 from Phase 2). The harness restored every
+source file (working tree verified clean of non-doc changes afterwards).
+
+## 9. Git and GitHub state at the snapshot
+- `main` = `c07804a` (PR #8 merged 2026-09-29). CI green.
+- Open PRs: **none**. Open issues: **none**.
+- Every remote branch (`claude/*`) is fully contained in `main`; none carries unmerged work.
+- Previous gate reports that say "nothing is merged / no PR open" describe the moment they were written.
+
+## 10. Known limitations and open questions (do not conceal, do not "fix" by hacks)
+Full lists: ROADMAP.md "Known issues" and "Technical debt"; ENGINE_AUTHORING_GUIDE.md §9; the Intake Gas Dynamics
+[PHASE1_REVIEW.md](milestones/intake-gas-dynamics-2/PHASE1_REVIEW.md) §4–5.
+
+**Reference-engine discrepancies (preserved, classified, not patched):**
+- **M54 vs BMW M54B30** (170 kW / 300 N·m): **153.9 kW** peak (−9.5 %), mid-range peak 297.8 N·m at 3,100 rpm
+  (reference 300 at 3,500), **no second torque hump**. DISA: closed stage 469.1 mm (derived by the frozen A-D1
+  procedure), stage crossover 3,924 rpm, tune switch **3,900 rpm** (sourced band 3,750–4,100). Review: the top end
+  needs ≈ +12.5 %; no single deferred mechanism closes it; the group/plenum mode (deferred) and better flow data
+  (M54 flows are *estimated*, possibly ≈ 20 % low — only flow-bench data can settle it) are both needed. Class B → D.
+  ROADMAP's "Current state" quotes 152 kW / 298 N·m near 3,000 rpm (different run conditions or an older figure) —
+  **not reconciled here**.
+- **K20 anchor margin:** air-per-cycle max error **2.87 %** against ±3 % (floor ≈ 2.69 % for the locked κ). The anchor
+  limits κ to ≈ ≤ 0.53. Class B. Do not change κ or the tolerance to widen the margin.
+- **K20 T35 turbo build:** −7.1 % peak power after Phase 1 (generic VE change at 7,250 rpm amplified ≈ ×4.6 by a
+  spool-limited turbo, plus an off-recipe tune). The turbo model is not validated against a reference.
+  **Discrepancy with the owner's handoff:** the handoff says T35 is treated as a diagnostic, not a hard fingerprint;
+  in the repository `k20_t35_98` is still an ordinary (hard) fingerprint case — only the worn project-car lap is a
+  knife-edge diagnostic (`FingerprintMatrix.KnifeEdgeSections`). Changing that is a verification change needing owner
+  approval; it has not been made.
+- **Owner decisions on PHASE1_REVIEW.md §5.1–5.3** (anchor margin, T35, M54 flow data) were not recorded in the
+  repository before this document. The owner's 2026-09-29 handoff states them as: do not alter tolerance or κ to fit;
+  treat T35 as diagnostic; no M54-specific constants. Recorded here as the owner's statement.
+
+**Model limitations (selection):** level-setting constants fitted on the K20 (Otto realisation, FMEP, 112° cam
+reference, v₀/ceiling); one runner mode per stage (no plenum/group resonance, harmonics, intake-closing coupling);
+quasi-static air path; open-loop speed-density ECU (no closed-loop λ, warm-up enrichment, decel fuel cut); one MAP
+sensor/fuel command/knock retard for all banks; shared elements split by cylinders without cross-feed; mean-value
+knock; planar vehicle; game-compressed fatigue; idle MAP low (no accessory load); synthetic engines are plausible, not
+realistic.
+
+**Unsupported features (rejected or declared not-modelled):** superchargers, dry sump, direct injection, exhaust cam
+phasing, continuous VVL (Valvetronic-type), twin-scroll turbines, cylinder deactivation, cam-in-block phaser moving
+both lobes, inline cylinder groups (parallel twin-turbo inline engines).
+
+**Authoring-factory gaps still open:** slot layouts (V/flat slot lists hand-written, ≈ 104–138 lines per multi-bank
+engine); tune skeletons and recipes hand-written; no `generate-tune`; fuel-system capacity not checked (needs a sweep,
+not a static check); per-engine C# still needed in the verification layer (fingerprint cases, reference tests, family
+lists) until C2; `--strict` is all-or-nothing; tunes and reference figures have no provenance home; `Program.cs`
+monolithic.
+
+**Authoring cost (measured, audit §5/§13):** M54 (PR #4): 2,568 added lines, 392 content JSON (380 in the content
+commit), 409 `src/` (the cam-timing capability), 1,227 tests. Estimated today for a real V8 without capability gaps:
+≈ 1,000–1,150 lines, ≈ 450 of them C#/YAML. **Targets** (unmeasured until the pilot): ≈ 300–400 data lines, 0 C#,
+≈ 5 commands; a variant ≈ 20–60 lines.
+
+## 11. Documents that are stale or inconsistent (fix in the next phase that touches them)
+- **ROADMAP.md** and **docs/milestones/ENGINE_AUTHORING_FACTORY_1.md** still say Phase 2 is "implemented and at its
+  gate" and the owner's gate review is unchecked. PR #8 was merged on 2026-09-29, and the owner's handoff states Phases
+  1 and 2 passed their gates. ROADMAP's "Current state (2026-09-28)" header also predates the merge.
+- **PHASE1/PHASE2_GATE_REPORT.md** say "Nothing is merged and no PR is open" — true when written.
+- ROADMAP M54 figures (152 kW) vs the Intake Gas Dynamics gate report (153.9 kW): see §10.
+These were deliberately **not** edited in the handoff commit (docs-only scope limited to this file, its JSON and
+AGENTS.md).
+
+## 12. Roadmap beyond Phase 3
+Status vocabulary: CONFIRMED (done, merged) / PLANNED (in an authorized milestone definition) / POSSIBLE (listed in
+ROADMAP "Next recommended tasks", not authorized) / NOT YET AUTHORIZED (explicitly excluded for now).
+
+- **PLANNED** (Engine Authoring Factory 1.0, authorized phase by phase — each phase still needs the owner's go):
+  slot layouts; `validate --engines`; `list`, `schema`; verification from data (profiles, light fingerprint cases,
+  conformance suite, `compare-engine`, `verify-engine`); anti-hack extension (content-derived audit tokens, calibrators
+  and generator in the audit); docs/skills; **pilot: LS3-type 6.2 L pushrod V8** (fictional marque, real reference,
+  own bellhousing + gearbox); **B58 negative test** (identity only); stretch EJ20-type flat-4; milestone gate with the
+  authoring-cost benchmark.
+- **POSSIBLE** (ROADMAP order): Intake Gas Dynamics 2.0 Phase 2 (group-plenum mode, IVC coupling, second reference
+  with published intake geometry — not defined or authorized); cylinder groups on inline engines; missing capabilities
+  (supercharger, DI, exhaust cam phasing, per-bank fuel/knock, dry sump); swap interfaces beyond the bellhousing;
+  multi-family calibration; chassis dyno; machining repairs; progression/economy; toe and set-up physics; tracks as
+  content; audio; exported builds.
+- **NOT YET AUTHORIZED:** more real engines beyond the pilot, bulk part catalogues, open world, multiplayer, GUI editor,
+  UI ahead of capabilities, matching a single engine's dyno curve, B58 as supported content.
+
+## 13. NEXT ACTION (exact)
+**Engine Authoring Factory 1.0 Phase 3 — Derived Values + Deterministic Baseline Tune Generation (brief in §7).**
+
+Status: the owner issued the brief on 2026-09-29 with the precondition "PR #8 merged". That precondition is now met
+(`c07804a`). In the handoff session the owner explicitly said *not* to start Phase 3 yet, so **the next agent confirms
+with the owner that Phase 3 may begin**, then:
+1. `git fetch origin`; confirm `main` still = `c07804a` (or re-verify whatever it now is) and no open PRs conflict.
+2. Base the Phase 3 branch on current `main` (never on an unmerged PR without authorization).
+3. Re-run the Phase 2 gate: Release build, `dotnet test` (expect 766), `validate` ± matrix, `check-engine` on all 11
+   engines, `fingerprint` (IDENTICAL), `regenerate-tunes` (12/12), mutation harness (expect 43/43).
+4. Inspect the systems listed in §7 before writing code; then implement per §7 with the `car-sim-verify` and
+   `car-sim-project-gate` skills; write `PHASE3_GATE_REPORT.md`; update this file; STOP for review.
+
+Also due when Phase 3 touches the docs: correct the stale statuses listed in §11.
+
+## 14. Fresh-agent bootstrap procedure
+1. Read [AGENTS.md](../AGENTS.md), then this file.
+2. Read the current milestone doc and its latest gate report (§6).
+3. `git status`, `git branch -a`, `git log --oneline -15`, `git fetch origin`, compare the branch with `origin/main`.
+4. Check GitHub: open PRs, whether prerequisite phases are merged, CI on `main`.
+5. If anything differs from §9, trust the repository, and update this file.
+6. Run only the checks the state calls for (§8 lists the commands); `car-sim-verify` packages them.
+7. Continue from §13. Do not start unauthorized work; stop at gates.
+
+Environment notes: this cloud container had no .NET SDK preinstalled; `apt-get install dotnet-sdk-8.0` worked
+(dot.net install script was blocked by the network policy). Godot is not available locally; rely on CI for Godot
+smoke tests. The full test suite takes ≈ 2 minutes, full tune regeneration ≈ 4.5 minutes, the fingerprint ≈ 35 s.
+
+## 15. Maintaining this document
+Update it (and `project-state.json`) at every milestone or phase gate, merge, or major decision: snapshot date and
+commit, §5, §6, §8, §9, §10, §11, §13. Keep it a summary with links; do not copy whole reports. Mark anything not
+re-verified as UNVERIFIED.
