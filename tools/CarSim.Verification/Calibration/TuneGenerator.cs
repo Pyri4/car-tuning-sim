@@ -236,12 +236,13 @@ public static class TuneGenerator
 
         // 2. The fuel is explicit: it sets the spark map's knock limit and the ECU's fuel beliefs.
         string fuels = string.Join(", ", db.Fuels.Keys.OrderBy(k => k, StringComparer.Ordinal));
-        FuelDefinition? fuel = null;
+        FuelDefinition? requestedFuel = null;
         if (string.IsNullOrWhiteSpace(request.FuelId))
             refusals.Add(new("fuel_required", $"The calibration fuel must be explicit (--fuel <id>); none is chosen by default. Loaded: {fuels}."));
-        else if (!db.Fuels.TryGetValue(request.FuelId, out fuel))
+        else if (!db.Fuels.TryGetValue(request.FuelId, out requestedFuel))
             refusals.Add(new("unknown_fuel", $"No fuel '{request.FuelId}'. Loaded: {fuels}."));
         if (refusals.Count > 0) return new TuneGeneration { Request = request, Check = check, Refusals = refusals };
+        var fuel = requestedFuel!; // present: a missing or unknown fuel was refused above
 
         // 3. The resolved engine (a variant arrives merged by the loader) and its stock assembly.
         var engine = db.Engines[request.EngineId];
@@ -291,7 +292,7 @@ public static class TuneGenerator
 
         // 7. The starting tune: the policy with the beliefs set from the build and the fuel.
         string tuneId = request.TuneId ?? policy.Id;
-        var recipe = new TuneRecipe(tuneId, engine.Id, "generated", "", fuel!.Id, new BuildRecipe(null, null), steps, handAuthored,
+        var recipe = new TuneRecipe(tuneId, engine.Id, "generated", "", fuel.Id, new BuildRecipe(null, null), steps, handAuthored,
             Provenance(engine, fuel, policy, steps));
         var calibrated = TuneRegenerator.CalibratedFields(recipe);
         // The calibrators build their engine from the recipe (TuneRegenerator.BuildAssembly): it must be the build checked here.
@@ -548,7 +549,7 @@ public static class TuneGenerator
         if (caps.SwitchedRunners && !caps.VariableIntakeRunner)
             notes.Add(new(TuneRegenerator.RunnerSwitch, NotGeneratable, "the ECU cannot switch the intake runners (intake_runner_uncontrolled): the primary runner stays."));
         foreach (var f in check.Features.Where(f => f.Status == FeatureStatus.NotModelled))
-            notes.Add(new(f.Feature, NotModelled, $"{f.Description} is not simulated, so the tune has no control for it; stands in: {f.Approximation}."));
+            notes.Add(new(f.Feature, NotModelled, $"{f.Description} is not simulated, so the tune has no control for it; stands in: {f.Approximation?.TrimEnd('.')}."));
         return notes;
     }
 
